@@ -1,5 +1,17 @@
 # open-slide — Framework Repo Guide
 
+## LemonRiver private project policy
+
+This worktree is part of **LemonRiver**, the user's private second-development and daily slide-production environment built on top of open-slide. Before changing branches, merging upstream, moving slide assets, committing, or pushing, read [docs/lemonriver-main-sync.md](docs/lemonriver-main-sync.md).
+
+Short version:
+
+- `main` / `open-slide-main` is the official upstream baseline.
+- `lemonriver-dev` / `LemonRiver-dev` receives upstream `main` only after explicit user approval.
+- `lemonriver-stable` / `LemonRiver-stable` advances only from `lemonriver-dev`, never directly from `main`.
+- Private slides, customer materials, backups, images, videos, and generated decks must not be pushed to GitHub or mixed into public bugfix branches.
+- Public framework fixes belong on dedicated clean branches such as `fix-image-pptx-export-images`.
+
 You are working on the **open-slide framework** — the runtime, CLI, and tooling that ship to npm.
 
 (Slide-authoring guidance lives in the `slide-authoring` / `create-slide` skills under `apps/demo/.claude/skills/`. Use those only when editing files inside `apps/demo/slides/`.)
