@@ -25,7 +25,15 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  Fragment,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import {
   ContextMenu,
@@ -921,15 +929,7 @@ function SortableRail({
   );
 }
 
-function SortableThumb({
-  index,
-  active,
-  activeRef,
-  onSelect,
-  ariaLabel,
-  children,
-  ...rest
-}: {
+type SortableThumbProps = {
   index: number;
   active: boolean;
   activeRef: React.MutableRefObject<HTMLButtonElement | null> | undefined;
@@ -939,16 +939,26 @@ function SortableThumb({
 } & Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
   'onClick' | 'aria-label' | 'aria-current' | 'type' | 'style' | 'className' | 'ref' | 'children'
->) {
+>;
+
+const SortableThumb = forwardRef<HTMLButtonElement, SortableThumbProps>(function SortableThumb(
+  { index, active, activeRef, onSelect, ariaLabel, children, ...rest },
+  forwardedRef,
+) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: index + 1,
     transition: { duration: 180, easing: 'var(--ease-swift)' },
   });
 
-  const setRef = (node: HTMLButtonElement | null) => {
-    setNodeRef(node);
-    if (activeRef) activeRef.current = node;
-  };
+  const setRef = useCallback(
+    (node: HTMLButtonElement | null) => {
+      setNodeRef(node);
+      if (activeRef) activeRef.current = node;
+      if (typeof forwardedRef === 'function') forwardedRef(node);
+      else if (forwardedRef) forwardedRef.current = node;
+    },
+    [activeRef, forwardedRef, setNodeRef],
+  );
 
   const yOnlyTransform = transform ? { ...transform, x: 0 } : transform;
 
@@ -975,4 +985,4 @@ function SortableThumb({
       {children}
     </button>
   );
-}
+});

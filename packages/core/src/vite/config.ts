@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
@@ -23,6 +24,8 @@ function findPackageRoot(fromFile: string): string {
 
 const PKG_ROOT = findPackageRoot(fileURLToPath(import.meta.url));
 const APP_ROOT = path.join(PKG_ROOT, 'src', 'app');
+const require = createRequire(import.meta.url);
+const GEIST_ROOT = findPackageRoot(require.resolve('@fontsource-variable/geist/package.json'));
 
 function readCoreVersion(): string {
   try {
@@ -114,7 +117,7 @@ export async function createViteConfig(opts: CreateViteConfigOptions): Promise<I
     server: {
       port: config.port ?? 5173,
       ...(config.allowedHosts !== undefined ? { allowedHosts: config.allowedHosts } : {}),
-      fs: { allow: [APP_ROOT, userCwd, slidesAbs, themesAbs, assetsAbs] },
+      fs: { allow: [APP_ROOT, userCwd, slidesAbs, themesAbs, assetsAbs, GEIST_ROOT] },
     },
     build: {
       outDir: path.resolve(userCwd, 'dist'),

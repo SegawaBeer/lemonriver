@@ -10,6 +10,7 @@
       "**",
       "!**/dist",
       "!**/node_modules",
+      "!.codex-tmp",
       "!**/*.tsbuildinfo",
       "!**/*.svg",
       "!packages/core/src/app/components/ui"
