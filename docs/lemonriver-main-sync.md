@@ -1,32 +1,31 @@
 # LemonRiver and upstream main sync guide
 
-This repository is used in two different ways:
+LemonRiver is split across **two independent git repositories**:
 
-1. As a fork/second-development environment for the open-slide application.
-2. As the private LemonRiver workspace that contains the user's finished slides, customer materials, images, videos, code snippets, exported files, and backups.
-
-Keep those two uses separate. When in doubt, protect private LemonRiver content first.
-
-## Worktree and branch roles
-
-| Folder | Branch | Role | Sharing rule |
+| Repo | Path | What it holds | Sharing |
 | --- | --- | --- | --- |
-| `/Users/changzhichao_work/Documents/AI-Maker/open-slide-main` | `main` | Official open-slide baseline synced from GitHub. | May track GitHub. Do not add LemonRiver private slides or assets. |
-| `/Users/changzhichao_work/Documents/AI-Maker/open-slide-fix-pptx-export` | `fix-image-pptx-export-images` | Clean public bugfix branch for framework fixes. | May be proposed upstream, but must contain framework code only. |
-| `/Users/changzhichao_work/Documents/AI-Maker/LemonRiver-dev` | `lemonriver-dev` | Private LemonRiver development version. Test upstream updates and local changes here first. | Local/private unless the user explicitly says otherwise. |
-| `/Users/changzhichao_work/Documents/AI-Maker/LemonRiver-stable` | `lemonriver-stable` | Private daily-use stable version. | Local/private. Advance only from `lemonriver-dev`. |
+| Framework fork | `/Users/changzhichao_work/Documents/AI-Maker/LemonRiver-dev` | open-slide source: `packages/core`, `packages/cli`, `apps/web`, upstream demo slides, root tooling. | May be pushed to GitHub **private**. |
+| Content repo | `/Users/changzhichao_work/Documents/AI-Maker/LemonRiver-stable` | The user's private decks, themes, assets. Consumes the framework as a packed tarball under `vendor/`. | **Local only. Never pushed anywhere.** |
 
-Current snapshot when this file was created on 2026-07-21:
+They share no git history and no working tree. The framework repo has no private
+content in it, so the elaborate protected-paths rules this file used to carry are
+gone — the separation is structural now, not procedural.
 
-- `main`: `df17137` (`@open-slide/core` 1.17.1, `@open-slide/cli` 1.4.1)
-- `lemonriver-dev`: `801b6d3` before this policy commit
-- `lemonriver-stable`: `801b6d3` before this policy commit
+Split on 2026-08-27. Before that both were worktrees of this one repo, which is
+why older commits here contain private decks.
 
-Always verify live state with `git status`, `git log`, and `git worktree list`; this snapshot is only orientation.
+## Worktrees of the framework repo
+
+| Folder | Branch | Role |
+| --- | --- | --- |
+| `LemonRiver-dev` | `lemonriver-dev` | Second development. Upstream lands here after user approval. |
+| `open-slide-main` | `main` | Official upstream baseline, synced from GitHub. |
+| `open-slide-fix-pptx-export` | `fix-image-pptx-export-images` | Clean public bugfix branch, framework code only. |
+| `LemonRiver-stable-legacy` | `lemonriver-stable` | **Frozen archive** of the pre-split state. Kept only until the user is done with it; do not develop here. |
+
+`git worktree list` is the live answer. This table is orientation.
 
 ## Inheritance model
-
-The intended promotion chain is:
 
 ```text
 official GitHub main
@@ -34,22 +33,19 @@ official GitHub main
         v
 open-slide-main / main
         |
-        | merge only after user approval
+        | git merge, only after user approval
         v
 LemonRiver-dev / lemonriver-dev
         |
-        | promote only after testing and user confirmation
+        | pnpm pack, after verification
         v
-LemonRiver-stable / lemonriver-stable
+LemonRiver-stable/vendor/open-slide-core-<version>+<sha>.tgz
 ```
 
-Do not merge `main` directly into `lemonriver-stable`.
-
-Do not push `lemonriver-dev` or `lemonriver-stable` to GitHub unless the user explicitly asks and acknowledges that the branches may contain private materials.
+Framework code only ever travels **downward**. The content repo never sends code
+back up; if a defect shows up while authoring slides, reproduce it here.
 
 ## Updating official main
-
-Only use the official worktree for this:
 
 ```bash
 cd /Users/changzhichao_work/Documents/AI-Maker/open-slide-main
@@ -58,174 +54,93 @@ git fetch origin main --tags
 git pull --ff-only
 ```
 
-This updates the official baseline only. It does not update LemonRiver by itself.
+This updates the baseline only. Then summarize what changed before proposing a
+merge, especially:
 
-After updating, summarize the upstream changes by comparing the old LemonRiver base with the new `main`, especially:
-
-- `packages/core/CHANGELOG.md`
-- `packages/cli/CHANGELOG.md`
-- `apps/demo/slides`
+- `packages/core/CHANGELOG.md`, `packages/cli/CHANGELOG.md`
 - `packages/core/skills`
 - `apps/web/content/docs`
 - package and lockfile changes
 
 ## Updating LemonRiver-dev from main
 
-Do this only after the user approves bringing official changes into LemonRiver.
-
-Before merging:
+Only after the user approves.
 
 ```bash
 cd /Users/changzhichao_work/Documents/AI-Maker/LemonRiver-dev
 git status --short --branch
-git worktree list
-```
-
-If there are unrelated local edits, identify them and preserve them. Do not revert user changes without explicit permission.
-
-Merge from local `main`:
-
-```bash
 git merge main
-```
-
-Then install and verify if dependencies changed:
-
-```bash
-pnpm install
+pnpm install    # if dependencies changed
 pnpm dev
 ```
 
-If the dev server starts, inspect the actual LemonRiver slide library, not just the command result.
+Preserve unrelated local edits. Don't revert user changes without permission.
 
-## Promoting LemonRiver-dev to stable
-
-Only promote after:
-
-- dev server starts in `LemonRiver-dev`
-- private slide folders are still present
-- local slide assets resolve
-- no slide stays stuck on loading
-- no obvious runtime errors appear
-- export paths that matter to the user have been checked
-- the user confirms the dev version is acceptable
-
-Then fast-forward stable:
+Watch for API renames that the content repo's decks would trip over — upstream
+has done this before (`unstable_SharedElement` → `MorphElement`,
+`sharedElements` → `morph`). Grep the content repo, not just this one:
 
 ```bash
-cd /Users/changzhichao_work/Documents/AI-Maker/LemonRiver-stable
-git status --short --branch
-git merge --ff-only lemonriver-dev
+rg -n "unstable_SharedElement|sharedElements" ../LemonRiver-stable/slides
 ```
 
-If `--ff-only` fails, stop and explain the divergence. Do not force merge stable unless the user approves the plan.
+## Shipping to the content repo
 
-## Conflict handling rules
-
-When conflicts appear, classify each file before editing.
-
-### Private slide and asset files
-
-Examples:
-
-- `apps/demo/slides/**`
-- `apps/demo/slides/.folders.json`
-- `apps/demo/slides/_backups/**`
-- slide-local `assets/`
-- generated/exported deck materials
-
-Default decision: preserve LemonRiver private content.
-
-When upstream demo changes conflict with LemonRiver slide archives, keep LemonRiver folders and folder metadata unless the user explicitly asks to replace them with official demos. Official demo slides are examples; LemonRiver slides are user work.
-
-### Framework code
-
-Examples:
-
-- `packages/core/**`
-- `packages/cli/**`
-- root build/test/package config
-- `pnpm-lock.yaml`
-
-Default decision: prefer upstream `main`, then reapply only intentional LemonRiver framework fixes.
-
-If a local framework change is meant for public contribution, keep or move it to a clean bugfix branch. Do not let private slide materials enter that branch.
-
-### Known migration issue: morph transition API
-
-Official open-slide stabilized the old shared-element API:
-
-- `unstable_SharedElement` became `MorphElement`
-- transition option `sharedElements` became `morph`
-- official `magic-move-demo` was renamed to `morph-demo`
-
-When merging recent `main` into LemonRiver, search for old usage:
+The content repo depends on `file:vendor/open-slide-core-<version>+<sha>.tgz`,
+which pins in `pnpm-lock.yaml` by path. To ship a framework update:
 
 ```bash
-rg -n "unstable_SharedElement|sharedElements|magic-move-demo" apps/demo/slides packages apps
+cd /Users/changzhichao_work/Documents/AI-Maker/LemonRiver-dev
+pnpm core build
+SHA=$(git rev-parse --short HEAD)
+cd packages/core && pnpm pack --pack-destination /tmp
+# rename so provenance is unambiguous — the version string alone can't tell a
+# local build apart from the real npm release of the same number
+mv "/tmp/open-slide-core-$(node -p "require('./package.json').version").tgz" \
+   "/tmp/open-slide-core-$(node -p "require('./package.json').version")+$SHA.tgz"
 ```
 
-Migrate LemonRiver slides to the new API rather than deleting those slides.
+Then in the content repo: drop the new tarball into `vendor/`, point
+`dependencies['@open-slide/core']` at it, `pnpm install`, and verify before
+deleting the old tarball. Keep the previous one until the new one is proven —
+rolling back is then a one-line edit.
 
-### Non-ASCII slide folder ids
+Verify in the content repo, not here:
 
-Recent upstream code skips slide folders whose ids are not ASCII-safe. LemonRiver may use Chinese display names in `meta.title` or folder labels, but slide folder ids should stay ASCII/kebab-case.
-
-Good:
-
-```text
-apps/demo/slides/comac-ontology
-apps/demo/slides/weichai-data-governance
-```
-
-Avoid:
-
-```text
-apps/demo/slides/商飞项目
-apps/demo/slides/潍柴培训
-```
-
-## Asset locality rules
-
-LemonRiver slides must be self-contained enough to survive other project folders moving or being deleted.
-
-- One-off materials for a deck go under `apps/demo/slides/<slide-id>/assets/`.
-- Shared private materials go under the project-level assets folder if the app uses one.
-- Do not import images, videos, code, or documents from unrelated project folders by absolute path.
-- Do not leave symlinks inside slide assets unless the user explicitly asks for linked storage.
-- If a slide is loading forever, first check missing imports, deleted files, invalid symlinks, and browser console errors.
-
-Suggested checks:
-
-```bash
-find apps/demo/slides -type l -print
-rg -n "from ['\"]/(Users|Volumes|private|var)/|new URL\\(['\"]/(Users|Volumes|private|var)/" apps/demo/slides
-rg -n "unstable_SharedElement|sharedElements" apps/demo/slides
-```
+- dev server starts, every deck loads with no failed requests
+- slide-local and `@assets/` imports resolve
+- presenter view and present-mode paging work
+- PDF and image-PPTX export still produce the right page count
 
 ## Public bugfix branch rule
 
-Use `open-slide-fix-pptx-export` / `fix-image-pptx-export-images` for public framework fixes only.
-
-Before any upstream PR or push from a bugfix branch, verify:
+Use `fix-image-pptx-export-images` (or another dedicated branch) for anything
+headed upstream. Before pushing or opening a PR:
 
 ```bash
 git status --short --branch
-git diff --stat main...HEAD
 git diff --name-only main...HEAD
 ```
 
-If the diff contains `apps/demo/slides/**` private materials, stop. Do not push.
+Private content can no longer reach these branches by accident, but a stray
+local scratch deck still can. If the diff touches `apps/demo/slides/**` and the
+change isn't about an official demo, stop.
+
+## Local guardrails
+
+`.git/info/exclude` (not `.gitignore`, so it never shows up in an upstream PR)
+ignores `_backups/`, `_exports/`, `apps/demo/slides/_sources/`, and
+`apps/demo/slides/_plans/`. It applies to every worktree of this repo.
+
+Rationale: a 406MB backup tarball was once committed here and its blob is still
+in `.git`. Keeping backups unstageable is cheaper than rewriting history again.
 
 ## Agent behavior checklist
 
-Before doing anything operational in LemonRiver:
-
-1. Confirm which folder/worktree you are in.
+1. Confirm which repo you are in — `git rev-parse --show-toplevel`. The two
+   LemonRiver repos look alike at a glance and share directory-name prefixes.
 2. Confirm the active branch.
-3. Read this file and root `AGENTS.md`.
-4. Preserve unrelated dirty worktree changes.
-5. Ask before merging `main` into `lemonriver-dev`.
-6. Ask before promoting `lemonriver-dev` into `lemonriver-stable`.
-7. Never push private branches without explicit approval.
-8. Verify the actual app behavior, not just that git commands succeeded.
+3. Preserve unrelated dirty worktree changes.
+4. Ask before merging `main` into `lemonriver-dev`.
+5. Never push a private branch without explicit approval.
+6. Verify actual app behavior, not just that git commands succeeded.

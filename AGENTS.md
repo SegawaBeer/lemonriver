@@ -1,20 +1,24 @@
 # open-slide — Framework Repo Guide
 
-## LemonRiver private project policy
+## LemonRiver fork policy
 
-This worktree is part of **LemonRiver**, the user's private second-development and daily slide-production environment built on top of open-slide. Before changing branches, merging upstream, moving slide assets, committing, or pushing, read [docs/lemonriver-main-sync.md](docs/lemonriver-main-sync.md).
+This repo is **LemonRiver-dev**, the user's private fork of open-slide. It holds framework code only — the runtime, CLI, tooling, and the official upstream demo slides. Before merging upstream, committing, or pushing, read [docs/lemonriver-main-sync.md](docs/lemonriver-main-sync.md).
 
 Short version:
 
-- `main` / `open-slide-main` is the official upstream baseline.
-- `lemonriver-dev` / `LemonRiver-dev` receives upstream `main` only after explicit user approval.
-- `lemonriver-stable` / `LemonRiver-stable` advances only from `lemonriver-dev`, never directly from `main`.
-- Private slides, customer materials, backups, images, videos, and generated decks must not be pushed to GitHub or mixed into public bugfix branches.
-- Public framework fixes belong on dedicated clean branches such as `fix-image-pptx-export-images`.
+- `main` / `open-slide-main` is the official upstream baseline. `lemonriver-dev` receives it only after explicit user approval.
+- **Private slide content does not live here.** It lives in a separate repo (`../LemonRiver-stable`), which consumes this fork as a packed tarball. Never copy private decks, customer materials, backups, or generated decks into this repo.
+- This fork may be pushed to GitHub **private**. Public framework fixes belong on dedicated clean branches such as `fix-image-pptx-export-images`.
+
+## Worktree execution role
+
+This worktree is the **framework developer environment**.
+
+- Framework investigation, upstream integration, compatibility fixes, and changes under `packages/core`, `packages/cli`, `apps/web`, or root tooling happen here.
+- `apps/demo/slides` tracks upstream demos only. Use them (or a scratch deck) to reproduce defects — don't pull a private deck over from the content repo to debug.
+- Ship a verified framework change to the content repo by packing it, not by copying source. See "Shipping to the content repo" in the sync guide.
 
 You are working on the **open-slide framework** — the runtime, CLI, and tooling that ship to npm.
-
-(Slide-authoring guidance lives in the `slide-authoring` / `create-slide` skills under `apps/demo/.claude/skills/`. Use those only when editing files inside `apps/demo/slides/`.)
 
 ## Layout
 
