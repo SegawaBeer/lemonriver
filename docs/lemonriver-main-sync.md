@@ -12,7 +12,26 @@ content in it, so the elaborate protected-paths rules this file used to carry ar
 gone — the separation is structural now, not procedural.
 
 Split on 2026-08-27. Before that both were worktrees of this one repo, which is
-why older commits here contain private decks.
+why older commits here used to contain private decks. On the same day
+`lemonriver-dev` was rebuilt directly on top of the untouched upstream `main` so
+that no commit in it has ever held private content — see "History" below.
+
+## History
+
+`lemonriver-dev` is `main` plus six commits. It was rebuilt on 2026-08-27 by
+cherry-picking the framework work onto pristine `main` and dropping the three
+commits that existed only to store private decks. The resulting tree was
+verified byte-identical to the previous tip.
+
+`main` itself was deliberately **not** rewritten. Upstream commits carry GitHub
+GPG signatures, and any history-rewriting tool has to drop `gpgsig`, which
+changes every sha and would permanently fork this repo from `origin/main`. So
+the rule is: never run `filter-repo`/`filter-branch` over ranges that include
+upstream commits. Rebuild our own commits on top of `main` instead.
+
+Effect: `.git` went from 923MB to about 5MB, the largest blob in the whole
+history is now a 0.4MB `pnpm-lock.yaml`, and `main` still matches `origin/main`
+exactly so `git merge main` keeps working.
 
 ## Worktrees of the framework repo
 
@@ -21,9 +40,14 @@ why older commits here contain private decks.
 | `LemonRiver-dev` | `lemonriver-dev` | Second development. Upstream lands here after user approval. |
 | `open-slide-main` | `main` | Official upstream baseline, synced from GitHub. |
 | `open-slide-fix-pptx-export` | `fix-image-pptx-export-images` | Clean public bugfix branch, framework code only. |
-| `LemonRiver-stable-legacy` | `lemonriver-stable` | **Frozen archive** of the pre-split state. Kept only until the user is done with it; do not develop here. |
 
 `git worktree list` is the live answer. This table is orientation.
+
+`LemonRiver-stable-legacy` used to be a fourth worktree holding the frozen
+pre-split state. On 2026-08-27 it was demoted to a plain directory: every file
+is still on disk, but it is no longer a git worktree and the `lemonriver-stable`
+branch is gone. Its decks all live in the content repo; what is unique to it is
+the untracked backup archive.
 
 ## Inheritance model
 
@@ -132,8 +156,8 @@ change isn't about an official demo, stop.
 ignores `_backups/`, `_exports/`, `apps/demo/slides/_sources/`, and
 `apps/demo/slides/_plans/`. It applies to every worktree of this repo.
 
-Rationale: a 406MB backup tarball was once committed here and its blob is still
-in `.git`. Keeping backups unstageable is cheaper than rewriting history again.
+Rationale: a 406MB backup tarball was once committed here. Removing it cost a
+history rebuild. Keeping backups unstageable is cheaper than doing that again.
 
 ## Agent behavior checklist
 
