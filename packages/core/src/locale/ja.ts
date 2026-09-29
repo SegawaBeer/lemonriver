@@ -457,6 +457,21 @@ export const ja: Locale = {
     scrollDownToCurrentPage: '下にスクロールして現在のページ {n} へ移動',
   },
 
+  board: {
+    title: 'ストーリーボード',
+    openBoard: 'ストーリーボード (B)',
+    backToDeck: 'スライドに戻る',
+    hint: 'カードをドラッグして並べ替え · ダブルクリックで編集',
+    loading: '読み込み中…',
+    columnFallback: 'パート {n}',
+    moveToEnd: '最後に移動',
+    reorderFailed: '並べ替えに失敗しました',
+    zoomIn: '拡大',
+    zoomOut: '縮小',
+    fitView: '全体を表示',
+    saveFailed: 'ボードの保存に失敗しました',
+  },
+
   pdfToast: {
     title: 'PDF を書き出し中',
     processing: 'ページ {current} / {total} を処理中',

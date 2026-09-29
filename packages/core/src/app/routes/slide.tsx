@@ -322,6 +322,11 @@ export function Slide() {
         setOverviewOpen((v) => !v);
         return;
       }
+      if (import.meta.env.DEV && !overviewOpen && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        navigate(`/s/${encodeURIComponent(slideId)}/board`);
+        return;
+      }
       // Once overview owns focus, swallow everything else here — its
       // capture-phase listener drives the focused thumbnail.
       if (overviewOpen) return;
@@ -348,7 +353,7 @@ export function Slide() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [index, goTo, playMode, slideId, overviewOpen]);
+  }, [index, goTo, playMode, slideId, overviewOpen, navigate]);
 
   if (error) {
     return (
@@ -825,6 +830,11 @@ export function Slide() {
                     actions={thumbnailActions}
                     moduleTransition={slide.transition}
                     onOverview={() => setOverviewOpen(true)}
+                    onBoard={
+                      import.meta.env.DEV
+                        ? () => navigate(`/s/${encodeURIComponent(slideId)}/board`)
+                        : undefined
+                    }
                   />
                   <main
                     ref={slideViewportRef}
@@ -948,6 +958,7 @@ function ResizableRail(props: {
   actions?: ThumbnailActions;
   moduleTransition?: SlideModule['transition'];
   onOverview?: () => void;
+  onBoard?: () => void;
 }) {
   const t = useLocale();
   const [width, setWidth] = useState<number>(readStoredRailWidth);

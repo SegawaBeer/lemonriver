@@ -474,6 +474,22 @@ export type Locale = {
     scrollDownToCurrentPage: string;
   };
 
+  board: {
+    title: string;
+    openBoard: string;
+    backToDeck: string;
+    hint: string;
+    loading: string;
+    /** template: "Part {n}" — columns in decks that declare no chapter pages. */
+    columnFallback: string;
+    moveToEnd: string;
+    reorderFailed: string;
+    zoomIn: string;
+    zoomOut: string;
+    fitView: string;
+    saveFailed: string;
+  };
+
   pdfToast: {
     title: string;
     /** template: "Processing page {current} of {total}" */

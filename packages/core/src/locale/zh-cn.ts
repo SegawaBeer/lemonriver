@@ -447,6 +447,21 @@ export const zhCN: Locale = {
     scrollDownToCurrentPage: '向下滚动至当前第 {n} 页',
   },
 
+  board: {
+    title: '故事看板',
+    openBoard: '故事看板 (B)',
+    backToDeck: '返回幻灯片',
+    hint: '拖动卡片调整顺序 · 双击进入该页编辑',
+    loading: '正在加载…',
+    columnFallback: '第 {n} 部分',
+    moveToEnd: '移到末尾',
+    reorderFailed: '调整顺序失败',
+    zoomIn: '放大',
+    zoomOut: '缩小',
+    fitView: '适应窗口',
+    saveFailed: '看板布局保存失败',
+  },
+
   pdfToast: {
     title: '导出 PDF',
     processing: '正在处理第 {current} / {total} 页',

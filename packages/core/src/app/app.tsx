@@ -1,4 +1,5 @@
 import config from 'virtual:open-slide/config';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
@@ -9,6 +10,11 @@ import { HomeShell } from './routes/home-shell';
 import { Presenter } from './routes/presenter';
 import { Slide } from './routes/slide';
 import { ThemeDetailPage, ThemesGalleryPage } from './routes/themes';
+
+// The board writes through dev-only routes, so it never ships in a built deck.
+const Board = import.meta.env.DEV
+  ? lazy(() => import('./routes/board').then((m) => ({ default: m.Board })))
+  : null;
 
 export function App() {
   return (
@@ -27,6 +33,16 @@ export function App() {
           )}
           <Route path="/s/:slideId" element={<Slide />} />
           <Route path="/s/:slideId/presenter" element={<Presenter />} />
+          {Board && (
+            <Route
+              path="/s/:slideId/board"
+              element={
+                <Suspense fallback={null}>
+                  <Board />
+                </Suspense>
+              }
+            />
+          )}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>

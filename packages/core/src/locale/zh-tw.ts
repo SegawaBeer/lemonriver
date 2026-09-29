@@ -447,6 +447,21 @@ export const zhTW: Locale = {
     scrollDownToCurrentPage: '向下捲動至目前的第 {n} 頁',
   },
 
+  board: {
+    title: '故事看板',
+    openBoard: '故事看板 (B)',
+    backToDeck: '返回投影片',
+    hint: '拖動卡片調整順序 · 雙擊進入該頁編輯',
+    loading: '正在載入…',
+    columnFallback: '第 {n} 部分',
+    moveToEnd: '移到最後',
+    reorderFailed: '調整順序失敗',
+    zoomIn: '放大',
+    zoomOut: '縮小',
+    fitView: '適應視窗',
+    saveFailed: '看板版面儲存失敗',
+  },
+
   pdfToast: {
     title: '匯出 PDF',
     processing: '處理第 {current} / {total} 頁',

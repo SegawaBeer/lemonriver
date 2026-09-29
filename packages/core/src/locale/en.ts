@@ -450,6 +450,21 @@ export const en: Locale = {
     scrollDownToCurrentPage: 'Scroll down to current page {n}',
   },
 
+  board: {
+    title: 'Story board',
+    openBoard: 'Story board (B)',
+    backToDeck: 'Back to deck',
+    hint: 'Drag a card to reorder · Double-click to edit the page',
+    loading: 'Loading deck…',
+    columnFallback: 'Part {n}',
+    moveToEnd: 'Move to end',
+    reorderFailed: 'Could not reorder pages',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    fitView: 'Fit to view',
+    saveFailed: 'Could not save the board layout',
+  },
+
   pdfToast: {
     title: 'Exporting PDF',
     processing: 'Processing page {current} of {total}',
