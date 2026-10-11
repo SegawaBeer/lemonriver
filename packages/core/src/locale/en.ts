@@ -463,6 +463,13 @@ export const en: Locale = {
     zoomOut: 'Zoom out',
     fitView: 'Fit to view',
     saveFailed: 'Could not save the board layout',
+    renameColumn: 'Rename this column',
+    columnTitlePlaceholder: 'Column name',
+    addPage: 'Add a page to this column (copies the last one)',
+    notesPlaceholder: 'Speaker notes…',
+    /** template: "Added a blank page at {n}" */
+    toastInserted: 'Added a blank page at {n}',
+    insertFailed: 'Could not add a page',
   },
 
   pdfToast: {

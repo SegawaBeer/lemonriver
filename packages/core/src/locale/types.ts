@@ -488,6 +488,13 @@ export type Locale = {
     zoomOut: string;
     fitView: string;
     saveFailed: string;
+    renameColumn: string;
+    columnTitlePlaceholder: string;
+    addPage: string;
+    notesPlaceholder: string;
+    /** template: "Added a blank page at {n}" */
+    toastInserted: string;
+    insertFailed: string;
   };
 
   pdfToast: {

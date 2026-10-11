@@ -118,10 +118,25 @@ export function useBoardColumns(
     [save],
   );
 
+  /** Grows one column by `delta`, for a page added straight into that column. */
+  const growColumn = useCallback(
+    (index: number, delta: number) => {
+      setColumns((current) => {
+        if (!current?.[index]) return current;
+        const next = current.map((column, i) =>
+          i === index ? { ...column, size: Math.max(0, column.size + delta) } : column,
+        );
+        void save(next);
+        return next;
+      });
+    },
+    [save],
+  );
+
   const renameColumn = useCallback(
     (index: number, title: string) => {
       setColumns((current) => {
-        if (!current || !current[index]) return current;
+        if (!current?.[index]) return current;
         const next = current.map((column, i) => (i === index ? { ...column, title } : column));
         void save(next);
         return next;
@@ -130,5 +145,5 @@ export function useBoardColumns(
     [save],
   );
 
-  return { columns, moveBetweenColumns, resizeColumnAt, renameColumn };
+  return { columns, moveBetweenColumns, resizeColumnAt, growColumn, renameColumn };
 }

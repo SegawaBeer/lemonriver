@@ -19,7 +19,7 @@ import { Maximize2, Minus, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/lib/use-locale';
-import { pad2 } from '@/lib/utils';
+import { cn, pad2 } from '@/lib/utils';
 import { type BoardColumn, columnsAfterMove } from '../../../files/board-structure';
 import type { DesignSystem } from '../../lib/design';
 import type { Page } from '../../lib/sdk';
@@ -37,22 +37,82 @@ import '@xyflow/react/dist/base.css';
 import './board.css';
 
 type Props = {
+  slideId: string;
   pages: Page[];
   columns: BoardColumn[];
+  notes?: (string | undefined)[];
   design?: DesignSystem;
   onOpenPage: (index: number) => void;
   onMovePage: (from: number, to: number) => void;
+  onRenameColumn: (index: number, title: string) => void;
+  onAddPage: (columnIndex: number) => void;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
   onMoveToEnd: (index: number) => void;
 };
 
+type ColumnLabelData = {
+  title: string;
+  count: number;
+  index: number;
+  onRename: (index: number, title: string) => void;
+  onAddPage: (index: number) => void;
+};
+
 function ColumnLabel({ data }: NodeProps) {
-  const { title, count } = data as unknown as { title: string; count: number };
+  const { title, count, index, onRename, onAddPage } = data as unknown as ColumnLabelData;
+  const t = useLocale();
+  const [editing, setEditing] = useState(false);
+
   return (
-    <div className="flex items-baseline gap-2" style={{ width: CARD_BOX_W }}>
-      <span className="eyebrow truncate">{title}</span>
+    <div
+      className="nodrag pointer-events-auto flex items-baseline gap-2"
+      style={{ width: CARD_BOX_W }}
+    >
+      {editing ? (
+        <input
+          // biome-ignore lint/a11y/noAutofocus: the field only exists once the title is clicked
+          autoFocus
+          defaultValue={title}
+          aria-label={t.board.renameColumn}
+          placeholder={t.board.columnTitlePlaceholder}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') e.currentTarget.blur();
+            if (e.key === 'Escape') {
+              e.currentTarget.value = title;
+              e.currentTarget.blur();
+            }
+          }}
+          onBlur={(e) => {
+            setEditing(false);
+            const next = e.currentTarget.value.trim();
+            if (next && next !== title) onRename(index, next);
+          }}
+          className="eyebrow min-w-0 flex-1 rounded-[4px] bg-muted/60 px-1.5 py-1 text-foreground outline-none ring-1 ring-brand/40"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          aria-label={t.board.renameColumn}
+          className="eyebrow min-w-0 truncate rounded-[4px] px-1.5 py-1 text-left motion-safe:transition-colors hover:bg-muted/60"
+        >
+          {title}
+        </button>
+      )}
       <span className="folio">{pad2(count)}</span>
+      <button
+        type="button"
+        onClick={() => onAddPage(index)}
+        aria-label={t.board.addPage}
+        className={cn(
+          'ml-auto flex size-6 items-center justify-center rounded-[4px] text-muted-foreground/60',
+          'motion-safe:transition-colors hover:bg-muted hover:text-foreground',
+        )}
+      >
+        <Plus className="size-3.5" strokeWidth={1.9} />
+      </button>
     </div>
   );
 }
@@ -83,26 +143,49 @@ type BuildArgs = {
   layout: BoardLayout;
   /** Original page index sitting at each position of this layout. */
   order: number[];
+  slideId: string;
   pages: Page[];
+  notes?: (string | undefined)[];
   design?: DesignSystem;
   actions: Pick<PageNodeData, 'onDuplicate' | 'onDelete' | 'onMoveToEnd'>;
+  columnActions: {
+    onRename: (index: number, title: string) => void;
+    onAddPage: (index: number) => void;
+  };
 };
 
 /**
  * Card ids stay keyed to the page, not to the position, so a reflow moves cards
  * instead of remounting them — a remount would re-render the whole page preview.
  */
-function buildNodes({ layout, order, pages, design, actions }: BuildArgs): Node[] {
+function buildNodes({
+  layout,
+  order,
+  slideId,
+  pages,
+  notes,
+  design,
+  actions,
+  columnActions,
+}: BuildArgs): Node[] {
   const labels: Node[] = layout.columns.map((column, i) => ({
     id: `column-${i}`,
     type: 'columnLabel',
     position: { x: column.x, y: column.y },
     width: CARD_BOX_W,
     height: 24,
-    data: { title: column.title, count: column.to - column.from + 1 },
+    data: {
+      title: column.title,
+      count: column.size,
+      index: i,
+      ...columnActions,
+    },
     draggable: false,
     selectable: false,
     deletable: false,
+    // React Flow switches pointer events off for a node that is neither
+    // selectable nor draggable, which would make the buttons in here dead.
+    style: { pointerEvents: 'all' },
   }));
   const drop: Node = {
     id: 'drop-slot',
@@ -125,7 +208,9 @@ function buildNodes({ layout, order, pages, design, actions }: BuildArgs): Node[
       width: CARD_BOX_W,
       height: CARD_BOX_H,
       data: {
+        slideId,
         page: pages[pageIndex],
+        note: notes?.[pageIndex],
         index: pageIndex,
         total: pages.length,
         design,
@@ -138,11 +223,15 @@ function buildNodes({ layout, order, pages, design, actions }: BuildArgs): Node[
 }
 
 function BoardFlow({
+  slideId,
   pages,
   columns,
+  notes,
   design,
   onOpenPage,
   onMovePage,
+  onRenameColumn,
+  onAddPage,
   onDuplicate,
   onDelete,
   onMoveToEnd,
@@ -157,9 +246,24 @@ function BoardFlow({
     [onDuplicate, onDelete, onMoveToEnd],
   );
 
+  const columnActions = useMemo(
+    () => ({ onRename: onRenameColumn, onAddPage }),
+    [onRenameColumn, onAddPage],
+  );
+
   const baseNodes = useMemo<Node[]>(
-    () => buildNodes({ layout, order: identityOrder(pages.length), pages, design, actions }),
-    [layout, pages, design, actions],
+    () =>
+      buildNodes({
+        layout,
+        order: identityOrder(pages.length),
+        slideId,
+        pages,
+        notes,
+        design,
+        actions,
+        columnActions,
+      }),
+    [layout, slideId, pages, notes, design, actions, columnActions],
   );
 
   const [nodes, setNodes] = useState<Node[]>(baseNodes);
@@ -189,7 +293,16 @@ function BoardFlow({
       // prospective deck rather than by shuffling cards through today's geometry.
       const order = orderAfterMove(pages.length, from, to);
       const previewLayout = layoutBoard(columnsAfterMove(columns, from, to));
-      const preview = buildNodes({ layout: previewLayout, order, pages, design, actions });
+      const preview = buildNodes({
+        layout: previewLayout,
+        order,
+        slideId,
+        pages,
+        notes,
+        design,
+        actions,
+        columnActions,
+      });
       const target = previewLayout.slots[order.indexOf(from)];
 
       setNodes((current) => {
@@ -206,7 +319,7 @@ function BoardFlow({
         });
       });
     },
-    [layout, columns, pages, design, actions],
+    [layout, columns, slideId, pages, notes, design, actions, columnActions],
   );
 
   const handleDragStop = useCallback<OnNodeDrag>(

@@ -460,6 +460,12 @@ export const zhCN: Locale = {
     zoomOut: '缩小',
     fitView: '适应窗口',
     saveFailed: '看板布局保存失败',
+    renameColumn: '重命名这一栏',
+    columnTitlePlaceholder: '栏目名称',
+    addPage: '在这一栏新增一页(复制最后一页)',
+    notesPlaceholder: '讲稿…',
+    toastInserted: '已在第 {n} 页新建空白页',
+    insertFailed: '新建页面失败',
   },
 
   pdfToast: {

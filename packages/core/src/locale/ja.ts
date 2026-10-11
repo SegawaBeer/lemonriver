@@ -470,6 +470,12 @@ export const ja: Locale = {
     zoomOut: '縮小',
     fitView: '全体を表示',
     saveFailed: 'ボードの保存に失敗しました',
+    renameColumn: 'この列の名前を変更',
+    columnTitlePlaceholder: '列の名前',
+    addPage: 'この列にページを追加(最後のページを複製)',
+    notesPlaceholder: '発表者ノート…',
+    toastInserted: 'ページ {n} に白紙ページを追加しました',
+    insertFailed: 'ページを追加できませんでした',
   },
 
   pdfToast: {

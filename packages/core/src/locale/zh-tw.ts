@@ -460,6 +460,12 @@ export const zhTW: Locale = {
     zoomOut: '縮小',
     fitView: '適應視窗',
     saveFailed: '看板版面儲存失敗',
+    renameColumn: '重新命名這一欄',
+    columnTitlePlaceholder: '欄目名稱',
+    addPage: '在這一欄新增一頁(複製最後一頁)',
+    notesPlaceholder: '講稿…',
+    toastInserted: '已於第 {n} 頁新增空白頁',
+    insertFailed: '新增頁面失敗',
   },
 
   pdfToast: {

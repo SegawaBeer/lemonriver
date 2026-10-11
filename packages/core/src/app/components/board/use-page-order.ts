@@ -75,6 +75,28 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
     [pages, slideId, send, t.thumbnailRail],
   );
 
+  const insert = useCallback(
+    async (i: number) => {
+      const before = pages;
+      if (i < 0 || i > before.length) return;
+      // The blank page has no component here yet; the server writes one and the
+      // deck reloads through HMR, so the local list only has to hold its slot.
+      const next = [...before];
+      next.splice(i, 0, before[Math.max(0, i - 1)]);
+      setPages(next);
+      try {
+        await send(`/__slides/${encodeURIComponent(slideId)}/pages/${i}/insert`, {
+          method: 'POST',
+        });
+        toast.success(format(t.board.toastInserted, { n: i + 1 }));
+      } catch (err) {
+        setPages(before);
+        toast.error(`${t.board.insertFailed}: ${String((err as Error).message ?? err)}`);
+      }
+    },
+    [pages, slideId, send, t.board],
+  );
+
   const remove = useCallback(
     async (i: number) => {
       const before = pages;
@@ -100,5 +122,5 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
     [reorder, pages.length],
   );
 
-  return { pages, reorder, duplicate, remove, moveToEnd };
+  return { pages, reorder, duplicate, insert, remove, moveToEnd };
 }

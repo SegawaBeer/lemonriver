@@ -5,9 +5,11 @@ import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../../lib/sdk';
 /** 1/4 of the authoring canvas, so a preview scales by exactly 0.25. */
 export const CARD_W = 480;
 export const CARD_H = (CARD_W * CANVAS_HEIGHT) / CANVAS_WIDTH;
-/** Card box = preview plus the card's own padding and its number row. */
+/** Height of the card's speaker-note strip. */
+export const NOTE_H = 52;
+/** Card box = preview plus the card's padding, number row and note strip. */
 export const CARD_BOX_W = CARD_W + 12;
-export const CARD_BOX_H = CARD_H + 36;
+export const CARD_BOX_H = CARD_H + 36 + NOTE_H;
 /** Gap between columns, and between cards inside a column. */
 const COL_GAP = 88;
 const ROW_GAP = 52;

@@ -5,11 +5,17 @@ import { Button } from '@/components/ui/button';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { format, useLocale } from '@/lib/use-locale';
 import { pad2 } from '@/lib/utils';
+import { columnStarts } from '../../files/board-structure';
 import { useBoardColumns } from '../components/board/use-board-columns';
 import { usePageOrder } from '../components/board/use-page-order';
+import type { Page } from '../lib/sdk';
 import { useSlideModule } from '../lib/use-slide-module';
 
 const BoardCanvas = lazy(() => import('../components/board/board-canvas'));
+
+// A fresh [] on every render would restart the page-order state in a loop while
+// the deck module is still loading.
+const NO_PAGES: Page[] = [];
 
 export function Board() {
   const { slideId = '' } = useParams();
@@ -18,14 +24,14 @@ export function Board() {
   const t = useLocale();
   useDocumentTitle(slide?.meta?.title);
 
-  const modulePages = slide?.default ?? [];
-  const { pages, reorder, duplicate, remove } = usePageOrder(slideId, modulePages);
+  const modulePages = slide?.default ?? NO_PAGES;
+  const { pages, reorder, duplicate, insert, remove } = usePageOrder(slideId, modulePages);
 
   const columnTitle = useCallback(
     (n: number) => format(t.board.columnFallback, { n }),
     [t.board.columnFallback],
   );
-  const { columns, moveBetweenColumns, resizeColumnAt } = useBoardColumns(
+  const { columns, moveBetweenColumns, resizeColumnAt, growColumn, renameColumn } = useBoardColumns(
     slideId,
     pages,
     columnTitle,
@@ -54,6 +60,24 @@ export function Board() {
       void duplicate(index);
     },
     [duplicate, resizeColumnAt],
+  );
+
+  // A new page lands at the end of the column whose + was clicked.
+  const addPage = useCallback(
+    (columnIndex: number) => {
+      if (!columns?.[columnIndex]) return;
+      const starts = columnStarts(columns);
+      const start = starts[columnIndex];
+      const size = columns[columnIndex].size;
+      growColumn(columnIndex, 1);
+      void insert(size > 0 ? start + size : start);
+    },
+    [columns, growColumn, insert],
+  );
+
+  const moveToEnd = useCallback(
+    (index: number) => movePage(index, pages.length - 1),
+    [movePage, pages.length],
   );
 
   const deletePage = useCallback(
@@ -96,14 +120,18 @@ export function Board() {
         ) : (
           <Suspense fallback={null}>
             <BoardCanvas
+              slideId={slideId}
               pages={pages}
+              notes={slide?.notes}
               columns={columns}
               design={slide?.design}
               onOpenPage={openPage}
               onMovePage={movePage}
+              onRenameColumn={renameColumn}
+              onAddPage={addPage}
               onDuplicate={duplicatePage}
               onDelete={deletePage}
-              onMoveToEnd={(index) => movePage(index, pages.length - 1)}
+              onMoveToEnd={moveToEnd}
             />
           </Suspense>
         )}

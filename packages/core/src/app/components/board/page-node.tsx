@@ -1,5 +1,6 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { Copy, MoveRight, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,15 +11,18 @@ import {
 import { format, useLocale } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
 import type { DesignSystem } from '../../lib/design';
+import { useNotes } from '../../lib/inspector/use-notes';
 import { SlidePageProvider } from '../../lib/page-context';
 import { CANVAS_WIDTH, type Page } from '../../lib/sdk';
 import { SlideCanvas } from '../slide-canvas';
-import { CARD_H, CARD_W } from './layout';
+import { CARD_H, CARD_W, NOTE_H } from './layout';
 
 export type PageNodeData = {
+  slideId: string;
   page: Page;
   index: number;
   total: number;
+  note?: string;
   design?: DesignSystem;
   canDelete: boolean;
   onDuplicate: (index: number) => void;
@@ -30,9 +34,11 @@ const hiddenHandle = { opacity: 0, width: 1, height: 1, minWidth: 1, minHeight: 
 
 export function PageNode({ data, selected, dragging }: NodeProps) {
   const {
+    slideId,
     page: PageComp,
     index,
     total,
+    note,
     design,
     canDelete,
     ...actions
@@ -64,6 +70,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
           {pad2(index + 1)}
         </span>
       </div>
+      <NoteStrip slideId={slideId} index={index} initial={note} />
     </div>
   );
 
@@ -116,5 +123,82 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
         isConnectable={false}
       />
     </>
+  );
+}
+
+/**
+ * The deck's own speaker notes, edited on the card. Writes go through the same
+ * debounced route the notes drawer uses, so the board and the editor never hold
+ * two different ideas of a page's script.
+ */
+function NoteStrip({
+  slideId,
+  index,
+  initial,
+}: {
+  slideId: string;
+  index: number;
+  initial?: string;
+}) {
+  const t = useLocale();
+  const [editing, setEditing] = useState(false);
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  const { value, setValue, status, flush } = useNotes(slideId, index, initial);
+
+  useEffect(() => {
+    if (editing) ref.current?.focus();
+  }, [editing]);
+
+  const shared = 'w-full rounded-[4px] px-1.5 py-1 text-left text-[11px] leading-[1.45]';
+
+  return (
+    <div className="nodrag nopan" style={{ height: NOTE_H }}>
+      {editing ? (
+        <textarea
+          ref={ref}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={() => {
+            setEditing(false);
+            void flush();
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Escape') {
+              e.currentTarget.blur();
+            }
+          }}
+          placeholder={t.board.notesPlaceholder}
+          className={cn(
+            shared,
+            'nowheel h-full resize-none bg-muted/50 text-foreground outline-none',
+            'ring-1 ring-brand/40 placeholder:text-muted-foreground/50',
+          )}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className={cn(
+            shared,
+            'h-full overflow-hidden bg-transparent',
+            'motion-safe:transition-[background-color,opacity] hover:bg-muted/60',
+            // An empty strip stays invisible so a board without notes reads clean.
+            value
+              ? 'text-muted-foreground'
+              : 'text-muted-foreground/45 opacity-0 group-hover/card:opacity-100',
+          )}
+        >
+          <span className="line-clamp-3 whitespace-pre-wrap">
+            {value || t.board.notesPlaceholder}
+          </span>
+        </button>
+      )}
+      {status.kind === 'error' && (
+        <span className="sr-only">
+          {format(t.notesDrawer.statusError, { msg: status.message })}
+        </span>
+      )}
+    </div>
   );
 }

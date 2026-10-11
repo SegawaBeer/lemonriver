@@ -4,6 +4,8 @@ import {
   duplicateNotesElementInSource,
   duplicatePageInDefaultExportInSource,
   duplicateSlideDir,
+  insertBlankPageInDefaultExportInSource,
+  insertNotesElementInSource,
   removeNotesElementInSource,
   removePageFromDefaultExportInSource,
   reorderDefaultExportPagesInSource,
@@ -21,6 +23,7 @@ import { type ApiContext, json, readBody } from './context.ts';
 // PUT    /__slides/:id/reorder            reorder pages { order: number[] }
 // DELETE /__slides/:id/pages/:i           remove page
 // POST   /__slides/:id/pages/:i/duplicate duplicate page
+// POST   /__slides/:id/pages/:i/insert    insert a blank page at index i
 // POST   /__slides/:id/duplicate          duplicate slide directory { newId? }
 // PATCH  /__slides/:id                    rename slide (writes meta.title)
 // DELETE /__slides/:id                    delete slide directory + folder assignment
@@ -90,7 +93,8 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
 
         const isDelete = method === 'DELETE' && !op;
         const isDuplicate = method === 'POST' && op === 'duplicate';
-        if (!isDelete && !isDuplicate) return next();
+        const isInsert = method === 'POST' && op === 'insert';
+        if (!isDelete && !isDuplicate && !isInsert) return next();
         const requestCheck = validateMutationRequest(req);
         if (!requestCheck.ok) {
           return json(res, requestCheck.status, { error: requestCheck.error });
@@ -108,22 +112,30 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
 
         const updated = isDelete
           ? removePageFromDefaultExportInSource(source, pageIndex)
-          : duplicatePageInDefaultExportInSource(source, pageIndex);
+          : isInsert
+            ? insertBlankPageInDefaultExportInSource(source, pageIndex)
+            : duplicatePageInDefaultExportInSource(source, pageIndex);
         if (updated === null) {
           return json(res, 422, {
             error: isDelete
               ? 'could not delete page — index out of range or default export is not an array'
-              : 'could not duplicate page — index out of range or default export is not an array',
+              : isInsert
+                ? 'could not insert a page — index out of range or default export is not an array'
+                : 'could not duplicate page — index out of range or default export is not an array',
           });
         }
         const withNotes = isDelete
           ? removeNotesElementInSource(updated, pageIndex)
-          : duplicateNotesElementInSource(updated, pageIndex);
+          : isInsert
+            ? insertNotesElementInSource(updated, pageIndex)
+            : duplicateNotesElementInSource(updated, pageIndex);
         if (withNotes === null) {
           return json(res, 422, {
             error: isDelete
               ? 'could not delete page — `notes` export has an unexpected shape'
-              : 'could not duplicate page — `notes` export has an unexpected shape',
+              : isInsert
+                ? 'could not insert a page — `notes` export has an unexpected shape'
+                : 'could not duplicate page — `notes` export has an unexpected shape',
           });
         }
         if (withNotes !== source) {
