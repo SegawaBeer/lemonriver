@@ -31,7 +31,10 @@ jobs:
           cache: pnpm
 
       - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@11
+        run: |
+          npm install -g npm@11
+          echo "npm $(npm --version) on node $(node --version)"
+          node -e "console.log('OIDC id-token endpoint:', Boolean(process.env.ACTIONS_ID_TOKEN_REQUEST_URL))"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
