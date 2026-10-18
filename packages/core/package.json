@@ -1,6 +1,6 @@
 {
   "name": "@lemonriver/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Runtime and CLI for LemonRiver — write slides in slides/, we handle the rest.",
   "type": "module",
   "exports": {
@@ -21,8 +21,8 @@
     }
   },
   "bin": {
-    "lemonriver": "./bin.js",
-    "open-slide": "./bin.js"
+    "lemonriver": "bin.js",
+    "open-slide": "bin.js"
   },
   "files": [
     "bin.js",

@@ -1,5 +1,11 @@
 # @lemonriver/core
 
+## 0.1.1
+
+### Patch Changes
+
+- Publish the bin paths without a leading `./` so npm stops printing a misleading "script name was invalid and removed" warning on every release. The commands themselves are unchanged.
+
 LemonRiver starts its own version line at 0.1.0. The framework's history before the fork — every release up to open-slide 2.0.1, which this version is based on — is kept in [CHANGELOG.upstream.md](CHANGELOG.upstream.md).
 
 ## 0.1.0
