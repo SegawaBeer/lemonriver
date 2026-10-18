@@ -172,7 +172,6 @@ describe('formatViteMismatch', () => {
     expect(message).toContain('is loading vite@5.4.21');
     expect(message).toContain(path.join('node_modules', 'vite'));
     expect(message).toContain('$ bun remove vite');
-    expect(message).toContain('migrate-to-v2');
   });
 
   it('cds into the workspace root when vite is declared there', () => {

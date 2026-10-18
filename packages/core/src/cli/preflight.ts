@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import { detectPackageManager, type PackageManager } from '../vite/routes/update.ts';
 
-const MIGRATION_URL = 'https://open-slide.dev/docs/migrate-to-v2';
-
 // Plugins core passes to Vite that import from `vite` themselves. Each one
 // resolves `vite` from its own install location, which is not necessarily
 // the copy core resolves.
@@ -135,7 +133,6 @@ export function formatViteMismatch(
   const got = chalk.bold(`vite@${mismatch.consumerVite.version}`);
   const from = chalk.dim(rel(mismatch.consumerVite.dir));
   const command = (cmd: string) => ['', `  ${chalk.dim('$')} ${chalk.cyan(cmd)}`, ''];
-  const footer = `${chalk.dim('Migration guide')}  ${chalk.cyan.underline(MIGRATION_URL)}`;
 
   if (!declaration) {
     return [
@@ -144,7 +141,6 @@ export function formatViteMismatch(
       `LemonRiver ships ${want}, but ${mismatch.consumer} is loading ${got}`,
       `from ${from}. Make sure no package.json lists vite, then reinstall:`,
       ...command(`${packageManager} install`),
-      footer,
     ].join('\n');
   }
 
@@ -157,7 +153,6 @@ export function formatViteMismatch(
     `It shadows the ${want} bundled with LemonRiver: ${mismatch.consumer}`,
     `is loading ${got} from ${from} instead.`,
     ...command(cd + removeCommand(packageManager)),
-    footer,
   ].join('\n');
 }
 
