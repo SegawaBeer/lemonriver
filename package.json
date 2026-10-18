@@ -16,6 +16,8 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "check:branding": "node scripts/check-branding.mjs",
+    "upstream:check": "node scripts/upstream.mjs check",
+    "upstream:merge": "node scripts/upstream.mjs merge",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "pnpm --filter @lemonriver/core test:e2e",
