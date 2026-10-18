@@ -48,5 +48,3 @@ jobs:
           commit-message: "chore: release packages"
           pr-title: "chore: release packages"
           push-with-git-cli: true
-        env:
-          NPM_CONFIG_PROVENANCE: true
