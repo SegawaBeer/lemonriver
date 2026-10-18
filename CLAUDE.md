@@ -17,11 +17,11 @@ This is LemonRiver's framework layer: the runtime, CLI, and tooling forked from 
 Pull upstream updates:
 
 ```bash
-git fetch upstream && git merge upstream/main
-pnpm check:branding
+pnpm upstream:check
+pnpm upstream:merge
 ```
 
-`check:branding` fails on any `@open-slide` reference outside the compatibility allowlist. After a merge it usually reports a file upstream just added that imports the old specifier — rename it there.
+See "Following upstream" below. `check:branding` fails on any `@open-slide` reference outside the compatibility allowlist — a merge usually surfaces a file upstream just added that imports the old specifier, and that is where to rename it.
 
 ## The compatibility layer — do not remove
 
@@ -32,8 +32,26 @@ Workspaces scaffolded before the rename have to keep working with zero edits, so
 - the version probe, the dev child-process entry, and the two places that write an import into a user's slide file accept either specifier
 - the self-updater re-adds whichever specifier the workspace declares, so a dependency alias (`"@open-slide/core": "npm:@lemonriver/core@…"`) survives an update instead of being replaced by the upstream package
 - `OpenSlideConfig` and `OpenSlideBuildConfig` stay exported as deprecated aliases
+- `apps/demo` keeps upstream's names throughout and reaches our package through a
+  dependency alias. Leave its files alone: that is what lets upstream's demo
+  changes merge cleanly, and it exercises the compatibility layer on every build.
+  The lab decks beside it do the same.
 
 Virtual module ids (`virtual:open-slide/*`), HMR event names, storage keys, and the `node_modules/.open-slide/` data directory are internal protocol. Leaving those alone is deliberate: renaming them would drop users' saved state and buy nothing.
+
+## Following upstream
+
+Two commands, and nothing else:
+
+```bash
+pnpm upstream:check   # what landed upstream, and which files a merge will fight over
+pnpm upstream:merge   # fetch, merge, install, then re-run the branding check
+```
+
+`merge` stops rather than guessing when files conflict. The files it predicts are
+computed — both sides edited them since they diverged — so the list stays correct
+as the fork grows. Conflicts are where our work and upstream's overlap; the rest
+of the tree follows upstream untouched.
 
 ## Layout
 

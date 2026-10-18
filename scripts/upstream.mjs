@@ -85,8 +85,9 @@ function report() {
     for (const [area, count] of byArea(fights).slice(0, 12)) {
       console.log(`  ${String(count).padStart(3)}  ${area}`);
     }
-    console.log('\n  Most of these are the same one-line rename we applied; git resolves');
-    console.log('  them on its own when upstream did not touch that line.');
+    console.log("\n  These are where our work and upstream's overlap: the compatibility");
+    console.log('  layer, the docs site, and the repo guide. Most resolve by keeping');
+    console.log("  both sides — upstream's change plus our code around it.");
   } else {
     console.log('Neither side touched the same file, so the merge should land clean.');
   }
