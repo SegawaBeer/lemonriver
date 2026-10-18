@@ -1,5 +1,5 @@
-import type { DesignSystem } from '@lemonriver/core';
-import { type Page, useSlidePageNumber } from '@lemonriver/core';
+import type { DesignSystem } from '@open-slide/core';
+import { type Page, useSlidePageNumber } from '@open-slide/core';
 
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');

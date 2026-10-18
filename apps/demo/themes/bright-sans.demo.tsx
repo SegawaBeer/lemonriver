@@ -1,4 +1,4 @@
-import { type Page, useSlidePageNumber } from '@lemonriver/core';
+import { type Page, useSlidePageNumber } from '@open-slide/core';
 import type { ReactNode } from 'react';
 
 const styles = `

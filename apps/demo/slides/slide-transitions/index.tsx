@@ -1,4 +1,4 @@
-import type { DesignSystem, Page, SlideMeta, SlideTransition } from '@lemonriver/core';
+import type { DesignSystem, Page, SlideMeta, SlideTransition } from '@open-slide/core';
 import type { CSSProperties } from 'react';
 
 export const design: DesignSystem = {

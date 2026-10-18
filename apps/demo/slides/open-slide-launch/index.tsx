@@ -1,4 +1,4 @@
-import type { DesignSystem, Page, SlideMeta } from '@lemonriver/core';
+import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
 import type { CSSProperties } from 'react';
 import openSlide from './assets/open-slide.png';
 
@@ -1025,7 +1025,7 @@ const Cli: Page = () => (
         $
       </span>
       <Letters
-        text="npx @lemonriver/cli init"
+        text="npx @open-slide/cli init"
         delay={780}
         step={42}
         duration={620}

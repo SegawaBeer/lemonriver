@@ -5,7 +5,12 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const SKIP_FILES = new Set(['AGENTS.md', 'pnpm-lock.yaml', 'scripts/check-branding.mjs']);
+const SKIP_FILES = new Set([
+  'AGENTS.md',
+  'pnpm-lock.yaml',
+  'scripts/check-branding.mjs',
+  'scripts/upstream.mjs',
+]);
 const SKIP_SUFFIXES = ['/CHANGELOG.md', '/CHANGELOG.upstream.md'];
 const SKIP_PREFIXES = ['apps/web/'];
 
@@ -31,7 +36,10 @@ const ALLOWED = [
   'packages/core/src/app/components/player.tsx',
 ];
 
-const ALLOWED_PREFIXES = ['apps/demo/slides/'];
+// The demo is upstream's, kept byte-for-byte apart from one dependency line
+// that points `@open-slide/core` at our package. It is what keeps upstream's
+// demo changes mergeable, and it exercises the compatibility layer daily.
+const ALLOWED_PREFIXES = ['apps/demo/'];
 
 // Internal protocol and module names. Renaming these would drop users' saved
 // state or churn files upstream edits constantly, for nothing users can see.

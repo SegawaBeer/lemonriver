@@ -26,8 +26,8 @@ importers:
 
   apps/demo:
     dependencies:
-      '@lemonriver/core':
-        specifier: workspace:*
+      '@open-slide/core':
+        specifier: workspace:@lemonriver/core@*
         version: link:../../packages/core
       react:
         specifier: ^19.2.8

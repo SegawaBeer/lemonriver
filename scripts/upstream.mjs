@@ -14,7 +14,10 @@ const BRANCH = 'main';
 
 function run(args, { allowFail = false } = {}) {
   try {
-    return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    return execFileSync('git', args, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
   } catch (err) {
     if (allowFail) return null;
     throw err;
@@ -119,7 +122,9 @@ function merge() {
   const merged = run(['merge', UPSTREAM], { allowFail: true });
   if (merged === null) {
     const conflicted = lines(run(['diff', '--name-only', '--diff-filter=U']));
-    console.log('\nThe merge stopped on conflicts. Nothing was lost — the merge is still in progress.\n');
+    console.log(
+      '\nThe merge stopped on conflicts. Nothing was lost — the merge is still in progress.\n',
+    );
     for (const f of conflicted) console.log(`  ${f}`);
     console.log('\nResolve those, then:');
     console.log('  git add <files> && git commit --no-edit');

@@ -1,4 +1,4 @@
-import { type DesignSystem, type Page, type SlideMeta, useSlidePageNumber } from '@lemonriver/core';
+import { type DesignSystem, type Page, type SlideMeta, useSlidePageNumber } from '@open-slide/core';
 import type { ReactNode } from 'react';
 
 export const design: DesignSystem = {
@@ -412,7 +412,7 @@ const FileContract: Page = () => {
         <>
           <Token c={violet}>import type</Token> {'{'} <Token c={warm}>DesignSystem</Token>,{' '}
           <Token c={warm}>Page</Token>, <Token c={warm}>SlideMeta</Token> {'}'}{' '}
-          <Token c={violet}>from</Token> <Token c={mint}>'@lemonriver/core'</Token>
+          <Token c={violet}>from</Token> <Token c={mint}>'@open-slide/core'</Token>
           {';'}
         </>
       ),
@@ -1608,7 +1608,7 @@ const Cli: Page = () => {
     { cmd: 'open-slide build', desc: 'viteBuild() → static SPA in dist/', tint: mint },
     { cmd: 'open-slide preview', desc: 'serve dist/ for local check', tint: warm },
     {
-      cmd: 'npx @lemonriver/cli init',
+      cmd: 'npx @open-slide/cli init',
       desc: 'scaffold a new project from packages/cli/template/',
       tint: violet,
     },

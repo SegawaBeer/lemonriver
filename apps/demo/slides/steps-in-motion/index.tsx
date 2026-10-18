@@ -6,7 +6,7 @@ import {
   Step,
   Steps,
   useSlidePageNumber,
-} from '@lemonriver/core';
+} from '@open-slide/core';
 import type { CSSProperties, ReactNode } from 'react';
 
 export const design: DesignSystem = {

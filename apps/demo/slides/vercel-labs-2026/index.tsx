@@ -1,4 +1,4 @@
-import type { DesignSystem, Page, SlideMeta } from '@lemonriver/core';
+import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
 
 export const meta: SlideMeta = {
   title: 'Vercel Labs · 2026',

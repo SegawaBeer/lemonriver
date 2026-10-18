@@ -11,7 +11,7 @@
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": ["@lemonriver/core/env"]
+    "types": ["@open-slide/core/env"]
   },
-  "include": ["slides/**/*", "lemonriver.config.ts"]
+  "include": ["slides/**/*", "open-slide.config.ts"]
 }

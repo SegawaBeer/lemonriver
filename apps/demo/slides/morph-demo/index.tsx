@@ -4,7 +4,7 @@ import {
   type Page,
   type SlideMeta,
   type SlideTransition,
-} from '@lemonriver/core';
+} from '@open-slide/core';
 import type { CSSProperties, ReactNode } from 'react';
 
 export const design: DesignSystem = {

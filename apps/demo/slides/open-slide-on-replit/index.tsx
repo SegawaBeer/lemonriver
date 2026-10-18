@@ -1,4 +1,4 @@
-import type { DesignSystem, Page, SlideMeta, SlideTransition } from '@lemonriver/core';
+import type { DesignSystem, Page, SlideMeta, SlideTransition } from '@open-slide/core';
 import createSlideSkill from './assets/create-slide-skill.webp';
 import initCommand from './assets/init-command.webp';
 import openslideHome from './assets/openslide-home.webp';
@@ -673,7 +673,7 @@ const SetUp: Page = () => (
                 padding: '8px 14px',
               }}
             >
-              <span style={{ color: p.accent }}>$</span> npx @lemonriver/cli init
+              <span style={{ color: p.accent }}>$</span> npx @open-slide/cli init
             </code>
           </Step>
           <Step n="02" title="Open &amp; explore">
@@ -1004,7 +1004,7 @@ const Closing: Page = () => (
           }}
         >
           Spin up a Repl, run{' '}
-          <code style={{ fontFamily: font.mono }}>npx @lemonriver/cli init</code>, and let the Agent
+          <code style={{ fontFamily: font.mono }}>npx @open-slide/cli init</code>, and let the Agent
           design your slides.
         </p>
       </div>

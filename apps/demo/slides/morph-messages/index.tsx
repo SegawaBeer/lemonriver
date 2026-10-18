@@ -5,7 +5,7 @@ import {
   type SlideMeta,
   type SlideTransition,
   useIsActivePage,
-} from '@lemonriver/core';
+} from '@open-slide/core';
 import { type CSSProperties, type ReactNode, useState } from 'react';
 
 export const design: DesignSystem = {
@@ -555,7 +555,7 @@ const Spin: Page = () => {
             : 'none',
         }}
       >
-        npx @lemonriver/cli init
+        npx @open-slide/cli init
       </div>
     </section>
   );

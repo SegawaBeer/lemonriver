@@ -1,4 +1,4 @@
-import type { DesignSystem, Page, SlideMeta, SlideTransition } from '@lemonriver/core';
+import type { DesignSystem, Page, SlideMeta, SlideTransition } from '@open-slide/core';
 import type { CSSProperties } from 'react';
 
 export const design: DesignSystem = {
@@ -421,7 +421,7 @@ const Cli: Page = () => (
         }}
       >
         <span style={{ color: muted }}>$ </span>
-        npx <span style={{ color: 'var(--osd-accent)' }}>@lemonriver/cli</span> init
+        npx <span style={{ color: 'var(--osd-accent)' }}>@open-slide/cli</span> init
       </div>
       <p
         style={{
