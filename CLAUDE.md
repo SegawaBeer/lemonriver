@@ -53,6 +53,22 @@ computed — both sides edited them since they diverged — so the list stays co
 as the fork grows. Conflicts are where our work and upstream's overlap; the rest
 of the tree follows upstream untouched.
 
+## Content lives elsewhere
+
+This repo is the framework, and it is public-facing. Real deck content — customer
+work, internal decks, anything not written as a public example — lives in
+`LemonRiver-stable`, a separate repo with no remote that is never published.
+
+Two rules follow from that:
+
+- **Nothing from there comes here.** Don't lift a deck, an asset, or a theme out
+  of it as an example. The demo decks under `apps/demo` are upstream's, and they
+  are the only ones that belong here.
+- **Don't write into it unless the user says so.** Experiments belong in this
+  repo, or in a draft deck under `apps/demo`. Exactly two things unlock a write:
+  the user authorises that one change, or the user says to sync finished work
+  across. Reading it and running its dev server is always fine.
+
 ## Layout
 
 pnpm + Turbo monorepo.
