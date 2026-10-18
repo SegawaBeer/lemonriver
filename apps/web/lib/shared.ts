@@ -1,11 +1,11 @@
-export const appName = 'open-slide';
-export const siteUrl = 'https://open-slide.dev';
+export const appName = 'LemonRiver';
+export const siteUrl = 'https://lemonriver.dev';
 export const docsRoute = '/docs';
 export const docsImageRoute = '/og/docs';
 export const docsContentRoute = '/llms.mdx/docs';
 
 export const gitConfig = {
-  owner: 'open-slide',
-  repo: 'open-slide',
+  owner: 'SegawaBeer',
+  repo: 'lemonriver',
   branch: 'main',
 };

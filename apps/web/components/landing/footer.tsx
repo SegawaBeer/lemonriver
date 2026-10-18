@@ -1,6 +1,8 @@
 import Image from 'next/image';
+import { gitConfig } from '@/lib/shared';
 import { Container } from './frame';
-import { VercelOssBadge } from './vercel-oss-badge';
+
+const repoUrl = `https://github.com/${gitConfig.owner}/${gitConfig.repo}`;
 
 export function Footer() {
   return (
@@ -9,18 +11,18 @@ export function Footer() {
         <div className="col-span-12 flex flex-col gap-4 lg:col-span-6">
           <div className="flex items-center gap-2.5 text-[14px] font-medium">
             <Image
-              src="/open-slide.png"
+              src="/lemonriver.png"
               alt=""
               aria-hidden
               width={24}
               height={24}
               className="h-6 w-6 rounded-[4px]"
             />
-            <span className="tracking-[-0.01em]">open-slide</span>
+            <span className="tracking-[-0.01em]">LemonRiver</span>
           </div>
-          <p className="max-w-[38ch] text-[14px] leading-[1.6] text-[color:var(--color-muted)]">
-            A React-first slide framework authored by AI agents. Free and open source under the MIT
-            license.
+          <p className="max-w-[44ch] text-[14px] leading-[1.6] text-[color:var(--color-muted)]">
+            A React-first slide framework authored by AI agents, built on open-slide. Free and open
+            source under the MIT license.
           </p>
         </div>
 
@@ -34,38 +36,18 @@ export function Footer() {
           ]}
         />
         <FooterCol
-          title="Packages"
-          links={[
-            ['@open-slide/core', 'https://www.npmjs.com/package/@open-slide/core'],
-            ['@open-slide/cli', 'https://www.npmjs.com/package/@open-slide/cli'],
-          ]}
-        />
-        <FooterCol
           title="Elsewhere"
           links={[
-            ['GitHub', 'https://github.com/open-slide/open-slide'],
-            ['npm', 'https://www.npmjs.com/package/@open-slide/core'],
-            ['Issues', 'https://github.com/open-slide/open-slide/issues'],
-            ['Buy me a coffee', 'https://buymeacoffee.com/1weiho'],
+            ['GitHub', repoUrl],
+            ['Issues', `${repoUrl}/issues`],
+            ['open-slide (upstream)', 'https://github.com/open-slide/open-slide'],
           ]}
         />
       </Container>
 
       <div className="border-t border-[color:var(--color-rule-soft)]">
         <Container className="flex flex-col items-start justify-between gap-3 py-5 text-[13px] text-[color:var(--color-muted)] sm:flex-row sm:items-center sm:gap-0">
-          <VercelOssBadge />
-          <span>
-            Crafted with 🤍 by{' '}
-            <a
-              href="https://1wei.dev/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[color:var(--color-text)] transition-colors hover:text-[color:var(--color-muted)]"
-            >
-              Yiwei
-            </a>
-            .
-          </span>
+          <span>MIT licensed. Built on open-slide.</span>
         </Container>
       </div>
     </footer>

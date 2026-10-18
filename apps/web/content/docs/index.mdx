@@ -3,10 +3,10 @@ title: Introduction
 description: A slide framework built for agents.
 ---
 
-![open-slide editor showing a deck with the inspector and assets panel docked alongside the canvas](/assets/screenshots/open-slide-cover.webp)
+![LemonRiver editor showing a deck with the inspector and assets panel docked alongside the canvas](/assets/screenshots/lemonriver-cover.webp)
 
-**open-slide** is a slide framework for the agent era. You describe a deck in
-natural language; your coding agent writes the React. open-slide handles the
+**LemonRiver** is a slide framework for the agent era. You describe a deck in
+natural language; your coding agent writes the React. LemonRiver handles the
 canvas, scaling, navigation, hot reload, present mode, and export so the agent
 can focus on content.
 
@@ -14,10 +14,32 @@ Every page renders into a fixed **1920 × 1080** canvas. Slides are arbitrary
 React components — not a constrained DSL.
 
 ```npm
-npx @open-slide/cli init
+npx @lemonriver/cli init
 ```
 
-## Why open-slide
+## Built on open-slide
+
+LemonRiver is a second development of [open-slide](https://github.com/open-slide/open-slide),
+the React-first slide framework. It follows upstream releases and carries its own work on top.
+
+What differs from upstream:
+
+- **Renamed throughout.** The packages publish as `@lemonriver/core` and
+  `@lemonriver/cli`, the CLI runs as `lemonriver`, and the config file is
+  `lemonriver.config.ts`.
+- **A story board for a deck.** A deck laid out as chapter columns on a pannable
+  canvas — drag a card to reorder, open a page in the editor, write speaker notes
+  on a card, or drop a blank page into a column.
+- **Workspaces written before the rename keep working.** No edits needed: the old
+  package name, the old `open-slide` command, and `open-slide.config.ts` all still
+  resolve.
+- **Its own version line.** LemonRiver starts at 0.1.0, built on open-slide 2.0.1.
+  The framework history before the fork is kept alongside the new changelog.
+
+Everything else — the canvas, the inspector, present mode, export, and the CLI
+subcommands — is upstream's, and tracks it.
+
+## Why LemonRiver
 
 - **Agent-native authoring.** Ships with skills that any Claude Code, Codex,
   or Cursor session can call.
@@ -36,12 +58,12 @@ Each deck lives under `slides/<kebab-case-id>/`. The entry is
 `slides/<id>/index.tsx`. Assets sit alongside in `slides/<id>/assets/`.
 
 ```tsx title="slides/getting-started/index.tsx"
-import type { Page, SlideMeta } from '@open-slide/core';
+import type { Page, SlideMeta } from '@lemonriver/core';
 
 const Cover: Page = () => (
   <div style={{ width: '100%', height: '100%', background: '#08090a', color: '#f7f8f8' }}>
     <h1 style={{ fontSize: 188, letterSpacing: '-0.04em' }}>
-      Hello, <em style={{ color: '#7170ff' }}>open-slide</em>.
+      Hello, <em style={{ color: '#7170ff' }}>LemonRiver</em>.
     </h1>
   </div>
 );

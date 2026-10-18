@@ -1,13 +1,12 @@
 import { FAQ, faqs } from '@/components/landing/faq';
 import { Features } from '@/components/landing/features';
 import { Footer } from '@/components/landing/footer';
+import { Fork } from '@/components/landing/fork';
 import { GetStarted } from '@/components/landing/get-started';
 import { Hero } from '@/components/landing/hero';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { Nav } from '@/components/landing/nav';
 import { ScrollReveal } from '@/components/landing/scroll-reveal';
-import { Support } from '@/components/landing/support';
-import { UsedBy } from '@/components/landing/used-by';
 import { fetchGitHubStars, formatStarCount } from '@/lib/github';
 import { appName, gitConfig, siteUrl } from '@/lib/shared';
 
@@ -28,11 +27,11 @@ const jsonLd = [
     '@type': 'Organization',
     name: appName,
     url: siteUrl,
-    logo: `${siteUrl}/open-slide.png`,
+    logo: `${siteUrl}/lemonriver.png`,
     sameAs: [
       repoUrl,
-      'https://www.npmjs.com/package/@open-slide/core',
-      'https://www.npmjs.com/package/@open-slide/cli',
+      'https://www.npmjs.com/package/@lemonriver/core',
+      'https://www.npmjs.com/package/@lemonriver/cli',
     ],
   },
   {
@@ -64,9 +63,9 @@ const jsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
-    name: 'Author a slide deck with open-slide',
+    name: 'Author a slide deck with LemonRiver',
     description:
-      'Scaffold an open-slide workspace, ask an AI agent to draft slides, then iterate visually in the browser.',
+      'Scaffold an LemonRiver workspace, ask an AI agent to draft slides, then iterate visually in the browser.',
     totalTime: 'PT2M',
     supply: [
       { '@type': 'HowToSupply', name: 'Node.js 18+' },
@@ -77,7 +76,7 @@ const jsonLd = [
         '@type': 'HowToStep',
         position: 1,
         name: 'Spin up a workspace',
-        text: 'Run npx @open-slide/cli init my-deck to scaffold the slide workspace. Every future deck lives inside it.',
+        text: 'Run npx @lemonriver/cli init my-deck to scaffold the slide workspace. Every future deck lives inside it.',
       },
       {
         '@type': 'HowToStep',
@@ -121,9 +120,8 @@ export default async function HomePage() {
         <Hero />
         <HowItWorks />
         <Features />
-        <UsedBy />
+        <Fork />
         <FAQ />
-        <Support />
         <GetStarted />
       </main>
       <Footer />

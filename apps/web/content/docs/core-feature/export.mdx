@@ -3,7 +3,7 @@ title: Export
 description: One command to a self-contained static HTML site or PDF.
 ---
 
-`open-slide build` produces a plain static site under `dist/` — everything
+`lemonriver build` produces a plain static site under `dist/` — everything
 renders on the client, so no server is needed.
 
 ## Static HTML
@@ -36,12 +36,12 @@ The build pipeline only includes:
 - The runtime — viewer, scaler, present mode (configurable; see below).
 
 You can trim the surface area for a public share by toggling fields in
-[`open-slide.config.ts`](/docs/reference/config):
+[`lemonriver.config.ts`](/docs/reference/config):
 
 ```ts
-import type { OpenSlideConfig } from '@open-slide/core';
+import type { LemonRiverConfig } from '@lemonriver/core';
 
-const config: OpenSlideConfig = {
+const config: LemonRiverConfig = {
   build: {
     showSlideBrowser: false,    // hide the deck index
     showSlideUi: false,         // hide on-canvas UI (toolbar etc.)

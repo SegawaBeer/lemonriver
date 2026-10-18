@@ -768,7 +768,7 @@ const Footer = () => {
         animationDelay: '0.3s',
       }}
     >
-      <span>open-slide · getting started</span>
+      <span>LemonRiver · getting started</span>
       <span>
         {pad2(current)} / {pad2(total)}
       </span>
@@ -3819,7 +3819,7 @@ const Cover: Page = () => {
           Press <Icon name="arrow-right" size={13} stroke={2.2} /> to begin
         </Pill>
         <Pill>
-          <span style={{ color: ink.accent }}>$</span>npx @open-slide/cli init
+          <span style={{ color: ink.accent }}>$</span>npx @lemonriver/cli init
         </Pill>
       </div>
       <Footer />
@@ -3899,7 +3899,7 @@ const FilePage: Page = () => (
           <Line delay={0.5}>
             <K>import type</K> <P>{'{ '}</P>
             <Tag>Page</Tag>
-            <P>{' }'}</P> <K>from</K> <Str>'@open-slide/core'</Str>
+            <P>{' }'}</P> <K>from</K> <Str>'@lemonriver/core'</Str>
             <P>;</P>
           </Line>
           <Line delay={0.55} />
@@ -4007,7 +4007,7 @@ const InitPage: Page = () => (
         <Line delay={0} className="gs">
           <Prompt />
           <Typed
-            text="npx @open-slide/cli init my-deck"
+            text="npx @lemonriver/cli init my-deck"
             delay={0.6}
             color={ink.text}
             caret={false}
@@ -4016,7 +4016,7 @@ const InitPage: Page = () => (
         <Line delay={2.3} />
         <Line delay={2.4}>
           <Ok />
-          <span style={{ color: ink.text }}>Created open-slide workspace</span>{' '}
+          <span style={{ color: ink.text }}>Created LemonRiver workspace</span>{' '}
           <Dim>in ~/code/my-deck</Dim>
         </Line>
         <Line delay={2.9}>
@@ -5268,7 +5268,7 @@ const TreeRow = ({
 
 const AgentsPage: Page = () => (
   <Frame
-    eyebrow="Why open-slide"
+    eyebrow="Why LemonRiver"
     title="Bring your own agent."
     lead="Every workspace ships with agent rules and skills. Slides are plain .tsx, so no SDK, no lock-in."
   >
@@ -5298,7 +5298,7 @@ const AgentsPage: Page = () => (
 
 const GitPage: Page = () => (
   <Frame
-    eyebrow="Why open-slide"
+    eyebrow="Why LemonRiver"
     title="Yours. Forever."
     lead="Every slide is a file in your repo. Diff it, review it, branch it. No proprietary database, no export-and-pray."
   >
@@ -5431,7 +5431,7 @@ const RecapPage: Page = () => {
       >
         <Steps>
           <Step>
-            <RecapStep n="01" title="Init" caption="npx @open-slide/cli init" delay={0.25} />
+            <RecapStep n="01" title="Init" caption="npx @lemonriver/cli init" delay={0.25} />
           </Step>
           <Step>
             <RecapStep n="02" title="Prompt" caption="/create-slide" delay={0.32} />

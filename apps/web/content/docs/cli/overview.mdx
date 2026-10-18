@@ -3,11 +3,11 @@ title: Overview
 description: Two CLIs — one to scaffold, one to run.
 ---
 
-open-slide ships two CLIs:
+LemonRiver ships two CLIs:
 
-- **`@open-slide/cli`** — the scaffolder. One command (`init`) to bootstrap
+- **`@lemonriver/cli`** — the scaffolder. One command (`init`) to bootstrap
   a new workspace.
-- **`@open-slide/core`** — the runtime CLI. `dev`, `build`, `preview`, and
+- **`@lemonriver/core`** — the runtime CLI. `dev`, `build`, `preview`, and
   `sync:skills` for an existing workspace.
 
 After `init`, `package.json` exposes the runtime CLI under standard scripts:
@@ -15,10 +15,10 @@ After `init`, `package.json` exposes the runtime CLI under standard scripts:
 ```json
 {
   "scripts": {
-    "dev": "open-slide dev",
-    "build": "open-slide build",
-    "preview": "open-slide preview",
-    "sync:skills": "open-slide sync:skills"
+    "dev": "LemonRiver dev",
+    "build": "LemonRiver build",
+    "preview": "LemonRiver preview",
+    "sync:skills": "LemonRiver sync:skills"
   }
 }
 ```

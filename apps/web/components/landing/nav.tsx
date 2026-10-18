@@ -3,8 +3,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import posthog from 'posthog-js';
+import { gitConfig } from '@/lib/shared';
 import { ButtonLink } from './button';
 import { ThemeToggle } from './theme-toggle';
+
+const repoUrl = `https://github.com/${gitConfig.owner}/${gitConfig.repo}`;
 
 const linkClass =
   'rounded-full px-3 py-1.5 text-[13.5px] font-medium text-[color:var(--color-text-soft)] transition-colors hover:bg-[color:var(--color-panel-hi)] hover:text-[color:var(--color-text)]';
@@ -18,14 +21,14 @@ export function Nav({ githubStars }: { githubStars?: string | null }) {
           className="flex items-center gap-2.5 text-[14px] font-medium tracking-[-0.01em]"
         >
           <Image
-            src="/open-slide.png"
-            alt="open-slide logo"
+            src="/lemonriver.png"
+            alt="LemonRiver logo"
             width={24}
             height={24}
             priority
             className="block h-6 w-6 rounded-[4px]"
           />
-          <span className="text-[color:var(--color-text)]">open-slide</span>
+          <span className="text-[color:var(--color-text)]">LemonRiver</span>
         </Link>
 
         <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-0.5 md:flex">
@@ -33,16 +36,7 @@ export function Nav({ githubStars }: { githubStars?: string | null }) {
             Docs
           </Link>
           <a
-            href="https://demo.open-slide.dev/"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => posthog.capture('nav_external_link_clicked', { label: 'demo' })}
-            className={linkClass}
-          >
-            Demo
-          </a>
-          <a
-            href="https://github.com/open-slide/open-slide"
+            href={repoUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => posthog.capture('nav_external_link_clicked', { label: 'github' })}

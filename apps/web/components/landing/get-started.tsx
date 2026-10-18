@@ -24,7 +24,7 @@ export function GetStarted() {
             <ButtonLink href="/docs" size="lg">
               Read the docs
             </ButtonLink>
-            <CopyCommand command="npx @open-slide/cli init" location="footer-cta" size="lg" />
+            <CopyCommand command="npx @lemonriver/cli init" location="footer-cta" size="lg" />
           </div>
         </div>
       </Container>

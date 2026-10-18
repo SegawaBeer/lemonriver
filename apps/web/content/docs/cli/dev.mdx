@@ -1,10 +1,10 @@
 ---
-title: open-slide dev
+title: LemonRiver dev
 description: Run the dev server with hot reload, inspector, and assets panel.
 ---
 
 ```npm
-open-slide dev
+LemonRiver dev
 # or, via the generated script
 npm run dev
 ```
@@ -37,12 +37,12 @@ isn't a TTY.
 
 ## Configuration
 
-Override the port (and a few other knobs) in `open-slide.config.ts`:
+Override the port (and a few other knobs) in `lemonriver.config.ts`:
 
-```ts title="open-slide.config.ts"
-import type { OpenSlideConfig } from '@open-slide/core';
+```ts title="lemonriver.config.ts"
+import type { LemonRiverConfig } from '@lemonriver/core';
 
-const config: OpenSlideConfig = {
+const config: LemonRiverConfig = {
   port: 5174,
   slidesDir: 'slides',
 };

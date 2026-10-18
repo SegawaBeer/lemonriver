@@ -1,19 +1,19 @@
 ---
-title: open-slide sync:skills
+title: LemonRiver sync:skills
 description: Refresh the bundled agent skills inside an existing workspace.
 ---
 
 ```npm
-open-slide sync:skills
+LemonRiver sync:skills
 # or
 npm run sync:skills
 ```
 
-Copies the latest skill definitions from your installed `@open-slide/core`
+Copies the latest skill definitions from your installed `@lemonriver/core`
 into the workspace under `.agents/skills/`, and refreshes the
 `.claude/skills/` symlinks so Claude Code picks them up too.
 
-Run this after upgrading `@open-slide/core` — that's how you pull in skill
+Run this after upgrading `@lemonriver/core` — that's how you pull in skill
 fixes and new skills without re-scaffolding.
 
 ## Flags
@@ -27,7 +27,7 @@ fixes and new skills without re-scaffolding.
 ```text
 .agents/
 └── skills/
-    └── <name>/        # canonical copy from @open-slide/core
+    └── <name>/        # canonical copy from @lemonriver/core
 .claude/
 └── skills/
     └── <name>         # symlink to ../../.agents/skills/<name>
@@ -40,5 +40,5 @@ copy.
 
 ## Drift detection on `dev`
 
-`open-slide dev` runs the same drift check at startup and offers to sync
-interactively — see [open-slide dev](/docs/cli/dev) for how to skip it.
+`lemonriver dev` runs the same drift check at startup and offers to sync
+interactively — see [LemonRiver dev](/docs/cli/dev) for how to skip it.

@@ -1,15 +1,15 @@
 ---
-title: open-slide.config.ts
+title: lemonriver.config.ts
 description: Workspace-level configuration.
 ---
 
 The config lives at the workspace root and is fully optional — every field
 has a sensible default.
 
-```ts title="open-slide.config.ts"
-import type { OpenSlideConfig } from '@open-slide/core';
+```ts title="lemonriver.config.ts"
+import type { LemonRiverConfig } from '@lemonriver/core';
 
-const config: OpenSlideConfig = {};
+const config: LemonRiverConfig = {};
 
 export default config;
 ```
@@ -49,7 +49,7 @@ export default config;
       description: 'Hostnames the dev/preview server responds to. `true` allows any host.',
     },
     build: {
-      type: 'OpenSlideBuildConfig',
+      type: 'LemonRiverBuildConfig',
       default: 'all toggles on',
       description: 'Build-time UI toggles (see below).',
     },
@@ -101,7 +101,7 @@ root — GitHub Pages project sites, a reverse-proxy folder, an intranet path.
 Use a leading and trailing slash:
 
 ```ts
-const config: OpenSlideConfig = {
+const config: LemonRiverConfig = {
   base: '/my-slides/',
 };
 ```
@@ -117,7 +117,7 @@ a generated domain, so Vite blocks the request with
 — a leading dot matches every subdomain:
 
 ```ts
-const config: OpenSlideConfig = {
+const config: LemonRiverConfig = {
   allowedHosts: ['.my-workspace.example.com'],
 };
 ```
@@ -126,7 +126,7 @@ Or set `allowedHosts: true` to accept any host. Only do this on a trusted
 network — it disables Vite's DNS-rebinding protection. The value is passed
 straight to Vite's
 [`server.allowedHosts`](https://vite.dev/config/server-options#server-allowedhosts)
-and also applies to `open-slide preview`.
+and also applies to `lemonriver preview`.
 
 ### Organizing many decks
 

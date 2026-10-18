@@ -1,9 +1,9 @@
 {
-  "title": "open-slide",
+  "title": "LemonRiver",
   "pages": [
     "index",
     "getting-started",
-    "migrate-to-v2",
+    "coming-from-open-slide",
     "---Core feature---",
     "...core-feature",
     "---Primitive---",

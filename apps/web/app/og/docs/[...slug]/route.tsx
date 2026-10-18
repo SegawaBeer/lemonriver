@@ -36,7 +36,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
     loadGoogleFont('Geist', 400),
     loadGoogleFont('Geist', 500),
     loadGoogleFont('Geist Mono', 500),
-    readFile(path.join(process.cwd(), 'public/open-slide.png')),
+    readFile(path.join(process.cwd(), 'public/lemonriver.png')),
   ]);
   const logoSrc = `data:image/png;base64,${logoBuffer.toString('base64')}`;
 
@@ -196,7 +196,7 @@ function Frame({
           <span>{breadcrumb}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: INK }}>open-slide.dev</span>
+          <span style={{ color: INK }}>lemonriver.dev</span>
           <span style={{ color: RULE }}>↗</span>
         </div>
       </div>

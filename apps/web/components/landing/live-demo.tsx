@@ -58,21 +58,9 @@ export function LiveDemo() {
           className="rise mt-4 flex items-center justify-between text-[13px] font-medium text-[color:var(--color-muted)]"
           style={{ animationDelay: '760ms' }}
         >
-          <a
-            href="https://demo.open-slide.dev/"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => posthog.capture('view_more_demos_clicked')}
-            className="group inline-flex items-center gap-1.5 transition-colors hover:text-[color:var(--color-text)]"
-          >
-            View more demos
-            <span
-              aria-hidden
-              className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-            >
-              ↗
-            </span>
-          </a>
+          <span className="text-[color:var(--color-text-soft)]">
+            Drag, or use the arrows, to page through the deck.
+          </span>
           <span className="flex items-center gap-2">
             <span className="sr-only" aria-live="polite">
               Slide {index + 1} of {count}

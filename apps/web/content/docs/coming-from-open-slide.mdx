@@ -1,0 +1,108 @@
+---
+title: Coming from open-slide
+description: Move an existing open-slide workspace onto LemonRiver.
+---
+
+LemonRiver is a second development of open-slide, so a workspace you already
+have runs on it. Two ways in, depending on how much you want to touch.
+
+## Keep your files as they are
+
+Point the dependency at LemonRiver, but leave the name your slides import:
+
+```json title="package.json"
+{
+  "dependencies": {
+    "@open-slide/core": "npm:@lemonriver/core@^0.1.0"
+  }
+}
+```
+
+Every `import ... from '@open-slide/core'` in your slides and themes keeps
+resolving, `open-slide.config.ts` is still read, and the `open-slide` command
+still starts the dev server. Nothing else changes — take this path if the
+workspace is large or you would rather not touch it.
+
+## Move the names across
+
+If you would rather use LemonRiver's own names, change the dependency and the
+imports:
+
+```json title="package.json"
+{
+  "dependencies": {
+    "@lemonriver/core": "^0.1.0"
+  },
+  "scripts": {
+    "dev": "lemonriver dev",
+    "build": "lemonriver build"
+  }
+}
+```
+
+Then in your files:
+
+- `open-slide.config.ts` → `lemonriver.config.ts` (the loader still finds the old name)
+- `import ... from '@open-slide/core'` → `'@lemonriver/core'` in slides and themes
+- `open-slide dev` / `open-slide build` → `lemonriver dev` / `lemonriver build`
+
+Then reinstall and pull the latest agent skills:
+
+```npm
+npm install
+npm run sync:skills
+```
+
+## Toolchain
+
+LemonRiver builds on **React 19** and **Vite 8** (Rolldown-powered). A workspace
+from before that upgrade needs its toolchain moved forward; its slides need no
+changes.
+
+- **Node.js 20.19+** (or 22.12+). Vite 8 dropped Node 18, so `lemonriver dev`
+  and `lemonriver build` won't start on older runtimes.
+
+### Remove the `vite` devDependency
+
+Older scaffolds carried `"vite"` in `devDependencies` purely so hosting
+providers would detect a Vite project. It has to go. Core depends on Vite 8,
+and a stale Vite 5 entry makes package managers that hoist without checking
+peer ranges (bun, yarn classic) place core's Vite plugins next to the wrong
+copy, so the dev server and build fail with:
+
+```
+Package subpath './internal' is not defined by "exports" in .../node_modules/vite/package.json
+```
+
+npm and pnpm happen to nest the plugins correctly, but don't rely on it.
+`lemonriver` checks for a mismatched `vite` on startup and refuses to run until
+it is removed.
+
+Remove `vite` from `devDependencies`, reinstall, and declare the build settings
+explicitly so your host still knows how to build the project:
+
+```json title="vercel.json"
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+```toml title="netlify.toml"
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
+
+### Slide code
+
+Slides are plain React components, so React 19's removals apply:
+`defaultProps` on function components, string refs, and `propTypes` are gone.
+Typical agent-authored slides use none of these — if yours do, the dev server's
+error overlay points at the offending page.

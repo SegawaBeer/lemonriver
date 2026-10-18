@@ -20,7 +20,7 @@ const steps: Step[] = [
     body: 'One command scaffolds the slide workspace. Every future deck you author lives inside it.',
     code: {
       prompt: '$',
-      line: 'npx @open-slide/cli init my-deck',
+      line: 'npx @lemonriver/cli init my-deck',
       tail: '✓ ready in 3s',
     },
   },

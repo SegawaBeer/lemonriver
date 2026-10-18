@@ -7,7 +7,7 @@ import { writeToClipboard } from './clipboard';
 import { CopyCommand } from './copy-command';
 
 const agentPrompt =
-  'Set up an open-slide workspace with `npx @open-slide/cli init`. Install the dependencies, start the dev server, and tell me the local URL when it is ready.';
+  'Set up an LemonRiver workspace with `npx @lemonriver/cli init`. Install the dependencies, start the dev server, and tell me the local URL when it is ready.';
 
 export function HeroActions() {
   const [copied, setCopied] = useState(false);
@@ -29,7 +29,7 @@ export function HeroActions() {
         <ButtonLink href="/docs" size="lg">
           Get started
         </ButtonLink>
-        <CopyCommand command="npx @open-slide/cli init" location="hero" size="lg" />
+        <CopyCommand command="npx @lemonriver/cli init" location="hero" size="lg" />
       </div>
 
       <button
