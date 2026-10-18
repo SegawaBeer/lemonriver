@@ -46,7 +46,7 @@ test.describe('rotated resizing regressions', () => {
     await duplicateSlide(request, 'edit-target', slideId);
     await writeFile(
       slideSourcePath(slideId),
-      `import type { Page, SlideMeta } from '@open-slide/core';
+      `import type { Page, SlideMeta } from '@lemonriver/core';
 export const meta: SlideMeta = { title: 'Rotated resizing', createdAt: '2026-01-01T00:00:00.000Z' };
 const Only: Page = () => (
   <div style={{ width: '100%', height: '100%', position: 'relative', background: '#14213d' }}>

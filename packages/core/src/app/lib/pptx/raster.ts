@@ -103,7 +103,7 @@ export class Rasterizer {
           }
         } catch (err) {
           console.warn(
-            '[open-slide] pptx export: could not rasterize an element, skipping it',
+            '[lemonriver] pptx export: could not rasterize an element, skipping it',
             err,
           );
         } finally {

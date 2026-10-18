@@ -3,11 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import fg from 'fast-glob';
 import { normalizePath, type Plugin } from 'vite';
-import type { OpenSlideConfig } from '../config.ts';
+import type { LemonRiverConfig } from '../config.ts';
 
 export type ThemesPluginOptions = {
   userCwd: string;
-  config: OpenSlideConfig;
+  config: LemonRiverConfig;
 };
 
 const THEMES_VMOD = 'virtual:open-slide/themes';
@@ -122,7 +122,7 @@ export function themesPlugin(opts: ThemesPluginOptions): Plugin {
   let isDev = false;
 
   return {
-    name: 'open-slide:themes',
+    name: 'lemonriver:themes',
     config(_c, env) {
       isDev = env.command === 'serve';
     },

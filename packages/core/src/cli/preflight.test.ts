@@ -14,14 +14,14 @@ function addPackage(rel: string, version: string): void {
 }
 
 function coreDir(): string {
-  const dir = path.join(root, 'node_modules', '@open-slide', 'core', 'dist', 'cli');
+  const dir = path.join(root, 'node_modules', '@lemonriver', 'core', 'dist', 'cli');
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
 beforeEach(() => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'open-slide-preflight-'));
-  addPackage('@open-slide/core', '2.0.0');
+  root = mkdtempSync(path.join(os.tmpdir(), 'lemonriver-preflight-'));
+  addPackage('@lemonriver/core', '2.0.0');
 });
 
 afterEach(() => {
@@ -32,7 +32,7 @@ describe('findViteMismatch', () => {
   it('flags a hoisted plugin that resolves a different vite than core', () => {
     addPackage('vite', '5.4.21');
     addPackage('@vitejs/plugin-react', '6.1.1');
-    addPackage('@open-slide/core/node_modules/vite', '8.2.2');
+    addPackage('@lemonriver/core/node_modules/vite', '8.2.2');
 
     const mismatch = findViteMismatch(coreDir());
     expect(mismatch).not.toBeNull();
@@ -43,8 +43,8 @@ describe('findViteMismatch', () => {
 
   it('passes when the plugin is nested next to core vite', () => {
     addPackage('vite', '5.4.21');
-    addPackage('@open-slide/core/node_modules/vite', '8.2.2');
-    addPackage('@open-slide/core/node_modules/@vitejs/plugin-react', '6.1.1');
+    addPackage('@lemonriver/core/node_modules/vite', '8.2.2');
+    addPackage('@lemonriver/core/node_modules/@vitejs/plugin-react', '6.1.1');
 
     expect(findViteMismatch(coreDir())).toBeNull();
   });
@@ -60,7 +60,7 @@ describe('findViteMismatch', () => {
   it('passes when two copies of the same vite version coexist', () => {
     addPackage('vite', '8.2.2');
     addPackage('@vitejs/plugin-react', '6.1.1');
-    addPackage('@open-slide/core/node_modules/vite', '8.2.2');
+    addPackage('@lemonriver/core/node_modules/vite', '8.2.2');
 
     expect(findViteMismatch(coreDir())).toBeNull();
   });
@@ -68,8 +68,8 @@ describe('findViteMismatch', () => {
   it('checks every consumer, not just the first', () => {
     addPackage('vite', '5.4.21');
     addPackage('@tailwindcss/vite', '4.3.3');
-    addPackage('@open-slide/core/node_modules/vite', '8.2.2');
-    addPackage('@open-slide/core/node_modules/@vitejs/plugin-react', '6.1.1');
+    addPackage('@lemonriver/core/node_modules/vite', '8.2.2');
+    addPackage('@lemonriver/core/node_modules/@vitejs/plugin-react', '6.1.1');
 
     expect(findViteMismatch(coreDir())?.consumer).toBe('@tailwindcss/vite');
   });
@@ -97,7 +97,7 @@ describe('findViteDeclaration', () => {
 
   it('finds vite in a parent workspace root', () => {
     writeManifest('.', { dependencies: { vite: '^5.0.0' } });
-    const dir = writeManifest('packages/deck', { dependencies: { '@open-slide/core': '2.0.0' } });
+    const dir = writeManifest('packages/deck', { dependencies: { '@lemonriver/core': '2.0.0' } });
     expect(findViteDeclaration(dir)?.file).toBe(path.join(root, 'package.json'));
   });
 
@@ -142,7 +142,7 @@ describe('findViteDeclaration', () => {
   });
 
   it('returns null when nothing lists vite', () => {
-    const dir = writeManifest('app', { dependencies: { '@open-slide/core': '2.0.0' } });
+    const dir = writeManifest('app', { dependencies: { '@lemonriver/core': '2.0.0' } });
     expect(findViteDeclaration(dir)).toBeNull();
   });
 });
@@ -151,7 +151,7 @@ describe('formatViteMismatch', () => {
   function mismatch() {
     addPackage('vite', '5.4.21');
     addPackage('@vitejs/plugin-react', '6.1.1');
-    addPackage('@open-slide/core/node_modules/vite', '8.2.2');
+    addPackage('@lemonriver/core/node_modules/vite', '8.2.2');
     const found = findViteMismatch(coreDir());
     if (!found) throw new Error('expected a mismatch');
     return found;
@@ -168,7 +168,7 @@ describe('formatViteMismatch', () => {
 
     expect(message).toContain('Remove vite from your package.json');
     expect(message).toContain('devDependencies in package.json still lists vite');
-    expect(message).toContain('shadows the vite@8.2.2 bundled with open-slide');
+    expect(message).toContain('shadows the vite@8.2.2 bundled with LemonRiver');
     expect(message).toContain('is loading vite@5.4.21');
     expect(message).toContain(path.join('node_modules', 'vite'));
     expect(message).toContain('$ bun remove vite');

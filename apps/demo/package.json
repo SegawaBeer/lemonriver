@@ -4,13 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "open-slide dev",
-    "build": "open-slide build",
-    "preview": "open-slide preview",
+    "dev": "lemonriver dev",
+    "build": "lemonriver build",
+    "preview": "lemonriver preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-slide/core": "workspace:*",
+    "@lemonriver/core": "workspace:*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

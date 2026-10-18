@@ -1,4 +1,5 @@
 import * as t from '@babel/types';
+import { isFrameworkSpecifier } from '../branding.ts';
 import { parseSource, walkAll, walkJsx } from './babel-walk.ts';
 import {
   type ApplyEditResult,
@@ -60,12 +61,14 @@ function buildPlaceholderReplacement(
   return `<ImagePlaceholder ${parts.join(' ')} />`;
 }
 
-function planEnsureImagePlaceholderImport(ast: t.File): Splice | null {
+function planEnsureImagePlaceholderImport(ast: t.File, specifier: string): Splice | null {
   const readKind = (n: t.ImportDeclaration | t.ImportSpecifier) => n.importKind === 'type';
   const imports = findImports(ast);
   let valueImport: ImportInfo | null = null;
+  let frameworkImport: ImportInfo | null = null;
   for (const imp of imports) {
-    if (imp.source !== '@open-slide/core') continue;
+    if (!isFrameworkSpecifier(imp.source)) continue;
+    frameworkImport ??= imp;
     const declIsTypeOnly = readKind(imp.node);
     for (const spec of imp.node.specifiers) {
       if (!t.isImportSpecifier(spec)) continue;
@@ -94,7 +97,7 @@ function planEnsureImagePlaceholderImport(ast: t.File): Splice | null {
   return {
     from: 0,
     to: 0,
-    text: "import { ImagePlaceholder } from '@open-slide/core';\n",
+    text: `import { ImagePlaceholder } from '${frameworkImport?.source ?? specifier}';\n`,
   };
 }
 
@@ -136,7 +139,11 @@ export function findReferencedAssets(source: string, assetPaths: readonly string
   return referenced;
 }
 
-export function applyRevertAsset(source: string, assetPath: string): ApplyEditResult {
+export function applyRevertAsset(
+  source: string,
+  assetPath: string,
+  specifier: string,
+): ApplyEditResult {
   const ast = parseSource(source);
   if (!ast) return { ok: false, status: 422, error: 'could not parse source' };
 
@@ -185,7 +192,7 @@ export function applyRevertAsset(source: string, assetPath: string): ApplyEditRe
   if (source[importTo] === '\n') importTo += 1;
   splices.push({ from: importFrom, to: importTo, text: '' });
 
-  const ensureSplice = planEnsureImagePlaceholderImport(ast);
+  const ensureSplice = planEnsureImagePlaceholderImport(ast, specifier);
   if (ensureSplice) splices.push(ensureSplice);
 
   return applySplices(source, splices);

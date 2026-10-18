@@ -1,6 +1,6 @@
-# open-slide workspace
+# LemonRiver workspace
 
-Slides as React components. Each slide lives under `slides/<id>/index.tsx` and default-exports an array of page components. The `@open-slide/core` runtime handles layout, scaling, navigation, thumbnails, and fullscreen play mode — you just write the pages.
+Slides as React components. Each slide lives under `slides/<id>/index.tsx` and default-exports an array of page components. The `@lemonriver/core` runtime handles layout, scaling, navigation, thumbnails, and fullscreen play mode — you just write the pages.
 
 ## Getting started
 
@@ -23,7 +23,7 @@ Then open the dev server and edit `slides/getting-started/index.tsx`, or create 
 
 ```tsx
 // slides/my-slide/index.tsx
-import type { Page, SlideMeta } from '@open-slide/core';
+import type { Page, SlideMeta } from '@lemonriver/core';
 
 const Cover: Page = () => (
   <div style={{ width: '100%', height: '100%' }}>Hello</div>
@@ -49,16 +49,16 @@ This workspace ships with Claude Code skills preconfigured under `.claude/skills
 
 ## Config
 
-Optional `open-slide.config.ts` at the workspace root:
+Optional `lemonriver.config.ts` at the workspace root:
 
 ```ts
-import type { OpenSlideConfig } from '@open-slide/core';
+import type { LemonRiverConfig } from '@lemonriver/core';
 
-const openSlideConfig: OpenSlideConfig = {
+const lemonriverConfig: LemonRiverConfig = {
   port: 5173,
 };
 
-export default openSlideConfig;
+export default lemonriverConfig;
 ```
 
 Supported fields: `slidesDir`, `port`.

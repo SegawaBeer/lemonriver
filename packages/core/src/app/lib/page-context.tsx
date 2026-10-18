@@ -31,7 +31,7 @@ export function useSlidePageNumber(): { current: number; total: number } {
   const ctx = useContext(SlidePageContext);
   if (!ctx) {
     throw new Error(
-      'useSlidePageNumber must be called from a slide page rendered by @open-slide/core',
+      'useSlidePageNumber must be called from a slide page rendered by @lemonriver/core',
     );
   }
   return { current: ctx.index + 1, total: ctx.total };

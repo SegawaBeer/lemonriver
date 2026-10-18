@@ -152,7 +152,7 @@ export function notesPlugin(opts: NotesPluginOptions): Plugin {
   const slidesRoot = path.resolve(opts.userCwd, opts.slidesDir ?? 'slides');
 
   return {
-    name: 'open-slide:notes',
+    name: 'lemonriver:notes',
     apply: 'serve',
     handleHotUpdate(ctx) {
       // Suppress HMR for our own writes — RFR bails on the slide's mixed

@@ -1,8 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions & discussion
-    url: https://github.com/open-slide/open-slide/discussions
-    about: Ask a question or share what you're building with open-slide.
-  - name: Support the project
-    url: https://buymeacoffee.com/1weiho
-    about: If open-slide has been useful to you, consider supporting development.
+    url: https://github.com/SegawaBeer/lemonriver/discussions
+    about: Ask a question or share what you're building with LemonRiver.

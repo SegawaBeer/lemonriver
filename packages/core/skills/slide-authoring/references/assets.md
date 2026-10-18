@@ -33,7 +33,7 @@ For a pure-text slide, don't create `slides/<id>/assets/` at all.
 When a page genuinely needs a real image **the user has to provide** — a product screenshot, a team photo, a chart from their data — leave a typed placeholder instead of inventing a stand-in:
 
 ```tsx
-import { ImagePlaceholder } from '@open-slide/core';
+import { ImagePlaceholder } from '@lemonriver/core';
 
 <ImagePlaceholder hint="Product hero screenshot" width={1280} height={720} />
 ```

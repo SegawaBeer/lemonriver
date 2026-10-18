@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { coreRoot, fixtureDir, runCli } from './helpers.ts';
 
-test.describe('open-slide cli', () => {
+test.describe('lemonriver cli', () => {
   test('prints the package version', async () => {
     const pkg = JSON.parse(await fs.readFile(path.join(coreRoot, 'package.json'), 'utf8')) as {
       version: string;

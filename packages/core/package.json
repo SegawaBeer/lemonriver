@@ -1,7 +1,7 @@
 {
-  "name": "@open-slide/core",
-  "version": "2.0.1",
-  "description": "Runtime and CLI for open-slide — write slides in slides/, we handle the rest.",
+  "name": "@lemonriver/core",
+  "version": "0.1.0",
+  "description": "Runtime and CLI for LemonRiver — write slides in slides/, we handle the rest.",
   "type": "module",
   "exports": {
     ".": {
@@ -21,6 +21,7 @@
     }
   },
   "bin": {
+    "lemonriver": "./bin.js",
     "open-slide": "./bin.js"
   },
   "files": [
@@ -49,20 +50,20 @@
   ],
   "license": "MIT",
   "author": {
-    "name": "1weiho",
-    "url": "https://github.com/1weiho"
+    "name": "SegawaBeer",
+    "url": "https://github.com/SegawaBeer"
   },
-  "homepage": "https://open-slide.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/open-slide/open-slide.git",
+    "url": "git+https://github.com/SegawaBeer/lemonriver.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/open-slide/open-slide/issues"
+    "url": "https://github.com/SegawaBeer/lemonriver/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@babel/parser": "^7.29.2",

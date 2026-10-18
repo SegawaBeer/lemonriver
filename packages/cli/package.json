@@ -1,9 +1,10 @@
 {
-  "name": "@open-slide/cli",
-  "version": "2.0.0",
-  "description": "Scaffold an open-slide workspace with Claude Code skills preconfigured.",
+  "name": "@lemonriver/cli",
+  "version": "0.1.0",
+  "description": "Scaffold a LemonRiver workspace with Claude Code skills preconfigured.",
   "type": "module",
   "bin": {
+    "lemonriver": "dist/cli.js",
     "open-slide": "dist/cli.js"
   },
   "files": [
@@ -28,20 +29,20 @@
   ],
   "license": "MIT",
   "author": {
-    "name": "1weiho",
-    "url": "https://github.com/1weiho"
+    "name": "SegawaBeer",
+    "url": "https://github.com/SegawaBeer"
   },
-  "homepage": "https://open-slide.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/open-slide/open-slide.git",
+    "url": "git+https://github.com/SegawaBeer/lemonriver.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/open-slide/open-slide/issues"
+    "url": "https://github.com/SegawaBeer/lemonriver/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",

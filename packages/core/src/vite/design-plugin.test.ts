@@ -7,6 +7,10 @@ import {
   serializeDesign,
 } from './design-plugin.ts';
 
+// The specifier the fixtures' workspace declares — the pre-rename name, so
+// these cases also cover a workspace that has not migrated yet.
+const SPECIFIER = '@open-slide/core';
+
 const SLIDE_WITH_DESIGN = `import type { DesignSystem, Page } from '@open-slide/core';
 
 const design: DesignSystem = {
@@ -96,7 +100,7 @@ describe('applyDesignWrite — slide with existing design', () => {
     const next = mergeDesign(defaultDesign, {
       palette: { accent: '#ff0000' } as DesignSystem['palette'],
     });
-    const r = applyDesignWrite(SLIDE_WITH_DESIGN, next);
+    const r = applyDesignWrite(SLIDE_WITH_DESIGN, next, SPECIFIER);
     if (!r.ok) throw new Error(r.error);
     expect(r.created).toBe(false);
     expect(r.source).toContain("import type { DesignSystem, Page } from '@open-slide/core'");
@@ -110,7 +114,7 @@ describe('applyDesignWrite — slide with existing design', () => {
   it('round-trips: parse → write → parse yields equal value', () => {
     const r1 = parseSlideDesign(SLIDE_WITH_DESIGN);
     if (!r1.ok) throw new Error('expected ok');
-    const written = applyDesignWrite(SLIDE_WITH_DESIGN, r1.design);
+    const written = applyDesignWrite(SLIDE_WITH_DESIGN, r1.design, SPECIFIER);
     if (!written.ok) throw new Error(written.error);
     const r2 = parseSlideDesign(written.source);
     if (!r2.ok) throw new Error('expected ok');
@@ -120,7 +124,7 @@ describe('applyDesignWrite — slide with existing design', () => {
 
 describe('applyDesignWrite — slide without design', () => {
   it('inserts a new design const after imports and adds DesignSystem to existing core import', () => {
-    const r = applyDesignWrite(SLIDE_WITHOUT_DESIGN, defaultDesign);
+    const r = applyDesignWrite(SLIDE_WITHOUT_DESIGN, defaultDesign, SPECIFIER);
     if (!r.ok) throw new Error(r.error);
     expect(r.created).toBe(true);
     expect(r.source).toContain('const design: DesignSystem =');
@@ -134,21 +138,21 @@ describe('applyDesignWrite — slide without design', () => {
 
   it('adds a plain specifier to a type-only core import', () => {
     const slide = `import type { Page } from '@open-slide/core';\n\nexport default [];\n`;
-    const r = applyDesignWrite(slide, defaultDesign);
+    const r = applyDesignWrite(slide, defaultDesign, SPECIFIER);
     if (!r.ok) throw new Error(r.error);
     expect(r.source).toContain("import type { Page, DesignSystem } from '@open-slide/core'");
   });
 
   it('adds a type-modified specifier to a value core import', () => {
     const slide = `import { Step } from '@open-slide/core';\n\nexport default [];\n`;
-    const r = applyDesignWrite(slide, defaultDesign);
+    const r = applyDesignWrite(slide, defaultDesign, SPECIFIER);
     if (!r.ok) throw new Error(r.error);
     expect(r.source).toContain("import { Step, type DesignSystem } from '@open-slide/core'");
   });
 
   it('adds its own type import when the core import has no named list', () => {
     const slide = `import * as Core from '@open-slide/core';\n\nexport default [];\n`;
-    const r = applyDesignWrite(slide, defaultDesign);
+    const r = applyDesignWrite(slide, defaultDesign, SPECIFIER);
     if (!r.ok) throw new Error(r.error);
     expect(r.source).toContain("import * as Core from '@open-slide/core'");
     expect(r.source).toContain("import type { DesignSystem } from '@open-slide/core'");
@@ -157,12 +161,37 @@ describe('applyDesignWrite — slide without design', () => {
 
   it('adds a fresh @open-slide/core type import when none exists', () => {
     const slide = `const Cover = () => <div>Hi</div>;\nexport default [Cover];\n`;
-    const r = applyDesignWrite(slide, defaultDesign);
+    const r = applyDesignWrite(slide, defaultDesign, SPECIFIER);
     if (!r.ok) throw new Error(r.error);
     expect(r.source).toContain("import type { DesignSystem } from '@open-slide/core'");
     expect(r.source).toContain('const design: DesignSystem =');
     const parsed = parseSlideDesign(r.source);
     if (!parsed.ok) throw new Error('inserted design is not parseable');
     expect(parsed.design).toEqual(defaultDesign);
+  });
+});
+
+describe('applyDesignWrite — renamed workspace', () => {
+  it('extends an existing @lemonriver/core import instead of adding a second one', () => {
+    const slide = `import type { Page } from '@lemonriver/core';\n\nexport default [];\n`;
+    const r = applyDesignWrite(slide, defaultDesign, '@lemonriver/core');
+    if (!r.ok) throw new Error(r.error);
+    expect(r.source).toContain("import type { Page, DesignSystem } from '@lemonriver/core'");
+    expect(r.source).not.toContain('@open-slide/core');
+  });
+
+  it('writes a fresh import under the specifier the workspace declares', () => {
+    const slide = `const Cover = () => <div>Hi</div>;\nexport default [Cover];\n`;
+    const r = applyDesignWrite(slide, defaultDesign, '@lemonriver/core');
+    if (!r.ok) throw new Error(r.error);
+    expect(r.source).toContain("import type { DesignSystem } from '@lemonriver/core'");
+  });
+
+  it('mirrors the file own specifier so a slide never carries two', () => {
+    const slide = `import * as Core from '@open-slide/core';\n\nexport default [];\n`;
+    const r = applyDesignWrite(slide, defaultDesign, '@lemonriver/core');
+    if (!r.ok) throw new Error(r.error);
+    expect(r.source).toContain("import type { DesignSystem } from '@open-slide/core'");
+    expect(r.source).not.toContain('@lemonriver/core');
   });
 });

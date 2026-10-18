@@ -3,7 +3,7 @@
 A slide can declare its own typed design tokens at the top of `index.tsx`:
 
 ```tsx
-import type { DesignSystem, Page } from '@open-slide/core';
+import type { DesignSystem, Page } from '@lemonriver/core';
 
 export const design: DesignSystem = {
   palette: { bg: '#f7f5f0', text: '#1a1814', accent: '#6d4cff' },
@@ -45,4 +45,4 @@ The dev UI has a **Design** button in the slide header (next to Inspect). Edits 
 
 - Must be `export const design: DesignSystem = { … }` (or `as DesignSystem` / `satisfies DesignSystem`) at module top level. (The panel's parser also tolerates a non-exported const, but the runtime reads `design` off the module's exports — without `export`, every `var(--osd-X)` is unresolved.)
 - Object initializer must be a literal — no spreads, no helper calls. Plain values only.
-- `DesignSystem` must be imported from `@open-slide/core` (the panel adds the import automatically when creating a fresh block).
+- `DesignSystem` must be imported from `@lemonriver/core` (the panel adds the import automatically when creating a fresh block).

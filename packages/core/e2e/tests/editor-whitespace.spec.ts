@@ -52,7 +52,7 @@ test.describe('editor whitespace replay', () => {
       await writeFile(
         slideSourcePath(slideId),
         `import { useRef, useState } from 'react';
-import { type Page, type SlideMeta, useIsActivePage } from '@open-slide/core';
+import { type Page, type SlideMeta, useIsActivePage } from '@lemonriver/core';
 import { useHistory } from '@/components/history-provider';
 import { readEditableText, useInspector } from '@/components/inspector/inspector-provider';
 export const meta: SlideMeta = { title: 'Whitespace replay', createdAt: '2026-01-01T00:00:00.000Z' };

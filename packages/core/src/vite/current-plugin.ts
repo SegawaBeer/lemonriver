@@ -73,7 +73,7 @@ export function currentPlugin(opts: CurrentPluginOptions): Plugin {
   let cached: Cached | null = null;
 
   return {
-    name: 'open-slide:current',
+    name: 'lemonriver:current',
     apply: 'serve',
     configureServer(server: ViteDevServer) {
       server.ws.on('open-slide:current', async (raw: IncomingPayload) => {

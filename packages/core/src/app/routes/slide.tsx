@@ -510,7 +510,7 @@ export function Slide() {
       if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
       linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 1200);
     } catch (err) {
-      console.error('[open-slide] copy link failed', err);
+      console.error('[lemonriver] copy link failed', err);
       toast.error(t.slide.toastCopyLinkFailed);
     }
   };
@@ -521,7 +521,7 @@ export function Slide() {
     try {
       await exportSlideAsHtml(slide, slideId);
     } catch (err) {
-      console.error('[open-slide] export failed', err);
+      console.error('[lemonriver] export failed', err);
     } finally {
       setExporting(false);
     }
@@ -545,7 +545,7 @@ export function Slide() {
       await opts.run(show);
       toast.dismiss(toastId);
     } catch (err) {
-      console.error(`[open-slide] ${opts.kind} export failed`, err);
+      console.error(`[lemonriver] ${opts.kind} export failed`, err);
       // Reuses the progress toast's id, so it must outlive this handler.
       toast.error(opts.failedMessage, { id: toastId, duration: 4000 });
     } finally {

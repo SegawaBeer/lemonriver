@@ -4,13 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "open-slide dev",
-    "build": "open-slide build",
-    "preview": "open-slide preview",
-    "sync:skills": "open-slide sync:skills"
+    "dev": "lemonriver dev",
+    "build": "lemonriver build",
+    "preview": "lemonriver preview",
+    "sync:skills": "lemonriver sync:skills"
   },
   "dependencies": {
-    "@open-slide/core": "^0.0.6",
+    "@lemonriver/core": "^0.0.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { stripVTControlCharacters } from 'node:util';
 import chalk from 'chalk';
 import type { LogErrorOptions, Logger, LogOptions, LogType, ResolvedServerUrls } from 'vite';
+import { BIN_NAME, isFrameworkSpecifier } from '../branding.ts';
 
 // Legacy Windows consoles render box-drawing glyphs as garbage; Windows
 // Terminal and VS Code's terminal are fine.
@@ -27,7 +28,7 @@ export function readVersion(): string {
     const pkgPath = path.join(dir, 'package.json');
     if (existsSync(pkgPath)) {
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { name?: string; version?: string };
-      if (pkg.name === '@open-slide/core' && pkg.version) return pkg.version;
+      if (pkg.name && isFrameworkSpecifier(pkg.name) && pkg.version) return pkg.version;
     }
     dir = path.dirname(dir);
   }
@@ -35,7 +36,7 @@ export function readVersion(): string {
 }
 
 export function brand(): string {
-  return chalk.inverse.bold(' open-slide ');
+  return chalk.inverse.bold(` ${BIN_NAME} `);
 }
 
 export function printHeader(status?: string): void {
@@ -101,7 +102,7 @@ const REWRITES: ReadonlyArray<readonly [RegExp, string]> = [
   [/\[vite\] ?/g, ''],
 ];
 
-// Vite phrases its logs in its own vocabulary; users of open-slide never
+// Vite phrases its logs in its own vocabulary; users of LemonRiver never
 // asked for Vite, so translate the handful of lines they'll actually see.
 export function rewriteViteMessage(msg: string): string | null {
   const plain = stripVTControlCharacters(msg);

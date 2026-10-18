@@ -18,7 +18,7 @@ import {
 } from './slide-ops.ts';
 
 async function withSlidesRoot<T>(fn: (root: string) => Promise<T>): Promise<T> {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'open-slide-test-'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'lemonriver-test-'));
   try {
     return await fn(root);
   } finally {
@@ -154,7 +154,7 @@ describe('updateMetaTitleInSource', () => {
 });
 
 describe('reorderDefaultExportPagesInSource', () => {
-  const withSatisfies = `import type { Page } from '@open-slide/core';
+  const withSatisfies = `import type { Page } from '@lemonriver/core';
 const A = () => null;
 const B = () => null;
 const C = () => null;
@@ -177,7 +177,7 @@ export default [A, B, C];
     expect(out).not.toBeNull();
     expect(out).toContain('export default [\n  C,\n  A,\n  B,\n] satisfies Page[];');
     // surrounding source untouched
-    expect(out).toContain("import type { Page } from '@open-slide/core';");
+    expect(out).toContain("import type { Page } from '@lemonriver/core';");
     expect(out).toContain("export const meta = { title: 't' };");
   });
 
@@ -313,7 +313,7 @@ describe('reorderNotesArrayInSource', () => {
 });
 
 describe('removePageFromDefaultExportInSource', () => {
-  const multiline = `import type { Page } from '@open-slide/core';
+  const multiline = `import type { Page } from '@lemonriver/core';
 const A = () => null;
 const B = () => null;
 const C = () => null;
@@ -369,7 +369,7 @@ export default [A, B, C];
 });
 
 describe('duplicatePageInDefaultExportInSource', () => {
-  const multiline = `import type { Page } from '@open-slide/core';
+  const multiline = `import type { Page } from '@lemonriver/core';
 const A = () => null;
 const B = () => null;
 const C = () => null;
@@ -519,7 +519,7 @@ describe('duplicateNotesElementInSource', () => {
 });
 
 describe('insertBlankPageInDefaultExportInSource', () => {
-  const multiline = `import type { Page } from '@open-slide/core';
+  const multiline = `import type { Page } from '@lemonriver/core';
 const A = () => null;
 const B = () => null;
 const C = () => null;

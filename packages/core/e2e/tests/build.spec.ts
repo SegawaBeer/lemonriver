@@ -10,9 +10,9 @@ import {
   waitForHttpOk,
 } from './helpers.ts';
 
-const FLAGS_CONFIG = `import type { OpenSlideConfig } from '@open-slide/core';
+const FLAGS_CONFIG = `import type { LemonRiverConfig } from '@lemonriver/core';
 
-const openSlideConfig: OpenSlideConfig = {
+const openSlideConfig: LemonRiverConfig = {
   build: { showSlideBrowser: false, showSlideUi: false },
 };
 
@@ -48,7 +48,7 @@ test.describe('static build and preview', () => {
 
     const html = await fs.readFile(path.join(dist, 'index.html'), 'utf8');
     expect(html).toContain('<div id="root"></div>');
-    expect(html).toContain('<title>open-slide</title>');
+    expect(html).toContain('<title>LemonRiver</title>');
 
     // Each slide is lazily imported, so the deck code-splits into at least one
     // chunk per slide plus the entry chunk. The exact chunk filenames depend on
@@ -88,7 +88,7 @@ test.describe('build flags', () => {
   test.beforeAll(async () => {
     test.setTimeout(300_000);
     const projectDir = prepareScratchProject('build-flags');
-    await fs.writeFile(path.join(projectDir, 'open-slide.config.ts'), FLAGS_CONFIG);
+    await fs.writeFile(path.join(projectDir, 'lemonriver.config.ts'), FLAGS_CONFIG);
     const res = await runCli(['build'], projectDir);
     expect(res.code, res.stderr).toBe(0);
     preview = startCliServer(

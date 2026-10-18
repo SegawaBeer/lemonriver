@@ -1,9 +1,9 @@
 ---
 name: slide-authoring
-description: Technical reference for writing or editing open-slide pages — file contract, 1920×1080 canvas, type scale, layout, palette/visual direction, assets, speaker notes, stepped reveals, page transitions, and morph transitions. Consult this whenever you are about to write or modify any file under `slides/<id>/`, including from inside the `create-slide` or `apply-comments` workflows, or for any ad-hoc slide edit. Triggers on phrases like "edit slide", "tweak this page", "fix the layout", "change the palette", "reveal one by one", "add a transition", "morph transition", "write the speaker notes", "generate the script / talk track", "investigate the slide framework", "how do slides work here".
+description: Technical reference for writing or editing LemonRiver pages — file contract, 1920×1080 canvas, type scale, layout, palette/visual direction, assets, speaker notes, stepped reveals, page transitions, and morph transitions. Consult this whenever you are about to write or modify any file under `slides/<id>/`, including from inside the `create-slide` or `apply-comments` workflows, or for any ad-hoc slide edit. Triggers on phrases like "edit slide", "tweak this page", "fix the layout", "change the palette", "reveal one by one", "add a transition", "morph transition", "write the speaker notes", "generate the script / talk track", "investigate the slide framework", "how do slides work here".
 ---
 
-# Authoring open-slide pages
+# Authoring LemonRiver pages
 
 This skill is the **technical reference** for everything that happens inside `slides/<id>/index.tsx`. It does not own a workflow:
 
@@ -32,15 +32,15 @@ Each framework primitive has a full reference file under `references/` in this s
 
 - Put the slide under `slides/<kebab-case-id>/`.
 - Entry is `slides/<id>/index.tsx`. Images/videos/fonts go under `slides/<id>/assets/`.
-- Do **not** touch `package.json`, `open-slide.config.ts`, or other slides.
-- Do not add dependencies. Only `react`, `@open-slide/core`, and standard web APIs are available.
+- Do **not** touch `package.json`, `lemonriver.config.ts`, or other slides.
+- Do not add dependencies. Only `react`, `@lemonriver/core`, and standard web APIs are available.
 - A slide is **one `index.tsx` plus `assets/`** — nothing else. Do not create sibling `.tsx`/`.ts` files (`Card.tsx`, `components/`, `helpers.ts`, etc.); helper components and constants go inside `index.tsx`. Do not create `README.md` or other prose files either — speaker notes / a talk script belong in the `notes` export (see **Speaker notes** below), not in a markdown file.
 
 ## File contract
 
 ```tsx
 // slides/<id>/index.tsx
-import type { Page, SlideMeta } from '@open-slide/core';
+import type { Page, SlideMeta } from '@lemonriver/core';
 
 const Cover: Page = () => <div>…</div>;
 const Body: Page = () => <div>…</div>;
@@ -177,7 +177,7 @@ A slide can declare typed design tokens at the top of `index.tsx` — `export co
 ## Starter template
 
 ```tsx
-import type { DesignSystem, Page, SlideMeta } from '@open-slide/core';
+import type { DesignSystem, Page, SlideMeta } from '@lemonriver/core';
 
 export const design: DesignSystem = {
   palette: { bg: '#0f172a', text: '#f8fafc', accent: '#fbbf24' },
@@ -258,7 +258,7 @@ Slide-local assets live under `slides/<id>/assets/` and are imported as ES modul
 
 ## Image placeholders
 
-When a page genuinely needs a real image **the user has to provide** (product screenshot, team photo, chart from their data), leave a typed `<ImagePlaceholder hint="…" />` from `@open-slide/core` instead of inventing a stand-in — the user replaces it via the Assets panel + inspector. **Do not** use placeholders for decoration or generic stock-photo filler; if type, layout, and color can carry the page, do that.
+When a page genuinely needs a real image **the user has to provide** (product screenshot, team photo, chart from their data), leave a typed `<ImagePlaceholder hint="…" />` from `@lemonriver/core` instead of inventing a stand-in — the user replaces it via the Assets panel + inspector. **Do not** use placeholders for decoration or generic stock-photo filler; if type, layout, and color can carry the page, do that.
 
 `references/assets.md` has the full usage rules, sizing guidance, and examples of when a placeholder is (and isn't) warranted.
 
@@ -365,9 +365,9 @@ This applies whenever the *visual element* repeats, not whenever the *data* does
 - ❌ Bullets that wrap to a second line — either shorten or move to its own page.
 - ❌ Body type under 28px — unreadable on a projector.
 - ❌ Inconsistent palette across pages.
-- ❌ Installing packages. Only `react`, `@open-slide/core`, and standard web APIs are available.
+- ❌ Installing packages. Only `react`, `@lemonriver/core`, and standard web APIs are available.
 - ❌ Writing CSS to a shared file. Inline styles or scoped classnames only.
 - ❌ Creating `README.md` or other prose files inside the slide folder.
 - ❌ Delivering a speech script as a markdown or text file. The runtime only surfaces the `notes` export — anything else never reaches the presenter view.
-- ❌ Editing `package.json`, `open-slide.config.ts`, or other slides.
+- ❌ Editing `package.json`, `lemonriver.config.ts`, or other slides.
 - ❌ Using a primitive without reading its reference file — each `references/*.md` carries the primitive's own anti-pattern list (placeholder misuse, transition vocabulary, `<Step>` nesting, morph geometry).

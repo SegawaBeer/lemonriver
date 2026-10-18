@@ -196,15 +196,15 @@ export async function run(argv: string[]): Promise<void> {
 
   const program = new Command();
   program
-    .name('open-slide')
-    .description('Scaffold and manage open-slide workspaces.')
+    .name('lemonriver')
+    .description('Scaffold and manage LemonRiver workspaces.')
     .version(version, '-v, --version', 'print version')
     .helpOption('-h, --help', 'show help')
-    .showHelpAfterError(chalk.dim('(run `open-slide --help` for usage)'));
+    .showHelpAfterError(chalk.dim('(run `lemonriver --help` for usage)'));
 
   program
     .command('init')
-    .description('Create a new open-slide workspace')
+    .description('Create a new LemonRiver workspace')
     .argument('[dir]', 'target directory', undefined)
     .option('-f, --force', 'overwrite non-empty target directory', false)
     .option('-n, --name <name>', 'override package name (defaults to folder name)')
@@ -215,7 +215,7 @@ export async function run(argv: string[]): Promise<void> {
     .option('--no-install', 'skip dependency installation')
     .option('--no-git', 'skip git init and initial commit')
     .action(async (dir: string | undefined, flags: InitCliFlags) => {
-      p.intro(`${chalk.inverse.bold(' open-slide ')} ${chalk.dim(`v${version}`)}`);
+      p.intro(`${chalk.inverse.bold(' lemonriver ')} ${chalk.dim(`v${version}`)}`);
       try {
         await runInit(dir, flags);
       } catch (err) {

@@ -1,13 +1,13 @@
 ---
 name: create-slide
-description: Use this skill when the user wants to create, draft, author, or generate new slides / a presentation in this open-slide repo. Triggers on phrases like "make slides about X", "make a deck about X", "create a presentation", "draft slides for", "new slide", "a deck with speaker notes / a script", or when the user asks to add content under `slides/`. Do NOT use for editing the framework itself — only for authoring content inside `slides/<id>/`.
+description: Use this skill when the user wants to create, draft, author, or generate new slides / a presentation in this LemonRiver repo. Triggers on phrases like "make slides about X", "make a deck about X", "create a presentation", "draft slides for", "new slide", "a deck with speaker notes / a script", or when the user asks to add content under `slides/`. Do NOT use for editing the framework itself — only for authoring content inside `slides/<id>/`.
 ---
 
-# Create a slide in open-slide
+# Create a slide in LemonRiver
 
 This skill owns the **workflow** for drafting a new deck. The technical reference — file contract, 1920×1080 canvas, type scale, palette, layout, assets — lives in the **`slide-authoring`** skill. Read that skill whenever you need details on *how* a page is structured. This skill assumes you'll consult it before writing code.
 
-You only write files under `slides/<id>/`. Never modify `package.json`, `open-slide.config.ts`, or existing slides.
+You only write files under `slides/<id>/`. Never modify `package.json`, `lemonriver.config.ts`, or existing slides.
 
 ## Step 1 — Pick a theme
 
@@ -62,7 +62,7 @@ Sketch the slide as a list of page roles before writing code. Common page types:
 
 **Rule of thumb**: one idea per page. If you're tempted to put two, split them.
 
-If the deck topic naturally calls for specific real images the user must supply (product screenshots, team photos, customer dashboards), plan where those go and use `<ImagePlaceholder>` from `@open-slide/core` — see the **Image placeholders** section in `slide-authoring`. Default is **no placeholders**: only insert one when a real image is genuinely required.
+If the deck topic naturally calls for specific real images the user must supply (product screenshots, team photos, customer dashboards), plan where those go and use `<ImagePlaceholder>` from `@lemonriver/core` — see the **Image placeholders** section in `slide-authoring`. Default is **no placeholders**: only insert one when a real image is genuinely required.
 
 ## Step 5 — Commit to a visual direction
 

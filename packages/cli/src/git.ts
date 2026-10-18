@@ -75,7 +75,7 @@ export async function gitInitAndCommit(target: string): Promise<GitInitResult> {
     };
   }
 
-  const commit = await run('git', ['commit', '-m', 'chore: init open-slide project'], target);
+  const commit = await run('git', ['commit', '-m', 'chore: init LemonRiver project'], target);
   if (commit.code !== 0) {
     return {
       status: 'failed',

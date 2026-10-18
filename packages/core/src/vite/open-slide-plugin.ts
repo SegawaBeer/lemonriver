@@ -3,20 +3,19 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import fg from 'fast-glob';
 import { loadConfigFromFile, normalizePath, type Plugin, type ViteDevServer } from 'vite';
-import type { OpenSlideConfig } from '../config.ts';
+import { CONFIG_FILES } from '../branding.ts';
+import type { LemonRiverConfig } from '../config.ts';
 import { SLIDE_ID_RE } from '../editing/slide-ops.ts';
 import { foldersManifestPath, readManifest } from '../files/folders.ts';
 import { hasRecentWrite } from './recent-writes.ts';
 
-export type { OpenSlideConfig };
+export type { LemonRiverConfig };
 
-export type OpenSlidePluginOptions = {
+export type LemonRiverPluginOptions = {
   userCwd: string;
-  config: OpenSlideConfig;
+  config: LemonRiverConfig;
   coreVersion: string;
 };
-
-const CONFIG_FILE = 'open-slide.config.ts';
 
 const SLIDES_VMOD = 'virtual:open-slide/slides';
 const CONFIG_VMOD = 'virtual:open-slide/config';
@@ -167,7 +166,7 @@ ${cases}
   return { code, ignored };
 }
 
-export function openSlidePlugin(opts: OpenSlidePluginOptions): Plugin {
+export function lemonRiverPlugin(opts: LemonRiverPluginOptions): Plugin {
   const { userCwd, config, coreVersion } = opts;
   const slidesDir = config.slidesDir ?? 'slides';
   const slidesRoot = path.resolve(userCwd, slidesDir);
@@ -202,7 +201,7 @@ export function openSlidePlugin(opts: OpenSlidePluginOptions): Plugin {
   };
 
   return {
-    name: 'open-slide',
+    name: 'lemonriver',
     config(_c, env) {
       isDev = env.command === 'serve';
     },
@@ -303,14 +302,14 @@ export function openSlidePlugin(opts: OpenSlidePluginOptions): Plugin {
   };
 }
 
-export async function loadUserConfig(userCwd: string): Promise<OpenSlideConfig> {
-  const file = path.join(userCwd, CONFIG_FILE);
-  if (!existsSync(file)) return {};
+export async function loadUserConfig(userCwd: string): Promise<LemonRiverConfig> {
+  const file = CONFIG_FILES.map((name) => path.join(userCwd, name)).find((p) => existsSync(p));
+  if (!file) return {};
   const loaded = await loadConfigFromFile(
     { command: 'serve', mode: 'development' },
     file,
     userCwd,
     'silent',
   );
-  return (loaded?.config ?? {}) as OpenSlideConfig;
+  return (loaded?.config ?? {}) as LemonRiverConfig;
 }

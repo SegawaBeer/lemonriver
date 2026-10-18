@@ -35,6 +35,9 @@ jobs:
       - name: Run lint
         run: pnpm lint
 
+      - name: Check for stale upstream branding
+        run: pnpm check:branding
+
   typecheck:
     runs-on: ubuntu-latest
     steps:

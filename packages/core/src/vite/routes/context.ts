@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Connect } from 'vite';
 import { resolveSlideEntry } from '../../editing/slide-ops.ts';
 import { foldersManifestPath } from '../../files/folders.ts';
+import { declaredFrameworkSpecifier } from '../../workspace-specifier.ts';
 
 export type ApiContext = {
   userCwd: string;
@@ -12,6 +13,7 @@ export type ApiContext = {
   globalAssetsRoot: string;
   manifestPath: string;
   coreVersion: string;
+  frameworkSpecifier: string;
 };
 
 export type ApiPluginOptions = {
@@ -35,6 +37,7 @@ export function makeContext(opts: ApiPluginOptions): ApiContext {
     globalAssetsRoot,
     manifestPath,
     coreVersion: opts.coreVersion,
+    frameworkSpecifier: declaredFrameworkSpecifier(userCwd),
   };
 }
 

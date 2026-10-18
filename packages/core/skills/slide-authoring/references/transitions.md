@@ -11,7 +11,7 @@ The framework can run an enter/exit animation between every slide change. There'
 Module-level for the whole deck; per-page to override. The **incoming page wins**: navigating A → B uses `pages[B].transition ?? module.transition`. Its `exit` plays on A, its `enter` plays on B. Going back B → A uses A's transition.
 
 ```tsx
-import type { Page, SlideTransition } from '@open-slide/core';
+import type { Page, SlideTransition } from '@lemonriver/core';
 
 const Cover: Page = () => <section>…</section>;
 const Body:  Page = () => <section>…</section>;

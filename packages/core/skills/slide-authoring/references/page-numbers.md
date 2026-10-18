@@ -3,7 +3,7 @@
 If a footer shows the current page (`03 / 12`, `Page 3`, etc.), read it from `useSlidePageNumber()` — **never hardcode** `n` / `TOTAL`. Inserting, reordering, or deleting a page would otherwise force you to retouch every footer.
 
 ```tsx
-import { useSlidePageNumber } from '@open-slide/core';
+import { useSlidePageNumber } from '@lemonriver/core';
 
 const Footer = () => {
   const { current, total } = useSlidePageNumber();

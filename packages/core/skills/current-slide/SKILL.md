@@ -1,6 +1,6 @@
 ---
 name: current-slide
-description: Resolve which slide, page, and (optionally) selected element the user is currently viewing in the open-slide dev server. Consult this whenever the user references "this page", "this slide", "this element", "the slide I'm on", "the current page", or any deictic reference to slide content without naming it. Re-read `node_modules/.open-slide/current.json` at the start of every such turn — the user navigates between turns, so a value you read earlier in the conversation is almost certainly stale.
+description: Resolve which slide, page, and (optionally) selected element the user is currently viewing in the LemonRiver dev server. Consult this whenever the user references "this page", "this slide", "this element", "the slide I'm on", "the current page", or any deictic reference to slide content without naming it. Re-read `node_modules/.open-slide/current.json` at the start of every such turn — the user navigates between turns, so a value you read earlier in the conversation is almost certainly stale.
 ---
 
 # Where is the user right now?

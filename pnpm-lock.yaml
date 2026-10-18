@@ -26,7 +26,7 @@ importers:
 
   apps/demo:
     dependencies:
-      '@open-slide/core':
+      '@lemonriver/core':
         specifier: workspace:*
         version: link:../../packages/core
       react:
@@ -249,7 +249,7 @@ importers:
 
   packages/core/e2e/fixture:
     dependencies:
-      '@open-slide/core':
+      '@lemonriver/core':
         specifier: workspace:*
         version: link:../..
       react:

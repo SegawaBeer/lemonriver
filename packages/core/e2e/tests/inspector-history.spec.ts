@@ -22,7 +22,7 @@ test.describe('inspector history target resolution', () => {
     await writeFile(
       slideSourcePath(slideId),
       `import { createElement, useRef } from 'react';
-import { type Page, type SlideMeta, useIsActivePage } from '@open-slide/core';
+import { type Page, type SlideMeta, useIsActivePage } from '@lemonriver/core';
 import { useHistory } from '@/components/history-provider';
 import { useInspector } from '@/components/inspector/inspector-provider';
 import type { EditOp } from '@/lib/inspector/use-editor';
@@ -67,7 +67,7 @@ export default [Only] satisfies Page[];
     await writeFile(
       slideSourcePath(slideId),
       `import { type RefObject, useRef } from 'react';
-import { type Page, type SlideMeta, useIsActivePage } from '@open-slide/core';
+import { type Page, type SlideMeta, useIsActivePage } from '@lemonriver/core';
 import { useHistory } from '@/components/history-provider';
 import { readEditableText, useInspector } from '@/components/inspector/inspector-provider';
 import type { EditOp } from '@/lib/inspector/use-editor';
@@ -122,7 +122,7 @@ export default [Only] satisfies Page[];
     await writeFile(
       slideSourcePath(slideId),
       `import { type RefObject, useRef } from 'react';
-import { type Page, type SlideMeta, useIsActivePage } from '@open-slide/core';
+import { type Page, type SlideMeta, useIsActivePage } from '@lemonriver/core';
 import { readEditableText, useInspector } from '@/components/inspector/inspector-provider';
 export const meta: SlideMeta = { title: 'Paged history', createdAt: '2026-01-01T00:00:00.000Z' };
 function Title({ value, nodeRef }: { value: string; nodeRef: RefObject<HTMLHeadingElement | null> }) {

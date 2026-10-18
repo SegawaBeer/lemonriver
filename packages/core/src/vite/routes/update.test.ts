@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { detectPackageManager, updateCommandFor } from './update.ts';
 
 async function tempProject(): Promise<string> {
-  return await fs.mkdtemp(path.join(os.tmpdir(), 'open-slide-update-'));
+  return await fs.mkdtemp(path.join(os.tmpdir(), 'lemonriver-update-'));
 }
 
 describe('update routes helpers', () => {
@@ -54,21 +54,21 @@ describe('update routes helpers', () => {
   });
 
   it('uses fixed update commands for each package manager', () => {
-    expect(updateCommandFor('pnpm')).toEqual({
+    expect(updateCommandFor('pnpm', '@lemonriver/core@latest')).toEqual({
       cmd: 'pnpm',
-      args: ['add', '@open-slide/core@latest'],
+      args: ['add', '@lemonriver/core@latest'],
     });
-    expect(updateCommandFor('yarn')).toEqual({
+    expect(updateCommandFor('yarn', '@lemonriver/core@latest')).toEqual({
       cmd: 'yarn',
-      args: ['add', '@open-slide/core@latest'],
+      args: ['add', '@lemonriver/core@latest'],
     });
-    expect(updateCommandFor('bun')).toEqual({
+    expect(updateCommandFor('bun', '@lemonriver/core@latest')).toEqual({
       cmd: 'bun',
-      args: ['add', '@open-slide/core@latest'],
+      args: ['add', '@lemonriver/core@latest'],
     });
-    expect(updateCommandFor('npm')).toEqual({
+    expect(updateCommandFor('npm', '@lemonriver/core@latest')).toEqual({
       cmd: 'npm',
-      args: ['install', '@open-slide/core@latest'],
+      args: ['install', '@lemonriver/core@latest'],
     });
   });
 });

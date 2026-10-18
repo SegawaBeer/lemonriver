@@ -2,17 +2,19 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ViteDevServer } from 'vite';
+import { BIN_NAME, LEGACY_BIN_NAME } from '../../branding.ts';
 import { validateMutationRequest } from '../../http/request-guard.ts';
+import { readFrameworkDependency } from '../../workspace-specifier.ts';
 import { type ApiContext, json } from './context.ts';
 
 // GET /__update-check  → { current, latest, outdated }
-//   Compares the running @open-slide/core version against the npm `latest`
-//   dist-tag. Network/parse failures degrade to { latest: null, outdated: false }.
+//   Compares the installed framework version against the npm `latest` dist-tag
+//   of whichever package the workspace depends on. Network/parse failures
+//   degrade to { latest: null, outdated: false }.
 // POST /__update-package → { packageManager, command, latest, message }
-//   Installs @open-slide/core@latest with the detected package manager, then
-//   runs `open-slide sync:skills`.
+//   Installs the latest framework version with the detected package manager,
+//   then runs `<bin> sync:skills`.
 
-const PKG = '@open-slide/core';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const COMMAND_TIMEOUT_MS = 300_000;
 
@@ -26,7 +28,7 @@ type UpdateResult = {
   message: string;
 };
 
-let cache: { at: number; latest: string | null } | null = null;
+let cache: { pkg: string; at: number; latest: string | null } | null = null;
 let updateInFlight: Promise<UpdateResult> | null = null;
 
 function parseSemver(v: string): [number, number, number] | null {
@@ -46,20 +48,20 @@ function isOutdated(current: string, latest: string): boolean {
   return false;
 }
 
-async function fetchLatest(now: number): Promise<string | null> {
-  if (cache && now - cache.at < CACHE_TTL_MS) return cache.latest;
+async function fetchLatest(pkg: string, now: number): Promise<string | null> {
+  if (cache && cache.pkg === pkg && now - cache.at < CACHE_TTL_MS) return cache.latest;
   try {
-    const res = await fetch(`https://registry.npmjs.org/${PKG}/latest`, {
+    const res = await fetch(`https://registry.npmjs.org/${pkg}/latest`, {
       signal: AbortSignal.timeout(3000),
       headers: { accept: 'application/json' },
     });
     if (!res.ok) throw new Error(`registry ${res.status}`);
     const body = (await res.json()) as { version?: unknown };
     const latest = typeof body.version === 'string' ? body.version : null;
-    cache = { at: now, latest };
+    cache = { pkg, at: now, latest };
     return latest;
   } catch {
-    return cache?.latest ?? null;
+    return cache?.pkg === pkg ? cache.latest : null;
   }
 }
 
@@ -99,22 +101,29 @@ export async function detectPackageManager(cwd: string): Promise<PackageManager>
   }
 }
 
-export function updateCommandFor(packageManager: PackageManager): CommandSpec {
+export function updateCommandFor(packageManager: PackageManager, addTarget: string): CommandSpec {
   switch (packageManager) {
     case 'pnpm':
-      return { cmd: 'pnpm', args: ['add', `${PKG}@latest`] };
+      return { cmd: 'pnpm', args: ['add', addTarget] };
     case 'yarn':
-      return { cmd: 'yarn', args: ['add', `${PKG}@latest`] };
+      return { cmd: 'yarn', args: ['add', addTarget] };
     case 'bun':
-      return { cmd: 'bun', args: ['add', `${PKG}@latest`] };
+      return { cmd: 'bun', args: ['add', addTarget] };
     case 'npm':
-      return { cmd: 'npm', args: ['install', `${PKG}@latest`] };
+      return { cmd: 'npm', args: ['install', addTarget] };
   }
 }
 
-function localOpenSlideCommand(cwd: string): CommandSpec {
-  const bin = process.platform === 'win32' ? 'open-slide.cmd' : 'open-slide';
-  return { cmd: path.join(cwd, 'node_modules', '.bin', bin), args: ['sync:skills'] };
+async function localSyncCommand(cwd: string): Promise<CommandSpec> {
+  const ext = process.platform === 'win32' ? '.cmd' : '';
+  for (const name of [BIN_NAME, LEGACY_BIN_NAME]) {
+    const bin = path.join(cwd, 'node_modules', '.bin', `${name}${ext}`);
+    if (await fileExists(bin)) return { cmd: bin, args: ['sync:skills'] };
+  }
+  return {
+    cmd: path.join(cwd, 'node_modules', '.bin', `${BIN_NAME}${ext}`),
+    args: ['sync:skills'],
+  };
 }
 
 function formatCommand(spec: CommandSpec): string {
@@ -157,26 +166,27 @@ async function runCommand(spec: CommandSpec, cwd: string): Promise<void> {
 
 async function updatePackage(ctx: ApiContext): Promise<UpdateResult> {
   const packageManager = await detectPackageManager(ctx.userCwd);
-  const updateCommand = updateCommandFor(packageManager);
-  const syncCommand = localOpenSlideCommand(ctx.userCwd);
+  const dependency = readFrameworkDependency(ctx.userCwd);
+  const updateCommand = updateCommandFor(packageManager, dependency.addTarget);
+  const syncCommand = await localSyncCommand(ctx.userCwd);
 
   await runCommand(updateCommand, ctx.userCwd);
   await runCommand(syncCommand, ctx.userCwd);
 
   cache = null;
-  const latest = await fetchLatest(Date.now());
+  const latest = await fetchLatest(dependency.pkg, Date.now());
   return {
     packageManager,
-    command: `${formatCommand(updateCommand)} && open-slide sync:skills`,
+    command: `${formatCommand(updateCommand)} && ${BIN_NAME} sync:skills`,
     latest,
-    message: 'Updated @open-slide/core and synced skills.',
+    message: `Updated ${dependency.pkg} and synced skills.`,
   };
 }
 
 export function registerUpdateRoutes(server: ViteDevServer, ctx: ApiContext): void {
   server.middlewares.use('/__update-check', async (req, res, next) => {
     if ((req.method ?? 'GET') !== 'GET') return next();
-    const latest = await fetchLatest(Date.now());
+    const latest = await fetchLatest(readFrameworkDependency(ctx.userCwd).pkg, Date.now());
     const result: CheckResult = {
       current: ctx.coreVersion,
       latest,

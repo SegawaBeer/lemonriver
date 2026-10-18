@@ -35,6 +35,7 @@ export async function isDirNonEmpty(target: string): Promise<boolean> {
 }
 
 declare const __CORE_VERSION_AT_BUILD__: string;
+declare const __CORE_PKG_NAME_AT_BUILD__: string;
 
 function coreVersionRange(): string {
   return `^${__CORE_VERSION_AT_BUILD__}`;
@@ -76,7 +77,7 @@ export async function scaffold(opts: ScaffoldOptions): Promise<void> {
 
   if (!existsSync(TEMPLATE_DIR)) {
     throw new Error(
-      `Template missing at ${TEMPLATE_DIR}. If you are running from source, run \`pnpm --filter @open-slide/cli build\` first.`,
+      `Template missing at ${TEMPLATE_DIR}. If you are running from source, run \`pnpm --filter @lemonriver/cli build\` first.`,
     );
   }
 
@@ -97,8 +98,8 @@ export async function scaffold(opts: ScaffoldOptions): Promise<void> {
     pkg.name = name ?? basename(target);
     pkg.version = '0.0.0';
     pkg.private = true;
-    if (pkg.dependencies?.['@open-slide/core']) {
-      pkg.dependencies['@open-slide/core'] = coreVersionRange();
+    if (pkg.dependencies?.[__CORE_PKG_NAME_AT_BUILD__]) {
+      pkg.dependencies[__CORE_PKG_NAME_AT_BUILD__] = coreVersionRange();
     }
     await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   }

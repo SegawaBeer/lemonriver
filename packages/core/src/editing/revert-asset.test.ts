@@ -93,6 +93,10 @@ describe('findReferencedAssets', () => {
   });
 });
 
+// The specifier the fixtures' workspace declares — the pre-rename name, so
+// these cases also cover a workspace that has not migrated yet.
+const SPECIFIER = '@open-slide/core';
+
 describe('applyRevertAsset', () => {
   it('reverts <img> back to <ImagePlaceholder> and removes the asset import', () => {
     const src = [
@@ -103,7 +107,7 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/hero.png');
+    const r = applyRevertAsset(src, './assets/hero.png', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source).not.toContain("from './assets/hero.png'");
     expect(r.source).not.toContain('<img');
@@ -121,7 +125,7 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/logo.svg');
+    const r = applyRevertAsset(src, './assets/logo.svg', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source).toContain('<ImagePlaceholder hint="Logo" />');
     expect(r.source).not.toMatch(/width=\{/);
@@ -137,7 +141,7 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/cover.png');
+    const r = applyRevertAsset(src, './assets/cover.png', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source).toContain('<ImagePlaceholder hint="Cover" width={800} />');
   });
@@ -151,7 +155,7 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/hero.png');
+    const r = applyRevertAsset(src, './assets/hero.png', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source).toMatch(/import \{ type Page, ImagePlaceholder \} from '@open-slide\/core';/);
   });
@@ -165,7 +169,7 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/hero.png');
+    const r = applyRevertAsset(src, './assets/hero.png', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source).toMatch(
       /import type \{ DesignSystem, Page, SlideMeta \} from '@open-slide\/core';/,
@@ -181,7 +185,7 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/hero.png');
+    const r = applyRevertAsset(src, './assets/hero.png', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source.split('\n')[0]).toBe("import { ImagePlaceholder } from '@open-slide/core';");
   });
@@ -192,7 +196,7 @@ describe('applyRevertAsset', () => {
       'export default [() => (<ImagePlaceholder hint="x" />)];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/missing.png');
+    const r = applyRevertAsset(src, './assets/missing.png', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source).toBe(src);
   });
@@ -209,7 +213,7 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/hero.png');
+    const r = applyRevertAsset(src, './assets/hero.png', SPECIFIER);
     if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
     expect(r.source).not.toContain("from './assets/hero.png'");
     expect(r.source).toContain('<ImagePlaceholder hint="First" width={100} height={100} />');
@@ -227,9 +231,39 @@ describe('applyRevertAsset', () => {
       ')];',
       '',
     ].join('\n');
-    const r = applyRevertAsset(src, './assets/hero.png');
+    const r = applyRevertAsset(src, './assets/hero.png', SPECIFIER);
     expect(r.ok).toBe(false);
     if (r.ok) throw new Error('expected failure');
     expect(r.error).toMatch(/outside <img/);
+  });
+});
+
+describe('applyRevertAsset — renamed workspace', () => {
+  it('mirrors the file own framework specifier', () => {
+    const src = [
+      "import type { Page } from '@lemonriver/core';",
+      "import hero from './assets/hero.png';",
+      'export default [() => (',
+      "  <img src={hero} alt='Hero' style={{ objectFit: 'cover' }} />",
+      ')];',
+      '',
+    ].join('\n');
+    const r = applyRevertAsset(src, './assets/hero.png', '@lemonriver/core');
+    if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
+    expect(r.source).toContain("import { ImagePlaceholder } from '@lemonriver/core';");
+    expect(r.source).not.toContain('@open-slide/core');
+  });
+
+  it('falls back to the workspace specifier when the file imports nothing from the framework', () => {
+    const src = [
+      "import hero from './assets/hero.png';",
+      'export default [() => (',
+      "  <img src={hero} alt='Hero' style={{ objectFit: 'cover' }} />",
+      ')];',
+      '',
+    ].join('\n');
+    const r = applyRevertAsset(src, './assets/hero.png', '@lemonriver/core');
+    if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
+    expect(r.source).toContain("import { ImagePlaceholder } from '@lemonriver/core';");
   });
 });

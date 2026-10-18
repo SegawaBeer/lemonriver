@@ -1,37 +1,37 @@
-# @open-slide/core
+# @lemonriver/core
 
-Runtime and CLI for [open-slide](https://github.com/open-slide/open-slide) — a React-based slide framework where you write slides and the framework handles the Vite/React stack, layout, navigation, hot reload, and fullscreen play mode.
+Runtime and CLI for [LemonRiver](https://github.com/SegawaBeer/lemonriver) — a React-based slide framework where you write slides and the framework handles the Vite/React stack, layout, navigation, hot reload, and fullscreen play mode.
 
 ## Install
 
 ```bash
-pnpm add @open-slide/core
+pnpm add @lemonriver/core
 ```
 
-Most users get this installed automatically by running `npx @open-slide/cli init`. Use this package directly only if you're wiring up an existing workspace by hand.
+Most users get this installed automatically by running `npx @lemonriver/cli init`. Use this package directly only if you're wiring up an existing workspace by hand.
 
 ## What's inside
 
 - **Runtime** — home page, slide viewer, thumbnail rail, keyboard navigation, and fullscreen presenter mode. Every slide renders into a fixed **1920×1080** canvas; the framework scales it.
 - **Vite plugin** — discovers `slides/<id>/index.{tsx,jsx,ts,js}`, exposes them via virtual modules, and reloads when slides are added or removed.
-- **CLI** — `open-slide dev | build | preview` so workspaces never need to touch Vite, React, or tsconfig directly.
+- **CLI** — `lemonriver dev | build | preview` so workspaces never need to touch Vite, React, or tsconfig directly.
 
 ## CLI
 
-Once installed, the `open-slide` bin is available in the workspace:
+Once installed, the `lemonriver` bin is available in the workspace:
 
 | Command | Description |
 | --- | --- |
-| `open-slide dev` | Start the dev server. Flags: `-p, --port <port>`, `--host [host]`, `--open`. |
-| `open-slide build` | Build a static site. Flags: `--out-dir <dir>` (defaults to `dist`). |
-| `open-slide preview` | Preview the production build. Flags: `-p, --port <port>`, `--host [host]`, `--open`. |
+| `lemonriver dev` | Start the dev server. Flags: `-p, --port <port>`, `--host [host]`, `--open`. |
+| `lemonriver build` | Build a static site. Flags: `--out-dir <dir>` (defaults to `dist`). |
+| `lemonriver preview` | Preview the production build. Flags: `-p, --port <port>`, `--host [host]`, `--open`. |
 
 ## Config
 
-Create `open-slide.config.ts` in the workspace root (all fields optional):
+Create `lemonriver.config.ts` in the workspace root (all fields optional):
 
 ```ts
-import type { OpenSlideConfig } from '@open-slide/core';
+import type { OpenSlideConfig } from '@lemonriver/core';
 
 const openSlideConfig: OpenSlideConfig = {
   slidesDir: 'slides',
@@ -58,11 +58,11 @@ The value is passed straight to Vite's `base` and to React Router's `basename`, 
 Slides live under `slides/<kebab-case-id>/index.tsx` and default-export an array of `Page` components:
 
 ```tsx
-import type { Page } from '@open-slide/core';
+import type { Page } from '@lemonriver/core';
 
 const Cover: Page = () => (
   <div className="flex h-full w-full items-center justify-center">
-    <h1 className="text-[120px] font-bold">Hello, open-slide</h1>
+    <h1 className="text-[120px] font-bold">Hello, LemonRiver</h1>
   </div>
 );
 
@@ -84,13 +84,13 @@ import {
   type SlideModule,
   type SlideTransition,
   type OpenSlideConfig,
-} from '@open-slide/core';
+} from '@lemonriver/core';
 ```
 
 The Vite plugin is exposed under a subpath for advanced setups:
 
 ```ts
-import { createViteConfig } from '@open-slide/core/vite';
+import { createViteConfig } from '@lemonriver/core/vite';
 ```
 
 ## License

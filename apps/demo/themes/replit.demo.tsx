@@ -1,5 +1,5 @@
-import type { DesignSystem } from '@open-slide/core';
-import { type Page, useSlidePageNumber } from '@open-slide/core';
+import type { DesignSystem } from '@lemonriver/core';
+import { type Page, useSlidePageNumber } from '@lemonriver/core';
 
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap');

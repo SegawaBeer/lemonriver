@@ -8,7 +8,7 @@ When the *same visual object* exists on two adjacent pages, the runtime can morp
 2. Enable `morph` on the incoming page's transition.
 
 ```tsx
-import { MorphElement, type Page, type SlideTransition } from '@open-slide/core';
+import { MorphElement, type Page, type SlideTransition } from '@lemonriver/core';
 import type { CSSProperties } from 'react';
 
 // Morph transition — a held exit and an opacity-only enter keep all the motion on the clones (see rules).
@@ -53,7 +53,7 @@ Narrow.transition = morphTransition; // backward: Wide → Narrow morphs it back
 5. **Gate entrance animations behind `useIsActivePage()`.** During the cut the runtime mounts a *fresh instance* of the outgoing page to snapshot its exit state (and the dev UI mounts every page for thumbnails/overview). If an intro replays there, the snapshot is mid-animation and the morph starts from garbage. The hook returns `true` only for the instance the audience is watching; every other instance (outgoing snapshot, thumbnails, overview, presenter preview, print) should render the final, settled state — no intro, full text.
 
    ```tsx
-   import { useIsActivePage } from '@open-slide/core';
+   import { useIsActivePage } from '@lemonriver/core';
 
    // Inside the page component:
    const animate = useIsActivePage();

@@ -14,8 +14,8 @@ describe('sanitizeDirName', () => {
   });
 
   it('replaces spaces with hyphens', () => {
-    expect(sanitizeDirName('future of open slide and how can i help')).toBe(
-      'future-of-open-slide-and-how-can-i-help',
+    expect(sanitizeDirName('future of lemon river and how can i help')).toBe(
+      'future-of-lemon-river-and-how-can-i-help',
     );
   });
 
@@ -45,7 +45,7 @@ describe('sanitizeDirName', () => {
 
   it('is idempotent', () => {
     const cases = [
-      'future of open slide and how can i help',
+      'future of lemon river and how can i help',
       "my deck's notes",
       'decks/my new deck',
       '!!!hi!!!',

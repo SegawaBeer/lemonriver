@@ -95,7 +95,7 @@ test.describe('visual editor', () => {
     await duplicateSlide(request, 'edit-target', slideId);
     await writeFile(
       slideSourcePath(slideId),
-      `import type { Page, SlideMeta } from '@open-slide/core';
+      `import type { Page, SlideMeta } from '@lemonriver/core';
 export const meta: SlideMeta = { title: 'Visual arrangement', createdAt: '2026-01-01T00:00:00.000Z' };
 const Only: Page = () => (
   <div style={{ width: '100%', height: '100%', position: 'relative', background: '#14213d', color: 'white', fontFamily: 'system-ui', fontSize: 32 }}>
@@ -580,7 +580,7 @@ export default [Only] satisfies Page[];
     await duplicateSlide(request, 'edit-target', slideId);
     await writeFile(
       slideSourcePath(slideId),
-      `import type { Page } from '@open-slide/core';
+      `import type { Page } from '@lemonriver/core';
 const Only: Page = () => (
   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
     <div data-testid="static-first" style={{ marginLeft: 100, width: 250, height: 200, background: 'red', left: 80, insetInlineStart: 40, inset: 50 }}>
@@ -642,7 +642,7 @@ export default [Only] satisfies Page[];
     await duplicateSlide(request, 'edit-target', slideId);
     await writeFile(
       slideSourcePath(slideId),
-      `import type { Page } from '@open-slide/core';
+      `import type { Page } from '@lemonriver/core';
 const Only: Page = () => (
   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
     <div data-testid="container" style={{ marginLeft: 100, width: 250, height: 200, background: 'red' }}>
@@ -811,7 +811,7 @@ export default [Only] satisfies Page[];
     await duplicateSlide(request, 'edit-target', slideId);
     await writeFile(
       slideSourcePath(slideId),
-      `import type { Page, SlideMeta } from '@open-slide/core';
+      `import type { Page, SlideMeta } from '@lemonriver/core';
 export const meta: SlideMeta = { title: 'Nested transforms', createdAt: '2026-01-01T00:00:00.000Z' };
 const Only: Page = () => (
   <div style={{ width: '100%', height: '100%', position: 'relative', background: '#14213d' }}>

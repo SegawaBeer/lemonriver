@@ -111,7 +111,7 @@ export function runCli(args: string[], cwd: string, timeoutMs = 180_000): Promis
     });
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      reject(new Error(`open-slide ${args.join(' ')} timed out after ${timeoutMs}ms\n${stderr}`));
+      reject(new Error(`lemonriver ${args.join(' ')} timed out after ${timeoutMs}ms\n${stderr}`));
     }, timeoutMs);
     child.on('error', (err) => {
       clearTimeout(timer);

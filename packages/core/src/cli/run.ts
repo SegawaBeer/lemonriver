@@ -43,7 +43,7 @@ async function runSkillsDriftCheck(skillsDir: string): Promise<void> {
 
   if (!interactive) {
     process.stderr.write(
-      `\n  ${notice}\n    ${chalk.dim('Run `open-slide sync:skills` to update.')}\n`,
+      `\n  ${notice}\n    ${chalk.dim('Run `lemonriver sync:skills` to update.')}\n`,
     );
     return;
   }
@@ -58,7 +58,7 @@ async function runSkillsDriftCheck(skillsDir: string): Promise<void> {
       await syncSkills(skillsDir);
     } else {
       process.stdout.write(
-        chalk.dim('    Skipped. Run `open-slide sync:skills` later to update.\n'),
+        chalk.dim('    Skipped. Run `lemonriver sync:skills` later to update.\n'),
       );
     }
   } finally {
@@ -83,11 +83,11 @@ function resolveBuiltinSkillsDir(): string {
 export async function run(argv: string[]): Promise<void> {
   const program = new Command();
   program
-    .name('open-slide')
-    .description('Author slides in React — open-slide runs the rest.')
+    .name('lemonriver')
+    .description('Author slides in React — LemonRiver runs the rest.')
     .version(readVersion(), '-v, --version', 'print version')
     .helpOption('-h, --help', 'show help')
-    .showHelpAfterError(chalk.dim('(run `open-slide --help` for usage)'));
+    .showHelpAfterError(chalk.dim('(run `lemonriver --help` for usage)'));
 
   program
     .command('dev')
@@ -129,7 +129,7 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command('sync:skills')
-    .description('Sync built-in skills from @open-slide/core into this workspace')
+    .description('Sync built-in skills from @lemonriver/core into this workspace')
     .option('--dry-run', 'show what would change without writing')
     .action(async (flags: SyncFlags) => {
       await syncSkills(resolveBuiltinSkillsDir(), flags);

@@ -141,7 +141,7 @@ export function formatViteMismatch(
     return [
       chalk.bold('Conflicting vite versions in node_modules'),
       '',
-      `open-slide ships ${want}, but ${mismatch.consumer} is loading ${got}`,
+      `LemonRiver ships ${want}, but ${mismatch.consumer} is loading ${got}`,
       `from ${from}. Make sure no package.json lists vite, then reinstall:`,
       ...command(`${packageManager} install`),
       footer,
@@ -154,7 +154,7 @@ export function formatViteMismatch(
     chalk.bold(`Remove ${chalk.yellow('vite')} from your package.json`),
     '',
     `${chalk.bold(declaration.field)} in ${chalk.dim(rel(declaration.file))} still lists vite, a leftover from v1.`,
-    `It shadows the ${want} bundled with open-slide: ${mismatch.consumer}`,
+    `It shadows the ${want} bundled with LemonRiver: ${mismatch.consumer}`,
     `is loading ${got} from ${from} instead.`,
     ...command(cd + removeCommand(packageManager)),
     footer,

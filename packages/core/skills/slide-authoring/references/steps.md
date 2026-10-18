@@ -5,7 +5,7 @@ Reveal a page one beat at a time instead of showing everything at once. Wrap the
 If `slides/build-on-reveal/` exists in this project (the demo workspace ships it), study it before authoring a stepped page; otherwise the rules and snippets below are sufficient.
 
 ```tsx
-import { Step, Steps } from '@open-slide/core';
+import { Step, Steps } from '@lemonriver/core';
 
 <Steps>
   <Step><div style={BULLET_ROW}>An audience reads faster than a presenter speaks.</div></Step>

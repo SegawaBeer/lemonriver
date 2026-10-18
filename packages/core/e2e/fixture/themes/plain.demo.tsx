@@ -1,4 +1,4 @@
-import type { Page } from '@open-slide/core';
+import type { Page } from '@lemonriver/core';
 
 const base = {
   width: '100%',

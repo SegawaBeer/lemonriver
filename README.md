@@ -1,28 +1,16 @@
-<img width="1280" height="640" alt="open-slide github cover" src="https://github.com/user-attachments/assets/da535284-f7a9-4834-b281-f9ac6fe416e8" />
+# LemonRiver
 
-<br />
-<br />
-<a href="https://vercel.com/open-source-program">
-  <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge-2026.svg" />
-</a>
-
-# open-slide
-
-[![GitHub stars](https://img.shields.io/github/stars/open-slide/open-slide?style=for-the-badge)](https://github.com/open-slide/open-slide/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/open-slide/open-slide?style=for-the-badge)](https://github.com/open-slide/open-slide/network/members)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-
-**The slide framework built for agents.** Describe your deck in natural language — your coding agent writes the React. open-slide handles the canvas, scaling, navigation, hot reload, and present mode so the agent can focus on content.
+**The slide framework built for agents.** Describe your deck in natural language — your coding agent writes the React. LemonRiver handles the canvas, scaling, navigation, hot reload, and present mode so the agent can focus on content.
 
 Every slide renders into a fixed **1920 × 1080** canvas. Pages are arbitrary React components, not a constrained DSL.
 
 ```bash
-npx @open-slide/cli init my-slide
+npx @lemonriver/cli init my-slide
 ```
 
-## Why open-slide
+## Why LemonRiver
 
-Slides are visual code. Agents are great at writing code. open-slide is the missing runtime that turns "make slides about X" into a polished, presentable deck — without you ever leaving the chat.
+Slides are visual code. Agents are great at writing code. LemonRiver is the runtime that turns "make slides about X" into a polished, presentable deck — without you ever leaving the chat.
 
 ## Highlights
 
@@ -37,7 +25,7 @@ From a one-line prompt to a polished deck, no boilerplate.
 
 ### 🎯 In-browser inspector
 
-Click any element in the dev server and attach a comment — *"make this red"*, *"change to 'Open Slide Rocks'"*, *"shrink the headline"*. Comments are persisted as `@slide-comment` markers in source. Run `/apply-comments` and the agent applies every pending edit, then clears the markers.
+Click any element in the dev server and attach a comment — *"make this red"*, *"change to 'LemonRiver Rocks'"*, *"shrink the headline"*. Comments are persisted as `@slide-comment` markers in source. Run `/apply-comments` and the agent applies every pending edit, then clears the markers.
 
 The loop: present → click to comment → `/apply-comments` → repeat.
 
@@ -64,7 +52,7 @@ Outputs a plain static build — one-click deploy to Vercel, Cloudflare Pages, Z
 ## Get started
 
 ```bash
-npx @open-slide/cli init my-slide
+npx @lemonriver/cli init my-slide
 cd my-slide
 pnpm dev
 ```
@@ -77,26 +65,24 @@ This repo is a pnpm + Turbo monorepo.
 
 | Path | Description |
 | --- | --- |
-| [packages/core](packages/core) | `@open-slide/core` — runtime (home page, slide viewer, present mode, inspector), Vite plugin, and the `open-slide` dev/build/preview CLI. |
-| [packages/cli](packages/cli) | `@open-slide/cli` — `npx @open-slide/cli init` scaffolder. Generates a minimal workspace where Vite/React/tsconfig stay hidden inside core. |
-| [apps/demo](apps/demo) | Example workspace that consumes `@open-slide/core` via `workspace:*`. Used for local development of the framework. |
+| [packages/core](packages/core) | `@lemonriver/core` — runtime (home page, slide viewer, present mode, inspector), Vite plugin, and the `lemonriver` dev/build/preview CLI. |
+| [packages/cli](packages/cli) | `@lemonriver/cli` — `npx @lemonriver/cli init` scaffolder. Generates a minimal workspace where Vite/React/tsconfig stay hidden inside core. |
+| [apps/demo](apps/demo) | Example workspace that consumes `@lemonriver/core` via `workspace:*`. Used for local development of the framework. |
 
 ## Development
 
 ```bash
 pnpm install
-pnpm dev      # runs the demo against the local @open-slide/core
+pnpm dev      # runs the demo against the local @lemonriver/core
 pnpm build    # builds all packages
-pnpm check    # type-checks all packages
-pnpm lint     # lints via biome
+pnpm check    # lints and formats via biome
+pnpm test     # runs vitest
 ```
 
-## Support
+## Relationship to open-slide
 
-If open-slide has been useful to you, consider supporting development:
-
-<a href="https://buymeacoffee.com/1weiho"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="40"></a>
+LemonRiver is a fork of [open-slide](https://github.com/1weiho/open-slide) and tracks it as `upstream`. The framework still resolves workspaces written against the pre-rename package name and config file, so decks authored before the fork keep working unchanged.
 
 ## License
 
-MIT © [Yiwei Ho](https://github.com/1weiho)
+MIT. The original copyright notice is retained in [LICENSE](LICENSE).

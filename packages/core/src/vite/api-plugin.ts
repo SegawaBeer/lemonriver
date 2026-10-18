@@ -12,12 +12,12 @@ import { registerSvglRoutes } from './routes/svgl.ts';
 import { registerUpdateRoutes } from './routes/update.ts';
 import { registerWatchers } from './routes/watchers.ts';
 
-// All open-slide dev-server endpoints in one plugin. To see the routes
+// All LemonRiver dev-server endpoints in one plugin. To see the routes
 // owned by a group, open the matching file under `routes/` — each file
 // leads with a comment-block manifest of its endpoints.
 export function apiPlugin(opts: ApiPluginOptions): Plugin {
   return {
-    name: 'open-slide:api',
+    name: 'lemonriver:api',
     apply: 'serve',
     configureServer(server) {
       const ctx = makeContext(opts);

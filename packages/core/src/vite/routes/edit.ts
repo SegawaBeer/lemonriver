@@ -71,7 +71,7 @@ export function registerEditRoutes(server: ViteDevServer, ctx: ApiContext): void
         const source = await readSlideSource(file);
         if (source === null) return json(res, 404, { error: 'slide not found' });
 
-        const result = applyRevertAsset(source, assetPath);
+        const result = applyRevertAsset(source, assetPath, ctx.frameworkSpecifier);
         if (!result.ok) return json(res, result.status, { error: result.error });
         const changed = result.source !== source;
         if (changed) await fs.writeFile(file, result.source, 'utf8');

@@ -1,4 +1,4 @@
-// Boots `open-slide dev` for the e2e suite against a throwaway copy of the
+// Boots `lemonriver dev` for the e2e suite against a throwaway copy of the
 // fixture project (see scratch.mjs).
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -10,7 +10,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const coreRoot = path.resolve(here, '..');
 
 if (!existsSync(path.join(coreRoot, 'dist', 'cli', 'bin.js'))) {
-  console.error('packages/core/dist is missing. Run `pnpm --filter @open-slide/core build` first.');
+  console.error('packages/core/dist is missing. Run `pnpm --filter @lemonriver/core build` first.');
   process.exit(1);
 }
 if (!existsSync(path.join(fixtureDir, 'node_modules'))) {

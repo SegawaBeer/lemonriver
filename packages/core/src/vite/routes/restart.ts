@@ -8,7 +8,7 @@ import { json } from './context.ts';
 //   after a restart means the new process is up.
 // POST /__restart-server → { restarting: true }
 //   Exits with RESTART_EXIT_CODE so the CLI supervisor respawns the server
-//   against the currently installed @open-slide/core.
+//   against the currently installed @lemonriver/core.
 
 export const RESTART_EXIT_CODE = 52;
 export const DEV_SUPERVISED_ENV = 'OPEN_SLIDE_DEV_SUPERVISED';
@@ -32,7 +32,7 @@ export function registerRestartRoutes(server: ViteDevServer): void {
     const guard = validateMutationRequest(req);
     if (!guard.ok) return json(res, guard.status, { error: guard.error });
     if (!isSupervised()) {
-      return json(res, 409, { error: 'dev server was not started by the open-slide CLI' });
+      return json(res, 409, { error: 'dev server was not started by the LemonRiver CLI' });
     }
 
     // exit only once the response is flushed, so the client sees `restarting`

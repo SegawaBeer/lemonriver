@@ -1,12 +1,12 @@
 import type { Locale } from './locale/types';
 
-export type OpenSlideBuildConfig = {
+export type LemonRiverBuildConfig = {
   showSlideBrowser?: boolean;
   showSlideUi?: boolean;
   allowHtmlDownload?: boolean;
 };
 
-export type OpenSlideConfig = {
+export type LemonRiverConfig = {
   base?: string;
   slidesDir?: string;
   themesDir?: string;
@@ -19,5 +19,11 @@ export type OpenSlideConfig = {
    * chooses one (their choice is then remembered locally).
    */
   locale?: Locale;
-  build?: OpenSlideBuildConfig;
+  build?: LemonRiverBuildConfig;
 };
+
+/** @deprecated Renamed to {@link LemonRiverConfig}; kept for config files written before the rename. */
+export type OpenSlideConfig = LemonRiverConfig;
+
+/** @deprecated Renamed to {@link LemonRiverBuildConfig}. */
+export type OpenSlideBuildConfig = LemonRiverBuildConfig;

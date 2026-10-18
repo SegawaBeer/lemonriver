@@ -5,6 +5,7 @@ import { defineConfig } from 'tsdown';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const corePkg = JSON.parse(readFileSync(resolve(here, '..', 'core', 'package.json'), 'utf8')) as {
+  name: string;
   version: string;
 };
 
@@ -21,5 +22,6 @@ export default defineConfig({
   shims: false,
   define: {
     __CORE_VERSION_AT_BUILD__: JSON.stringify(corePkg.version),
+    __CORE_PKG_NAME_AT_BUILD__: JSON.stringify(corePkg.name),
   },
 });

@@ -2,10 +2,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Plugin, ViteDevServer } from 'vite';
 import { type DesignSystem, defaultDesign } from '../app/lib/design.ts';
+import { isFrameworkSpecifier } from '../branding.ts';
 import { type AstNode, parseSource, tryParse } from '../editing/babel-walk.ts';
 import { jsString } from '../editing/edit-ops.ts';
 import { resolveSlideEntry } from '../editing/slide-ops.ts';
 import { validateMutationRequest } from '../http/request-guard.ts';
+import { declaredFrameworkSpecifier } from '../workspace-specifier.ts';
 import { json, readBody } from './routes/context.ts';
 
 // Reading tolerates a slide mid-edit; writing splices by AST offset, so a
@@ -243,8 +245,9 @@ function findImports(ast: AstNode): ImportInfo[] {
 function addDesignSystemImport(
   source: string,
   imports: ImportInfo[],
+  specifier: string,
 ): { source: string; offsetShift: number } {
-  const stmt = `import type { DesignSystem } from '@open-slide/core';\n`;
+  const stmt = `import type { DesignSystem } from '${specifier}';\n`;
   if (imports.length > 0) {
     const last = imports[imports.length - 1];
     const insertAt = last.node.end;
@@ -259,10 +262,11 @@ function addDesignSystemImport(
 function ensureDesignSystemImport(
   source: string,
   ast: AstNode,
+  specifier: string,
 ): { source: string; offsetShift: number } {
   const imports = findImports(ast);
-  const coreImport = imports.find((imp) => imp.source === '@open-slide/core');
-  if (!coreImport) return addDesignSystemImport(source, imports);
+  const coreImport = imports.find((imp) => isFrameworkSpecifier(imp.source));
+  if (!coreImport) return addDesignSystemImport(source, imports, specifier);
 
   const hasDesignSystem = coreImport.specifiers.some((spec) => {
     if (spec.type !== 'ImportSpecifier') return false;
@@ -275,12 +279,12 @@ function ensureDesignSystemImport(
   // `import type { … }` already applies to every specifier, and repeating the
   // modifier on one of them is a TypeScript error.
   const typeOnlyDecl = (node as unknown as { importKind?: string }).importKind === 'type';
-  const specifier = typeOnlyDecl ? 'DesignSystem' : 'type DesignSystem';
+  const specifierText = typeOnlyDecl ? 'DesignSystem' : 'type DesignSystem';
 
   const named = coreImport.specifiers.filter((spec) => spec.type === 'ImportSpecifier');
   const lastNamed = named[named.length - 1];
   if (lastNamed) {
-    const insertText = `, ${specifier}`;
+    const insertText = `, ${specifierText}`;
     const next = `${source.slice(0, lastNamed.end)}${insertText}${source.slice(lastNamed.end)}`;
     return { source: next, offsetShift: insertText.length };
   }
@@ -289,9 +293,9 @@ function ensureDesignSystemImport(
   const braceClose = importText.lastIndexOf('}');
   // A namespace, default-only, or side-effect import has no named list to
   // extend, so `DesignSystem` needs an import statement of its own.
-  if (braceClose === -1) return addDesignSystemImport(source, imports);
+  if (braceClose === -1) return addDesignSystemImport(source, imports, coreImport.source);
   const absoluteBrace = node.start + braceClose;
-  const next = `${source.slice(0, absoluteBrace)}${specifier}${source.slice(absoluteBrace)}`;
+  const next = `${source.slice(0, absoluteBrace)}${specifierText}${source.slice(absoluteBrace)}`;
   return { source: next, offsetShift: specifier.length };
 }
 
@@ -310,7 +314,11 @@ export type WriteResult =
   | { ok: true; source: string; created: boolean }
   | { ok: false; status: number; error: string };
 
-export function applyDesignWrite(source: string, next: DesignSystem): WriteResult {
+export function applyDesignWrite(
+  source: string,
+  next: DesignSystem,
+  specifier: string,
+): WriteResult {
   let body: string;
   try {
     body = serializeDesign(next);
@@ -327,7 +335,7 @@ export function applyDesignWrite(source: string, next: DesignSystem): WriteResul
     return { ok: true, source: out, created: false };
   }
 
-  const withImport = ensureDesignSystemImport(source, ast);
+  const withImport = ensureDesignSystemImport(source, ast, specifier);
   const ast2 = parseStrict(withImport.source);
   if (!ast2) {
     return { ok: false, status: 422, error: 'failed to re-parse after adding import' };
@@ -345,9 +353,10 @@ export type DesignPluginOptions = {
 
 export function designPlugin(opts: DesignPluginOptions): Plugin {
   const slidesRoot = path.resolve(opts.userCwd, opts.slidesDir ?? 'slides');
+  const specifier = declaredFrameworkSpecifier(opts.userCwd);
 
   return {
-    name: 'open-slide:design',
+    name: 'lemonriver:design',
     apply: 'serve',
     configureServer(server: ViteDevServer) {
       server.middlewares.use('/__design', async (req, res, next) => {
@@ -397,7 +406,7 @@ export function designPlugin(opts: DesignPluginOptions): Plugin {
               return json(res, 422, { error: parsed.error });
             }
             const merged = mergeDesign(baseDesign, patch);
-            const written = applyDesignWrite(source, merged);
+            const written = applyDesignWrite(source, merged, specifier);
             if (!written.ok) return json(res, written.status, { error: written.error });
             if (written.source !== source) await fs.writeFile(file, written.source, 'utf8');
             return json(res, 200, { ok: true, design: merged, created: written.created });
@@ -414,7 +423,7 @@ export function designPlugin(opts: DesignPluginOptions): Plugin {
             } catch {
               return json(res, 404, { error: 'slide not found' });
             }
-            const written = applyDesignWrite(source, defaultDesign);
+            const written = applyDesignWrite(source, defaultDesign, specifier);
             if (!written.ok) return json(res, written.status, { error: written.error });
             if (written.source !== source) await fs.writeFile(file, written.source, 'utf8');
             return json(res, 200, { ok: true, design: defaultDesign, created: written.created });
