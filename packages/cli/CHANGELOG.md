@@ -1,5 +1,11 @@
 # @lemonriver/cli
 
+## 0.1.1
+
+### Patch Changes
+
+- New workspaces scaffold against the current core release instead of the stale 0.0.6 range.
+
 LemonRiver starts its own version line at 0.1.0. The scaffolder's history before the fork is kept in [CHANGELOG.upstream.md](CHANGELOG.upstream.md).
 
 ## 0.1.0

@@ -26,6 +26,7 @@ const ALLOWED = [
   'packages/core/src/config.ts',
   'packages/core/src/index.ts',
   'packages/core/src/editing/revert-asset.test.ts',
+  'packages/core/src/editing/slide-ops.test.ts',
   'packages/core/src/vite/design-plugin.test.ts',
   'packages/core/src/vite/open-slide-plugin.test.ts',
   'packages/core/src/workspace-specifier.test.ts',

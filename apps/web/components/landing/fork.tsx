@@ -15,7 +15,7 @@ const changes = [
   },
   {
     title: 'Its own version line',
-    body: 'LemonRiver starts at 0.1.0, built on open-slide 2.0.1. The framework history before the fork is kept alongside the new changelog.',
+    body: 'LemonRiver starts at 0.1.0 and tracks open-slide upstream. The framework history before the fork is kept alongside the new changelog.',
   },
 ];
 

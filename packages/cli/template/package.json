@@ -10,7 +10,7 @@
     "sync:skills": "lemonriver sync:skills"
   },
   "dependencies": {
-    "@lemonriver/core": "^0.0.6",
+    "@lemonriver/core": "^0.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

@@ -1,5 +1,12 @@
 # @lemonriver/core
 
+## 0.2.0
+
+### Minor Changes
+
+- Bring in open-slide 2.3.1: an in-app agent panel that drives a locally installed Claude Code or Codex, a comment mode with floating pins, a chrome-less single-page preview route, Spanish UI, and fixes for present-mode letterboxing, narrow toolbars, thumbnail arrow keys and undo/redo.
+- 36c8c07: Story board cards can now take a name, a status and a work memo, and two cards can be linked with a dashed line that can be hidden — all stored with the board, never written into the deck.
+
 ## 0.1.1
 
 ### Patch Changes
