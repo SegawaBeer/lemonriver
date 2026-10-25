@@ -612,7 +612,7 @@ export const zhCN: Locale = {
     resultSeconds: '{seconds} 秒',
     errorEyebrow: '错误',
     statusLoading: '正在检查 agent',
-    disabled: 'agent 面板已在 open-slide.config.ts 中禁用。',
+    disabled: 'agent 面板已在 lemonriver.config.ts 中禁用。',
     connectTitle: '连接 agent',
     connectDescription:
       '直接在这里驱动你的 coding agent，无需切换到终端。这台电脑上已安装的 agent 会自动连接，并复用它的登录状态。',

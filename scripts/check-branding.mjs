@@ -12,7 +12,8 @@ const SKIP_FILES = new Set([
   'scripts/upstream.mjs',
 ]);
 const SKIP_SUFFIXES = ['/CHANGELOG.md', '/CHANGELOG.upstream.md'];
-const SKIP_PREFIXES = ['apps/web/'];
+// `apps/web` is upstream's site; `.claude` is maintainer tooling that drives it.
+const SKIP_PREFIXES = ['apps/web/', '.claude/'];
 
 // Files that keep the old name on purpose: the compatibility layer itself, the
 // legacy fixtures that prove it works, our own docs naming the upstream
@@ -49,6 +50,9 @@ const INTERNAL = [
   /open-slide:/,
   /open-slide-plugin/,
   /open-slide-presenter-/,
+  // Prompt markers the agent panel and its parsers agree on. Only this package
+  // reads them, so they stay as-is to keep prompt.ts mergeable.
+  /open-slide-(context|questions|note)/,
 ];
 
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })

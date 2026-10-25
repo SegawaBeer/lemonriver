@@ -126,7 +126,7 @@ test.describe('comment mode', () => {
     await duplicateSlide(request, 'edit-target', 'cm-pages');
     await writeFile(
       slideSourcePath('cm-pages'),
-      `import type { Page, SlideMeta } from '@open-slide/core';
+      `import type { Page, SlideMeta } from '@lemonriver/core';
 export const meta: SlideMeta = { title: 'Paged', createdAt: '2026-01-01T00:00:00.000Z' };
 const Frame = ({ title }: { title: string }) => (
   <div style={{ width: '100%', height: '100%', background: '#14213d', color: 'white', padding: 120 }}>

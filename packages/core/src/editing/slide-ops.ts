@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parse as babelParse } from '@babel/parser';
+import { PKG_NAME } from '../branding.ts';
 
 export const SLIDE_ID_RE = /^[a-z0-9_-]+$/i;
 
@@ -194,8 +195,8 @@ export async function duplicateSlideDir(
 
 export const BLANK_SLIDE_TITLE = 'Untitled';
 
-function blankSlideSource(createdAt: string): string {
-  return `import type { Page, SlideMeta } from '@open-slide/core';
+function blankSlideSource(createdAt: string, specifier: string): string {
+  return `import type { Page, SlideMeta } from '${specifier}';
 
 export const meta: SlideMeta = { title: ${JSON.stringify(BLANK_SLIDE_TITLE)}, createdAt: ${JSON.stringify(createdAt)} };
 
@@ -207,6 +208,7 @@ export default [Blank] satisfies Page[];
 
 export async function createBlankSlideDir(
   slidesRoot: string,
+  specifier: string = PKG_NAME,
 ): Promise<
   { ok: true; slideId: string; file: string } | { ok: false; status: number; error: string }
 > {
@@ -223,7 +225,7 @@ export async function createBlankSlideDir(
       return { ok: false, status: 500, error: String((err as Error).message ?? err) };
     }
     const file = path.join(dir, 'index.tsx');
-    await fs.writeFile(file, blankSlideSource(new Date().toISOString()), 'utf8');
+    await fs.writeFile(file, blankSlideSource(new Date().toISOString(), specifier), 'utf8');
     return { ok: true, slideId, file };
   }
   return { ok: false, status: 409, error: 'no free slide id' };

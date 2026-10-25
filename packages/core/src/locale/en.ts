@@ -617,7 +617,7 @@ export const en: Locale = {
     resultSeconds: '{seconds}s',
     errorEyebrow: 'Error',
     statusLoading: 'Checking agents',
-    disabled: 'The agent panel is disabled in open-slide.config.ts.',
+    disabled: 'The agent panel is disabled in lemonriver.config.ts.',
     connectTitle: 'Connect an agent',
     connectDescription:
       'Drive your coding agent from here instead of a terminal. Agents installed on this machine connect automatically and reuse their sign-in.',

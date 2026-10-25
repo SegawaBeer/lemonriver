@@ -612,7 +612,7 @@ export const zhTW: Locale = {
     resultSeconds: '{seconds} 秒',
     errorEyebrow: '錯誤',
     statusLoading: '正在檢查 agent',
-    disabled: 'agent 面板已在 open-slide.config.ts 中停用。',
+    disabled: 'agent 面板已在 lemonriver.config.ts 中停用。',
     connectTitle: '連接 agent',
     connectDescription:
       '直接在這裡操作你的 coding agent，不用再切到終端機。這台電腦上已安裝的 agent 會自動連接，並沿用它的登入狀態。',

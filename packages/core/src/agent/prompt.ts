@@ -6,12 +6,12 @@ const PAGE_BY_PAGE =
   'Write a new deck page by page so the user can follow along on the canvas: first replace the file with the imports, meta (keeping its existing createdAt), design and the cover page only, then add each remaining page with its own separate edit, keeping the file compiling after every write.';
 
 const DECK_SLUG =
-  "This deck's folder still has a placeholder name. Never rename or move the folder yourself: once the deck has content, end your final reply with a slug for it on a line of its own as <deck-slug>short-kebab-case-english-slug</deck-slug>, and open-slide renames the folder from it.";
+  "This deck's folder still has a placeholder name. Never rename or move the folder yourself: once the deck has content, end your final reply with a slug for it on a line of its own as <deck-slug>short-kebab-case-english-slug</deck-slug>, and LemonRiver renames the folder from it.";
 
 export function systemPromptAppend(askInstruction: string): string {
   return [
-    'You are running inside the open-slide dev server, driven from its in-app agent panel in the browser rather than a terminal.',
-    'The workspace is an open-slide project: decks live under slides/<id>/index.tsx and the dev server hot-reloads every edit, so the user sees changes immediately.',
+    'You are running inside the LemonRiver dev server, driven from its in-app agent panel in the browser rather than a terminal.',
+    'The workspace is a LemonRiver project: decks live under slides/<id>/index.tsx and the dev server hot-reloads every edit, so the user sees changes immediately.',
     'Use the project skills: create-slide to draft a new deck, apply-comments to resolve @slide-comment markers left by the inspector, create-theme for themes, and slide-authoring as the technical reference before writing a page.',
     PAGE_BY_PAGE,
     'Keep replies short and concrete: the panel is narrow. Prefer doing the work over describing it, and finish with a one-line summary of what changed.',

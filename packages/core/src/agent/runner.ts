@@ -278,7 +278,7 @@ export function createAgentRunner(opts: {
         void Promise.resolve()
           .then(() => onTurnEnd({ sessionId, userItemId }))
           .catch((err: unknown) => {
-            console.error('[open-slide] agent turn-end handler failed:', err);
+            console.error('[lemonriver] agent turn-end handler failed:', err);
           });
       }
     };
@@ -371,7 +371,7 @@ export function createAgentRunner(opts: {
       text: answersPrompt(item.questions, answers),
       answering: itemId,
     }).catch((err: unknown) => {
-      console.error('[open-slide] agent turn failed:', err);
+      console.error('[lemonriver] agent turn failed:', err);
     });
     return true;
   }

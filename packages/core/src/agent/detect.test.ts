@@ -13,7 +13,7 @@ import {
 let dir: string;
 
 beforeEach(async () => {
-  dir = await mkdtemp(path.join(tmpdir(), 'open-slide-detect-'));
+  dir = await mkdtemp(path.join(tmpdir(), 'lemonriver-detect-'));
 });
 
 afterEach(async () => {

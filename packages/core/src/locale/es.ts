@@ -31,7 +31,7 @@ export const es: Locale = {
   },
 
   home: {
-    appTitle: 'open-slide',
+    appTitle: 'LemonRiver',
     draft: 'Borradores',
     duplicate: 'Duplicar',
     themes: 'Temas',
@@ -41,7 +41,7 @@ export const es: Locale = {
     menu: 'Menú',
     newFolder: 'Nueva carpeta',
     folderName: 'Nombre de la carpeta',
-    updateAvailable: 'open-slide {version} está disponible',
+    updateAvailable: 'LemonRiver {version} está disponible',
     updatePackage: 'Actualizar',
     updatingPackage: 'Actualizando',
     updatePackageDone:
@@ -460,6 +460,27 @@ export const es: Locale = {
     scrollDownToCurrentPage: 'Bajar hasta la página actual {n}',
   },
 
+  board: {
+    title: 'Tablero de la historia',
+    openBoard: 'Tablero de la historia (B)',
+    backToDeck: 'Volver a la presentación',
+    hint: 'Arrastra una tarjeta para reordenar · Haz doble clic para editar la página',
+    loading: 'Cargando presentación…',
+    columnFallback: 'Parte {n}',
+    moveToEnd: 'Mover al final',
+    reorderFailed: 'No se pudieron reordenar las páginas',
+    zoomIn: 'Acercar',
+    zoomOut: 'Alejar',
+    fitView: 'Ajustar a la vista',
+    saveFailed: 'No se pudo guardar la disposición del tablero',
+    renameColumn: 'Renombrar esta columna',
+    columnTitlePlaceholder: 'Nombre de la columna',
+    addPage: 'Añadir una página a esta columna (copia la última)',
+    notesPlaceholder: 'Notas del orador…',
+    toastInserted: 'Página en blanco añadida en {n}',
+    insertFailed: 'No se pudo añadir la página',
+  },
+
   pdfToast: {
     title: 'Exportando PDF',
     processing: 'Procesando página {current} de {total}',
@@ -604,7 +625,7 @@ export const es: Locale = {
     resultSeconds: '{seconds}s',
     errorEyebrow: 'Error',
     statusLoading: 'Comprobando agentes',
-    disabled: 'El panel del agente está desactivado en open-slide.config.ts.',
+    disabled: 'El panel del agente está desactivado en lemonriver.config.ts.',
     connectTitle: 'Conectar un agente',
     connectDescription:
       'Dirige tu agente de código desde aquí en lugar de una terminal. Los agentes instalados en esta máquina se conectan solos y reutilizan su sesión.',

@@ -100,7 +100,7 @@ export function createSessionStore(opts: { file: string | null }) {
       await fs.writeFile(tmp, JSON.stringify(body), { encoding: 'utf8', mode: 0o600 });
       await fs.rename(tmp, file);
     } catch (err) {
-      console.error('[open-slide] failed to save agent sessions:', err);
+      console.error('[lemonriver] failed to save agent sessions:', err);
       await fs.rm(tmp, { force: true }).catch(() => {});
     }
   };

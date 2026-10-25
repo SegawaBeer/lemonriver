@@ -208,7 +208,7 @@ export function createClaudeProvider(): AgentProvider {
           ? { behavior: 'allow', updatedInput: input }
           : {
               behavior: 'deny',
-              message: 'The user declined this action in the open-slide agent panel.',
+              message: 'The user declined this action in the LemonRiver agent panel.',
             };
       };
 

@@ -8,7 +8,7 @@ import type { AgentStreamEvent } from './types.ts';
 let dir: string;
 
 beforeEach(async () => {
-  dir = await mkdtemp(path.join(tmpdir(), 'open-slide-agent-'));
+  dir = await mkdtemp(path.join(tmpdir(), 'lemonriver-agent-'));
 });
 
 afterEach(async () => {

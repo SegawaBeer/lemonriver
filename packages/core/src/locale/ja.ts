@@ -622,7 +622,7 @@ export const ja: Locale = {
     resultSeconds: '{seconds} 秒',
     errorEyebrow: 'エラー',
     statusLoading: 'エージェントを確認中',
-    disabled: 'エージェントパネルは open-slide.config.ts で無効化されています。',
+    disabled: 'エージェントパネルは lemonriver.config.ts で無効化されています。',
     connectTitle: 'エージェントを接続',
     connectDescription:
       'ターミナルの代わりにここからコーディングエージェントを操作できます。このマシンにインストール済みのエージェントは自動で接続され、そのログインを再利用します。',

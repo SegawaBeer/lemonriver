@@ -46,7 +46,7 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
         if (!requestCheck.ok) {
           return json(res, requestCheck.status, { error: requestCheck.error });
         }
-        const created = await createBlankSlideDir(ctx.slidesRoot);
+        const created = await createBlankSlideDir(ctx.slidesRoot, ctx.frameworkSpecifier);
         if (!created.ok) return json(res, created.status, { error: created.error });
         recordWrite(created.file);
         invalidateSlidesModule(server);
