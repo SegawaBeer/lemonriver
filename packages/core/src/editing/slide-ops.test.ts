@@ -47,12 +47,22 @@ describe('createBlankSlideDir', () => {
       expect(first).toMatchObject({ ok: true, slideId: 'untitled-2' });
       expect(await createBlankSlideDir(root)).toMatchObject({ ok: true, slideId: 'untitled-3' });
       const source = await fs.readFile(path.join(root, 'untitled-2', 'index.tsx'), 'utf8');
-      const createdAt = source.match(/createdAt: "([^"]+)"/)?.[1];
+      const createdAt = source.match(/createdAt: '([^']+)'/)?.[1];
       expect(createdAt && new Date(createdAt).toISOString()).toBe(createdAt);
       expect(source).toContain(
-        `export const meta: SlideMeta = { title: "Untitled", createdAt: "${createdAt}" };`,
+        `export const meta: SlideMeta = { title: 'Untitled', createdAt: '${createdAt}' };`,
       );
+      expect(source).toContain("import type { Page, SlideMeta } from '@lemonriver/core';");
       expect(source).toContain('export default [Blank] satisfies Page[];');
+    });
+  });
+
+  it('imports the framework through the specifier the workspace declares', async () => {
+    await withSlidesRoot(async (root) => {
+      const created = await createBlankSlideDir(root, '@open-slide/core');
+      expect(created).toMatchObject({ ok: true, slideId: 'untitled' });
+      const source = await fs.readFile(path.join(root, 'untitled', 'index.tsx'), 'utf8');
+      expect(source).toContain("import type { Page, SlideMeta } from '@open-slide/core';");
     });
   });
 });

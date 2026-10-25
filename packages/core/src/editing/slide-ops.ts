@@ -196,9 +196,10 @@ export async function duplicateSlideDir(
 export const BLANK_SLIDE_TITLE = 'Untitled';
 
 function blankSlideSource(createdAt: string, specifier: string): string {
+  const q = (value: string) => `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
   return `import type { Page, SlideMeta } from '${specifier}';
 
-export const meta: SlideMeta = { title: ${JSON.stringify(BLANK_SLIDE_TITLE)}, createdAt: ${JSON.stringify(createdAt)} };
+export const meta: SlideMeta = { title: ${q(BLANK_SLIDE_TITLE)}, createdAt: ${q(createdAt)} };
 
 const Blank: Page = () => <div style={{ width: '100%', height: '100%', background: '#ffffff' }} />;
 
