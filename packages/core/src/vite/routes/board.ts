@@ -1,13 +1,31 @@
 import type { ViteDevServer } from 'vite';
-import { boardStructurePath, readBoardStructure, writeBoardStructure } from '../../files/board.ts';
+import { defaultExportEntriesInSource } from '../../editing/page-entries.ts';
+import {
+  boardStructurePath,
+  readBoardFile,
+  readBoardStructure,
+  updateBoardFile,
+  writeBoardStructure,
+} from '../../files/board.ts';
+import { sanitizeCards, sanitizeLinks } from '../../files/board-cards.ts';
 import { type BoardStructure, reconcileColumns } from '../../files/board-structure.ts';
 import { validateMutationRequest } from '../../http/request-guard.ts';
-import { type ApiContext, json, readBody, resolveSlideEntryPath } from './context.ts';
+import {
+  type ApiContext,
+  json,
+  readBody,
+  readSlideSource,
+  resolveSlideEntryPath,
+} from './context.ts';
 
 // GET /__board?slideId=…&pages=n   → { columns } | { columns: null }
 // PUT /__board                     { slideId, columns: [{ title, size }] }
+// GET /__board/cards?slideId=…     → { cards, links }
+// PUT /__board/cards               { slideId, cards, links }
+// GET /__board/entries?slideId=…   → { entries: string[] | null }
 
 type PutBody = { slideId?: string; columns?: unknown };
+type CardsBody = { slideId?: string; cards?: unknown; links?: unknown };
 
 export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): void {
   server.middlewares.use('/__board', async (req, res, next) => {
@@ -48,6 +66,43 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
         if (structure.columns.length === 0) return json(res, 400, { error: 'no usable columns' });
         await writeBoardStructure(boardStructurePath(ctx.userCwd, slideId), structure);
         return json(res, 200, { ok: true });
+      }
+
+      if (method === 'GET' && url.pathname === '/cards') {
+        const slideId = url.searchParams.get('slideId') ?? '';
+        if (!resolveSlideEntryPath(ctx, slideId)) {
+          return json(res, 400, { error: 'invalid slideId' });
+        }
+        const stored = await readBoardFile(boardStructurePath(ctx.userCwd, slideId));
+        return json(res, 200, {
+          cards: sanitizeCards(stored.cards),
+          links: sanitizeLinks(stored.links),
+        });
+      }
+
+      if (method === 'PUT' && url.pathname === '/cards') {
+        const requestCheck = validateMutationRequest(req, { requireJsonBody: true });
+        if (!requestCheck.ok) {
+          return json(res, requestCheck.status, { error: requestCheck.error });
+        }
+        const body = (await readBody(req)) as CardsBody;
+        const slideId = body.slideId ?? '';
+        if (!resolveSlideEntryPath(ctx, slideId)) {
+          return json(res, 400, { error: 'invalid slideId' });
+        }
+        await updateBoardFile(boardStructurePath(ctx.userCwd, slideId), {
+          cards: sanitizeCards(body.cards),
+          links: sanitizeLinks(body.links),
+        });
+        return json(res, 200, { ok: true });
+      }
+
+      if (method === 'GET' && url.pathname === '/entries') {
+        const slideId = url.searchParams.get('slideId') ?? '';
+        const entry = resolveSlideEntryPath(ctx, slideId);
+        if (!entry) return json(res, 400, { error: 'invalid slideId' });
+        const source = await readSlideSource(entry);
+        return json(res, 200, { entries: source ? defaultExportEntriesInSource(source) : null });
       }
 
       next();

@@ -458,7 +458,7 @@ export const en: Locale = {
     title: 'Story board',
     openBoard: 'Story board (B)',
     backToDeck: 'Back to deck',
-    hint: 'Drag a card to reorder · Double-click to edit the page',
+    hint: 'Drag a card to reorder · Double-click to edit the page · Drag the dot to link two cards',
     loading: 'Loading deck…',
     columnFallback: 'Part {n}',
     moveToEnd: 'Move to end',
@@ -474,6 +474,19 @@ export const en: Locale = {
     /** template: "Added a blank page at {n}" */
     toastInserted: 'Added a blank page at {n}',
     insertFailed: 'Could not add a page',
+    cardTitlePlaceholder: 'Name this card',
+    renameCard: 'Rename this card',
+    status: 'Status',
+    statusNone: 'No status',
+    statusTodo: 'To do',
+    statusDoing: 'In progress',
+    statusReview: 'In review',
+    statusDone: 'Done',
+    memoPlaceholder: 'Work memo — stays on the board…',
+    linkHandle: 'Drag onto another card to link them',
+    showLinks: 'Show links',
+    hideLinks: 'Hide links',
+    removeLink: 'Remove this link',
   },
 
   pdfToast: {

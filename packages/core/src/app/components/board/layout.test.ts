@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { Page } from '../../lib/sdk';
-import { CARD_H, CARD_W, layoutBoard, orderAfterMove, seedColumns, slotAtPoint } from './layout';
+import {
+  CARD_BOX_H,
+  CARD_BOX_W,
+  CARD_H,
+  CARD_W,
+  cardAtPoint,
+  layoutBoard,
+  linkCurve,
+  orderAfterMove,
+  seedColumns,
+  slotAtPoint,
+} from './layout';
 
 /** Pages are identified by their component name, so the fixtures need real names. */
 function named(name: string): Page {
@@ -105,5 +116,46 @@ describe('orderAfterMove', () => {
     expect(orderAfterMove(5, 0, 3)).toEqual([1, 2, 3, 0, 4]);
     expect(orderAfterMove(5, 4, 1)).toEqual([0, 4, 1, 2, 3]);
     expect(orderAfterMove(5, 2, 2)).toEqual([0, 1, 2, 3, 4]);
+  });
+});
+
+describe('cardAtPoint', () => {
+  const layout = layoutBoard([
+    { title: 'Cover', size: 2 },
+    { title: 'Chapter One', size: 2 },
+  ]);
+
+  it('finds the card under a point anywhere inside it', () => {
+    const slot = layout.slots[3];
+    expect(cardAtPoint(layout, slot.x + CARD_BOX_W - 1, slot.y + CARD_BOX_H - 1)).toBe(3);
+  });
+
+  it('reports empty canvas between cards as no card', () => {
+    const [a, b] = [layout.slots[0], layout.slots[1]];
+    expect(cardAtPoint(layout, a.x + 10, (a.y + CARD_BOX_H + b.y) / 2)).toBeNull();
+    expect(cardAtPoint(layout, a.x + CARD_BOX_W + 20, a.y + 10)).toBeNull();
+  });
+});
+
+describe('linkCurve', () => {
+  const box = (x: number, y: number) => ({ x, y, width: 100, height: 60 });
+
+  it('bows a link between cards in one column out to the right of the column', () => {
+    const curve = linkCurve(box(0, 0), box(0, 400));
+    expect(curve.x).toBeGreaterThan(100);
+    expect(curve.path.startsWith('M 100,18')).toBe(true);
+  });
+
+  it('never ends where the main line does, at the middle of a card side', () => {
+    const curve = linkCurve(box(0, 0), box(300, 0));
+    expect(curve.path).not.toContain(',30');
+  });
+
+  it('joins cards in different columns between their facing sides, whichever is first', () => {
+    const forward = linkCurve(box(0, 0), box(300, 200));
+    const backward = linkCurve(box(300, 200), box(0, 0));
+    expect(forward.path).toBe(backward.path);
+    expect(forward.path.startsWith('M 100,18')).toBe(true);
+    expect(forward.path.endsWith('300,218')).toBe(true);
   });
 });

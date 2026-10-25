@@ -1,11 +1,12 @@
 import { ChevronLeft } from 'lucide-react';
-import { lazy, Suspense, useCallback } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { format, useLocale } from '@/lib/use-locale';
 import { pad2 } from '@/lib/utils';
 import { columnStarts } from '../../files/board-structure';
+import { useBoardCards } from '../components/board/use-board-cards';
 import { useBoardColumns } from '../components/board/use-board-columns';
 import { usePageOrder } from '../components/board/use-page-order';
 import type { Page } from '../lib/sdk';
@@ -16,6 +17,20 @@ const BoardCanvas = lazy(() => import('../components/board/board-canvas'));
 // A fresh [] on every render would restart the page-order state in a loop while
 // the deck module is still loading.
 const NO_PAGES: Page[] = [];
+
+const LINKS_KEY = 'open-slide:board-links-visible';
+
+function useLinksVisible() {
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem(LINKS_KEY) !== '0';
+  });
+  useEffect(() => {
+    window.localStorage.setItem(LINKS_KEY, visible ? '1' : '0');
+  }, [visible]);
+  const toggle = useCallback(() => setVisible((v) => !v), []);
+  return [visible, toggle] as const;
+}
 
 export function Board() {
   const { slideId = '' } = useParams();
@@ -36,15 +51,24 @@ export function Board() {
     pages,
     columnTitle,
   );
+  const { ready, cards, pairs, patch, link, unlink, beginOp } = useBoardCards(
+    slideId,
+    modulePages,
+    pages.length,
+  );
+  const [showLinks, toggleLinks] = useLinksVisible();
 
-  // Order and structure move together: every path that reorders a deck goes
-  // through here, so the columns can never drift out of step with the pages.
+  // Order, structure and the board's own card data move together: every path
+  // that changes the deck's pages goes through here, so none of them can drift
+  // out of step with the pages.
   const movePage = useCallback(
     (from: number, to: number) => {
+      if (from === to) return;
+      const settle = beginOp({ kind: 'move', from, to });
       moveBetweenColumns(from, to);
-      void reorder(from, to);
+      void reorder(from, to).then(settle);
     },
-    [moveBetweenColumns, reorder],
+    [beginOp, moveBetweenColumns, reorder],
   );
 
   const openPage = useCallback(
@@ -56,10 +80,11 @@ export function Board() {
 
   const duplicatePage = useCallback(
     (index: number) => {
+      const settle = beginOp({ kind: 'duplicate', index });
       resizeColumnAt(index, 1);
-      void duplicate(index);
+      void duplicate(index).then(settle);
     },
-    [duplicate, resizeColumnAt],
+    [beginOp, duplicate, resizeColumnAt],
   );
 
   // A new page lands at the end of the column whose + was clicked.
@@ -69,10 +94,12 @@ export function Board() {
       const starts = columnStarts(columns);
       const start = starts[columnIndex];
       const size = columns[columnIndex].size;
+      const at = size > 0 ? start + size : start;
+      const settle = beginOp({ kind: 'insert', index: at });
       growColumn(columnIndex, 1);
-      void insert(size > 0 ? start + size : start);
+      void insert(at).then(settle);
     },
-    [columns, growColumn, insert],
+    [beginOp, columns, growColumn, insert],
   );
 
   const moveToEnd = useCallback(
@@ -82,10 +109,12 @@ export function Board() {
 
   const deletePage = useCallback(
     (index: number) => {
+      if (pages.length <= 1) return;
+      const settle = beginOp({ kind: 'delete', index });
       resizeColumnAt(index, -1);
-      void remove(index);
+      void remove(index).then(settle);
     },
-    [remove, resizeColumnAt],
+    [beginOp, pages.length, remove, resizeColumnAt],
   );
 
   return (
@@ -123,6 +152,10 @@ export function Board() {
               slideId={slideId}
               pages={pages}
               notes={slide?.notes}
+              cards={cards}
+              cardsReady={ready}
+              links={pairs}
+              showLinks={showLinks}
               columns={columns}
               design={slide?.design}
               onOpenPage={openPage}
@@ -132,6 +165,10 @@ export function Board() {
               onDuplicate={duplicatePage}
               onDelete={deletePage}
               onMoveToEnd={moveToEnd}
+              onPatchCard={patch}
+              onLink={link}
+              onUnlink={unlink}
+              onToggleLinks={toggleLinks}
             />
           </Suspense>
         )}

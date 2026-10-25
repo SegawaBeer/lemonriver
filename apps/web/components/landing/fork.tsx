@@ -7,7 +7,7 @@ const changes = [
   },
   {
     title: 'A story board for a deck',
-    body: 'Lay a deck out as chapter columns on a pannable canvas: drag a card to reorder, open a page in the editor, write speaker notes on the card, or drop a blank page into a column.',
+    body: 'Lay a deck out as chapter columns on a pannable canvas: drag a card to reorder, open a page in the editor, write speaker notes on the card, or drop a blank page into a column. Name a card, give it a status, leave yourself a work memo, or link two related pages — none of it ever reaches the deck.',
   },
   {
     title: 'Workspaces written before the rename still work',

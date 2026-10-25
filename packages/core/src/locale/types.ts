@@ -503,6 +503,19 @@ export type Locale = {
     /** template: "Added a blank page at {n}" */
     toastInserted: string;
     insertFailed: string;
+    cardTitlePlaceholder: string;
+    renameCard: string;
+    status: string;
+    statusNone: string;
+    statusTodo: string;
+    statusDoing: string;
+    statusReview: string;
+    statusDone: string;
+    memoPlaceholder: string;
+    linkHandle: string;
+    showLinks: string;
+    hideLinks: string;
+    removeLink: string;
   };
 
   pdfToast: {

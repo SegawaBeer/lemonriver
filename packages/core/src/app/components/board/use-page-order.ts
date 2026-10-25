@@ -25,10 +25,10 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
   }, []);
 
   const reorder = useCallback(
-    async (from: number, to: number) => {
-      if (from === to || from < 0 || to < 0) return;
+    async (from: number, to: number): Promise<boolean> => {
+      if (from === to || from < 0 || to < 0) return false;
       const before = pages;
-      if (from >= before.length || to >= before.length) return;
+      if (from >= before.length || to >= before.length) return false;
 
       const next = [...before];
       const [moved] = next.splice(from, 1);
@@ -45,18 +45,20 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ order }),
         });
+        return true;
       } catch (err) {
         setPages(before);
         toast.error(`${t.board.reorderFailed}: ${String((err as Error).message ?? err)}`);
+        return false;
       }
     },
     [pages, slideId, send, t.board],
   );
 
   const duplicate = useCallback(
-    async (i: number) => {
+    async (i: number): Promise<boolean> => {
       const before = pages;
-      if (i < 0 || i >= before.length) return;
+      if (i < 0 || i >= before.length) return false;
       const next = [...before];
       next.splice(i + 1, 0, before[i]);
       setPages(next);
@@ -65,20 +67,22 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
           method: 'POST',
         });
         toast.success(format(t.thumbnailRail.toastDuplicated, { n: i + 1 }));
+        return true;
       } catch (err) {
         setPages(before);
         toast.error(
           `${t.thumbnailRail.toastDuplicateFailed}: ${String((err as Error).message ?? err)}`,
         );
+        return false;
       }
     },
     [pages, slideId, send, t.thumbnailRail],
   );
 
   const insert = useCallback(
-    async (i: number) => {
+    async (i: number): Promise<boolean> => {
       const before = pages;
-      if (i < 0 || i > before.length) return;
+      if (i < 0 || i > before.length) return false;
       // The blank page has no component here yet; the server writes one and the
       // deck reloads through HMR, so the local list only has to hold its slot.
       const next = [...before];
@@ -89,27 +93,31 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
           method: 'POST',
         });
         toast.success(format(t.board.toastInserted, { n: i + 1 }));
+        return true;
       } catch (err) {
         setPages(before);
         toast.error(`${t.board.insertFailed}: ${String((err as Error).message ?? err)}`);
+        return false;
       }
     },
     [pages, slideId, send, t.board],
   );
 
   const remove = useCallback(
-    async (i: number) => {
+    async (i: number): Promise<boolean> => {
       const before = pages;
-      if (i < 0 || i >= before.length || before.length <= 1) return;
+      if (i < 0 || i >= before.length || before.length <= 1) return false;
       setPages(before.slice(0, i).concat(before.slice(i + 1)));
       try {
         await send(`/__slides/${encodeURIComponent(slideId)}/pages/${i}`, { method: 'DELETE' });
         toast.success(format(t.thumbnailRail.toastDeleted, { n: i + 1 }));
+        return true;
       } catch (err) {
         setPages(before);
         toast.error(
           `${t.thumbnailRail.toastDeleteFailed}: ${String((err as Error).message ?? err)}`,
         );
+        return false;
       }
     },
     [pages, slideId, send, t.thumbnailRail],

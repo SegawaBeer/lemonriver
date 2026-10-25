@@ -17,7 +17,7 @@ export const faqs: QA[] = [
   },
   {
     q: 'What does LemonRiver add over upstream?',
-    a: 'A story board view: it lays a deck out as chapter columns on a pannable canvas, so you can drag cards to reorder, open a page in the editor, write speaker notes on a card, or drop a blank page into a column. The board keeps its own column structure beside the project, so moving a page never re-groups the pages it used to head. The rest of the framework tracks upstream.',
+    a: 'A story board view: it lays a deck out as chapter columns on a pannable canvas, so you can drag cards to reorder, open a page in the editor, write speaker notes on a card, or drop a blank page into a column. Cards can also carry a name, a status, a work memo and links to related pages, which stay on the board and never reach the deck. The board keeps its own column structure beside the project, so moving a page never re-groups the pages it used to head. The rest of the framework tracks upstream.',
   },
   {
     q: 'How is LemonRiver different from Reveal.js, Slidev, or Spectacle?',

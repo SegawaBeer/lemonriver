@@ -2,33 +2,44 @@ import {
   applyNodeChanges,
   Background,
   BackgroundVariant,
+  BaseEdge,
   type Edge,
+  EdgeLabelRenderer,
+  type EdgeProps,
+  type EdgeTypes,
+  type InternalNode,
   MarkerType,
   MiniMap,
   type Node,
   type NodeChange,
   type NodeProps,
   type NodeTypes,
+  type OnConnectEnd,
   type OnNodeDrag,
   Panel,
   ReactFlow,
   ReactFlowProvider,
+  useInternalNode,
   useReactFlow,
 } from '@xyflow/react';
-import { Maximize2, Minus, Plus } from 'lucide-react';
+import { Link2, Link2Off, Maximize2, Minus, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
+import type { BoardCard, CardPatch } from '../../../files/board-cards';
 import { type BoardColumn, columnsAfterMove } from '../../../files/board-structure';
 import type { DesignSystem } from '../../lib/design';
 import type { Page } from '../../lib/sdk';
 import {
   type BoardLayout,
+  type Box,
   CARD_BOX_H,
   CARD_BOX_W,
+  cardAtPoint,
   identityOrder,
   layoutBoard,
+  linkCurve,
   orderAfterMove,
   slotAtPoint,
 } from './layout';
@@ -41,6 +52,11 @@ type Props = {
   pages: Page[];
   columns: BoardColumn[];
   notes?: (string | undefined)[];
+  cards: (BoardCard | undefined)[];
+  cardsReady: boolean;
+  /** Linked pages, as deck positions. */
+  links: [number, number][];
+  showLinks: boolean;
   design?: DesignSystem;
   onOpenPage: (index: number) => void;
   onMovePage: (from: number, to: number) => void;
@@ -49,6 +65,10 @@ type Props = {
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
   onMoveToEnd: (index: number) => void;
+  onPatchCard: (index: number, patch: CardPatch) => void;
+  onLink: (a: number, b: number) => void;
+  onUnlink: (a: number, b: number) => void;
+  onToggleLinks: () => void;
 };
 
 type ColumnLabelData = {
@@ -129,6 +149,52 @@ function DropSlot() {
 
 const nodeTypes: NodeTypes = { page: PageNode, columnLabel: ColumnLabel, dropSlot: DropSlot };
 
+type LinkEdgeData = { a: number; b: number; onUnlink: (a: number, b: number) => void };
+
+function boxOf(node: InternalNode | undefined): Box | null {
+  if (!node) return null;
+  const { x, y } = node.internals.positionAbsolute;
+  return {
+    x,
+    y,
+    width: node.measured.width ?? CARD_BOX_W,
+    height: node.measured.height ?? CARD_BOX_H,
+  };
+}
+
+/**
+ * A loose association between two pages. It is drawn thin and dashed so it can
+ * never be read as the deck's order, and it follows the cards as they move.
+ */
+function LinkEdge({ id, source, target, data }: EdgeProps) {
+  const t = useLocale();
+  const { a, b, onUnlink } = data as unknown as LinkEdgeData;
+  const from = boxOf(useInternalNode(source));
+  const to = boxOf(useInternalNode(target));
+  if (!from || !to) return null;
+  const curve = linkCurve(from, to);
+
+  return (
+    <>
+      <BaseEdge id={id} path={curve.path} className="osd-board-link" interactionWidth={14} />
+      <EdgeLabelRenderer>
+        <button
+          type="button"
+          aria-label={t.board.removeLink}
+          title={t.board.removeLink}
+          onClick={() => onUnlink(a, b)}
+          className="osd-board-link-remove nodrag nopan"
+          style={{ transform: `translate(-50%, -50%) translate(${curve.x}px, ${curve.y}px)` }}
+        >
+          <X className="size-3" strokeWidth={2.2} />
+        </button>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+const edgeTypes: EdgeTypes = { link: LinkEdge };
+
 const edgeStyle = { stroke: 'var(--osd-board-line)', strokeWidth: 1.5 } as const;
 const marker = {
   type: MarkerType.ArrowClosed,
@@ -136,6 +202,12 @@ const marker = {
   height: 14,
   color: 'var(--osd-board-line)',
 };
+
+const linkDraftStyle = {
+  stroke: 'var(--osd-board-link)',
+  strokeWidth: 1.5,
+  strokeDasharray: '5 4',
+} as const;
 
 const pageIndexOf = (id: string) => Number(id.replace('page-', ''));
 
@@ -146,8 +218,10 @@ type BuildArgs = {
   slideId: string;
   pages: Page[];
   notes?: (string | undefined)[];
+  cards: (BoardCard | undefined)[];
+  cardsReady: boolean;
   design?: DesignSystem;
-  actions: Pick<PageNodeData, 'onDuplicate' | 'onDelete' | 'onMoveToEnd'>;
+  actions: Pick<PageNodeData, 'onDuplicate' | 'onDelete' | 'onMoveToEnd' | 'onPatchCard'>;
   columnActions: {
     onRename: (index: number, title: string) => void;
     onAddPage: (index: number) => void;
@@ -164,6 +238,8 @@ function buildNodes({
   slideId,
   pages,
   notes,
+  cards,
+  cardsReady,
   design,
   actions,
   columnActions,
@@ -199,7 +275,7 @@ function buildNodes({
     hidden: true,
     data: {},
   };
-  const cards: Node[] = layout.slots.map((slot) => {
+  const pageNodes: Node[] = layout.slots.map((slot) => {
     const pageIndex = order[slot.index] ?? slot.index;
     return {
       id: `page-${pageIndex}`,
@@ -211,6 +287,9 @@ function buildNodes({
         slideId,
         page: pages[pageIndex],
         note: notes?.[pageIndex],
+        card: cards[pageIndex],
+        cardsReady,
+        canLink: cardsReady && pages.length > 1,
         index: pageIndex,
         total: pages.length,
         design,
@@ -219,7 +298,7 @@ function buildNodes({
       } satisfies PageNodeData as unknown as Record<string, unknown>,
     };
   });
-  return [...labels, drop, ...cards];
+  return [...labels, drop, ...pageNodes];
 }
 
 function BoardFlow({
@@ -227,6 +306,10 @@ function BoardFlow({
   pages,
   columns,
   notes,
+  cards,
+  cardsReady,
+  links,
+  showLinks,
   design,
   onOpenPage,
   onMovePage,
@@ -235,15 +318,19 @@ function BoardFlow({
   onDuplicate,
   onDelete,
   onMoveToEnd,
+  onPatchCard,
+  onLink,
+  onUnlink,
+  onToggleLinks,
 }: Props) {
   const t = useLocale();
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
 
   const layout = useMemo(() => layoutBoard(columns), [columns]);
 
   const actions = useMemo(
-    () => ({ onDuplicate, onDelete, onMoveToEnd }),
-    [onDuplicate, onDelete, onMoveToEnd],
+    () => ({ onDuplicate, onDelete, onMoveToEnd, onPatchCard }),
+    [onDuplicate, onDelete, onMoveToEnd, onPatchCard],
   );
 
   const columnActions = useMemo(
@@ -259,11 +346,13 @@ function BoardFlow({
         slideId,
         pages,
         notes,
+        cards,
+        cardsReady,
         design,
         actions,
         columnActions,
       }),
-    [layout, slideId, pages, notes, design, actions, columnActions],
+    [layout, slideId, pages, notes, cards, cardsReady, design, actions, columnActions],
   );
 
   const [nodes, setNodes] = useState<Node[]>(baseNodes);
@@ -299,6 +388,8 @@ function BoardFlow({
         slideId,
         pages,
         notes,
+        cards,
+        cardsReady,
         design,
         actions,
         columnActions,
@@ -319,7 +410,7 @@ function BoardFlow({
         });
       });
     },
-    [layout, columns, slideId, pages, notes, design, actions, columnActions],
+    [layout, columns, slideId, pages, notes, cards, cardsReady, design, actions, columnActions],
   );
 
   const handleDragStop = useCallback<OnNodeDrag>(
@@ -358,7 +449,7 @@ function BoardFlow({
 
   const edges = useMemo<Edge[]>(() => {
     const byIndex = new Map(layout.slots.map((slot) => [slot.index, slot]));
-    return pages.slice(0, -1).map((_, i) => {
+    const mainLine: Edge[] = pages.slice(0, -1).map((_, i) => {
       const sameColumn = byIndex.get(i)?.column === byIndex.get(i + 1)?.column;
       return {
         id: `line-${i}`,
@@ -373,20 +464,50 @@ function BoardFlow({
         focusable: false,
       };
     });
-  }, [layout, pages]);
+    if (!showLinks) return mainLine;
+    const linkLines: Edge[] = links.map(([a, b]) => ({
+      id: `link-${Math.min(a, b)}-${Math.max(a, b)}`,
+      source: `page-${a}`,
+      target: `page-${b}`,
+      type: 'link',
+      data: { a, b, onUnlink } satisfies LinkEdgeData,
+      selectable: false,
+      focusable: false,
+    }));
+    return [...mainLine, ...linkLines];
+  }, [layout, pages, links, showLinks, onUnlink]);
+
+  // A link is drawn by dragging a card's dot onto another card. The whole card is
+  // the target rather than a handle on it, because a handle is too small to hit
+  // at the zoom a long deck is read at.
+  const handleConnectEnd = useCallback<OnConnectEnd>(
+    (event, state) => {
+      const from = state.fromNode;
+      if (from?.type !== 'page') return;
+      const point = 'changedTouches' in event ? event.changedTouches[0] : event;
+      if (!point) return;
+      const at = screenToFlowPosition({ x: point.clientX, y: point.clientY });
+      const target = cardAtPoint(layout, at.x, at.y);
+      const source = pageIndexOf(from.id);
+      if (target !== null && target !== source) onLink(source, target);
+    },
+    [layout, screenToFlowPosition, onLink],
+  );
 
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
       onNodeDrag={handleDrag}
       onNodeDragStop={handleDragStop}
       onNodeDoubleClick={(_, node) => {
         if (node.type === 'page') onOpenPage(pageIndexOf(node.id));
       }}
-      nodesConnectable={false}
+      onConnectEnd={handleConnectEnd}
+      connectionLineStyle={linkDraftStyle}
       edgesFocusable={false}
       onlyRenderVisibleElements
       onInit={frameStart}
@@ -424,6 +545,16 @@ function BoardFlow({
         </Button>
         <Button variant="outline" size="icon-sm" aria-label={t.board.fitView} onClick={fitAll}>
           <Maximize2 />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label={showLinks ? t.board.hideLinks : t.board.showLinks}
+          aria-pressed={showLinks}
+          title={showLinks ? t.board.hideLinks : t.board.showLinks}
+          onClick={onToggleLinks}
+        >
+          {showLinks ? <Link2 /> : <Link2Off />}
         </Button>
       </Panel>
     </ReactFlow>
