@@ -6,6 +6,10 @@ export type LemonRiverBuildConfig = {
   allowHtmlDownload?: boolean;
 };
 
+export type LemonRiverAgentConfig = {
+  enabled?: boolean;
+};
+
 export type LemonRiverConfig = {
   base?: string;
   slidesDir?: string;
@@ -20,6 +24,7 @@ export type LemonRiverConfig = {
    */
   locale?: Locale;
   build?: LemonRiverBuildConfig;
+  agent?: LemonRiverAgentConfig;
 };
 
 /** @deprecated Renamed to {@link LemonRiverConfig}; kept for config files written before the rename. */

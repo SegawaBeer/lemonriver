@@ -25,9 +25,13 @@ From a one-line prompt to a polished deck, no boilerplate.
 
 ### 🎯 In-browser inspector
 
-Click any element in the dev server and attach a comment — *"make this red"*, *"change to 'LemonRiver Rocks'"*, *"shrink the headline"*. Comments are persisted as `@slide-comment` markers in source. Run `/apply-comments` and the agent applies every pending edit, then clears the markers.
+Switch the dev server toolbar to comment mode, then click any element or drag across a region and leave a note — *"make this red"*, *"change to 'LemonRiver Rocks'"*, *"shrink the headline"*. Each comment floats as a pin beside its target and is persisted as an `@slide-comment` marker in source. Run `/apply-comments` and the agent applies every pending edit, then clears the markers.
 
-The loop: present → click to comment → `/apply-comments` → repeat.
+The loop: present → comment → `/apply-comments` → repeat.
+
+### 🧑‍💻 In-app agent panel
+
+Connect your locally installed Claude Code or Codex once and the whole loop moves into the browser: draft a deck, answer the scoping questions as option cards, apply comments with one click, and edit the selected element by describing the change. Without a connected agent the dev server keeps the terminal-driven flow above.
 
 ### 🖼️ Assets manager + svgl logo search
 

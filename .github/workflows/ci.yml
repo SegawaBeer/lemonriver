@@ -38,6 +38,9 @@ jobs:
       - name: Check for stale upstream branding
         run: pnpm check:branding
 
+      - name: Check core package contents
+        run: pnpm core check:pack
+
   typecheck:
     runs-on: ubuntu-latest
     steps:

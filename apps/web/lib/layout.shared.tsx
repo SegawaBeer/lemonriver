@@ -13,7 +13,7 @@ export function baseOptions(): BaseLayoutProps {
             aria-hidden
             width={24}
             height={24}
-            className="h-6 w-6 rounded-[4px]"
+            className="h-6 w-6"
           />
           <span>{appName}</span>
         </>

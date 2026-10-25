@@ -26,7 +26,7 @@ export function Nav({ githubStars }: { githubStars?: string | null }) {
             width={24}
             height={24}
             priority
-            className="block h-6 w-6 rounded-[4px]"
+            className="block h-6 w-6"
           />
           <span className="text-[color:var(--color-text)]">LemonRiver</span>
         </Link>
@@ -34,6 +34,9 @@ export function Nav({ githubStars }: { githubStars?: string | null }) {
         <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-0.5 md:flex">
           <Link href="/docs" className={linkClass}>
             Docs
+          </Link>
+          <Link href="/changelog" className={linkClass}>
+            Changelog
           </Link>
           <a
             href={repoUrl}

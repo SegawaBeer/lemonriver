@@ -19,5 +19,10 @@ export type {
   SlideTransition,
   TransitionPhase,
 } from './app/lib/transition.ts';
-export type { LemonRiverBuildConfig, LemonRiverConfig, OpenSlideConfig } from './config.ts';
+export type {
+  LemonRiverAgentConfig,
+  LemonRiverBuildConfig,
+  LemonRiverConfig,
+  OpenSlideConfig,
+} from './config.ts';
 export type { Locale, Plural } from './locale/types.ts';
