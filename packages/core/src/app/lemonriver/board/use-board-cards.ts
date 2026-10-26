@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useLocale } from '@/lib/use-locale';
+import type { Page } from '../../lib/sdk';
+import { useLrText } from '../text';
 import {
   adoptEntries,
   type BoardCard,
@@ -19,8 +20,7 @@ import {
   sanitizeCards,
   sanitizeLinks,
   unlinkCards,
-} from '../../../files/board-cards';
-import type { Page } from '../../lib/sdk';
+} from './model/cards';
 
 type BoardState = {
   cards: BoardCards;
@@ -41,7 +41,7 @@ const countAfter = (op: PageOp, count: number) =>
  * data stays on its page however and wherever the deck is reordered.
  */
 export function useBoardCards(slideId: string, modulePages: Page[], count: number) {
-  const t = useLocale();
+  const lr = useLrText();
   const [board, setBoard] = useState<BoardState>(INITIAL);
   const boardRef = useRef(board);
   const countRef = useRef(count);
@@ -63,11 +63,11 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
         } catch (err) {
-          toast.error(`${t.board.saveFailed}: ${String((err as Error).message ?? err)}`);
+          toast.error(`${lr.board.saveFailed}: ${String((err as Error).message ?? err)}`);
         }
       });
     },
-    [slideId, t.board],
+    [slideId, lr.board],
   );
 
   const commit = useCallback(

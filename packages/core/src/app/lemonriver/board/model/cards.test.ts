@@ -14,7 +14,7 @@ import {
   sanitizeCards,
   sanitizeLinks,
   unlinkCards,
-} from './board-cards.ts';
+} from './cards.ts';
 
 /** Runs one board operation the way the board does, entries and all. */
 function run(state: CardState, entries: string[], op: PageOp) {

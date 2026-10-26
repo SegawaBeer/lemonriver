@@ -1,0 +1,38 @@
+import type { LrText } from './types';
+
+export const en: LrText = {
+  board: {
+    title: 'Story board',
+    openBoard: 'Story board (B)',
+    backToDeck: 'Back to deck',
+    hint: 'Drag a card to reorder · Double-click to edit the page · Drag the dot to link two cards',
+    loading: 'Loading deck…',
+    columnFallback: 'Part {n}',
+    moveToEnd: 'Move to end',
+    reorderFailed: 'Could not reorder pages',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    fitView: 'Fit to view',
+    saveFailed: 'Could not save the board layout',
+    renameColumn: 'Rename this column',
+    columnTitlePlaceholder: 'Column name',
+    addPage: 'Add a page to this column (copies the last one)',
+    notesPlaceholder: 'Speaker notes…',
+    /** template: "Added a blank page at {n}" */
+    toastInserted: 'Added a blank page at {n}',
+    insertFailed: 'Could not add a page',
+    cardTitlePlaceholder: 'Name this card',
+    renameCard: 'Rename this card',
+    status: 'Status',
+    statusNone: 'No status',
+    statusTodo: 'To do',
+    statusDoing: 'In progress',
+    statusReview: 'In review',
+    statusDone: 'Done',
+    memoPlaceholder: 'Work memo — stays on the board…',
+    linkHandle: 'Drag onto another card to link them',
+    showLinks: 'Show links',
+    hideLinks: 'Hide links',
+    removeLink: 'Remove this link',
+  },
+};

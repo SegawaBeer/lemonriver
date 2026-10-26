@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { format, useLocale } from '@/lib/use-locale';
 import type { Page } from '../../lib/sdk';
+import { useLrText } from '../text';
 
 /**
  * Page edits on the board go through the same dev-server routes the thumbnail
@@ -11,6 +12,7 @@ import type { Page } from '../../lib/sdk';
 export function usePageOrder(slideId: string, modulePages: Page[]) {
   const [pages, setPages] = useState<Page[]>(modulePages);
   const t = useLocale();
+  const lr = useLrText();
 
   useEffect(() => {
     setPages(modulePages);
@@ -48,11 +50,11 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
         return true;
       } catch (err) {
         setPages(before);
-        toast.error(`${t.board.reorderFailed}: ${String((err as Error).message ?? err)}`);
+        toast.error(`${lr.board.reorderFailed}: ${String((err as Error).message ?? err)}`);
         return false;
       }
     },
-    [pages, slideId, send, t.board],
+    [pages, slideId, send, lr.board],
   );
 
   const duplicate = useCallback(
@@ -89,18 +91,20 @@ export function usePageOrder(slideId: string, modulePages: Page[]) {
       next.splice(i, 0, before[Math.max(0, i - 1)]);
       setPages(next);
       try {
-        await send(`/__slides/${encodeURIComponent(slideId)}/pages/${i}/insert`, {
+        await send('/__board/pages/insert', {
           method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ slideId, index: i }),
         });
-        toast.success(format(t.board.toastInserted, { n: i + 1 }));
+        toast.success(format(lr.board.toastInserted, { n: i + 1 }));
         return true;
       } catch (err) {
         setPages(before);
-        toast.error(`${t.board.insertFailed}: ${String((err as Error).message ?? err)}`);
+        toast.error(`${lr.board.insertFailed}: ${String((err as Error).message ?? err)}`);
         return false;
       }
     },
-    [pages, slideId, send, t.board],
+    [pages, slideId, send, lr.board],
   );
 
   const remove = useCallback(

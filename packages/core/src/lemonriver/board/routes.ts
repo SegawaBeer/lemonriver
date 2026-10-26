@@ -1,14 +1,11 @@
+import fs from 'node:fs/promises';
 import type { ViteDevServer } from 'vite';
-import { defaultExportEntriesInSource } from '../../editing/page-entries.ts';
+import { sanitizeCards, sanitizeLinks } from '../../app/lemonriver/board/model/cards.ts';
 import {
-  boardStructurePath,
-  readBoardFile,
-  readBoardStructure,
-  updateBoardFile,
-  writeBoardStructure,
-} from '../../files/board.ts';
-import { sanitizeCards, sanitizeLinks } from '../../files/board-cards.ts';
-import { type BoardStructure, reconcileColumns } from '../../files/board-structure.ts';
+  type BoardStructure,
+  reconcileColumns,
+} from '../../app/lemonriver/board/model/structure.ts';
+import { resolveSlideEntry } from '../../editing/slide-ops.ts';
 import { validateMutationRequest } from '../../http/request-guard.ts';
 import {
   type ApiContext,
@@ -16,13 +13,26 @@ import {
   readBody,
   readSlideSource,
   resolveSlideEntryPath,
-} from './context.ts';
+} from '../../vite/routes/context.ts';
+import { defaultExportEntriesInSource } from './page-entries.ts';
+import {
+  insertBlankPageInDefaultExportInSource,
+  insertNotesElementInSource,
+} from './page-insert.ts';
+import {
+  boardStructurePath,
+  readBoardFile,
+  readBoardStructure,
+  updateBoardFile,
+  writeBoardStructure,
+} from './store.ts';
 
 // GET /__board?slideId=…&pages=n   → { columns } | { columns: null }
 // PUT /__board                     { slideId, columns: [{ title, size }] }
 // GET /__board/cards?slideId=…     → { cards, links }
 // PUT /__board/cards               { slideId, cards, links }
 // GET /__board/entries?slideId=…   → { entries: string[] | null }
+// POST /__board/pages/insert       { slideId, index } → insert a blank page
 
 type PutBody = { slideId?: string; columns?: unknown };
 type CardsBody = { slideId?: string; cards?: unknown; links?: unknown };
@@ -95,6 +105,45 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
           links: sanitizeLinks(body.links),
         });
         return json(res, 200, { ok: true });
+      }
+
+      if (method === 'POST' && url.pathname === '/pages/insert') {
+        const requestCheck = validateMutationRequest(req, { requireJsonBody: true });
+        if (!requestCheck.ok) {
+          return json(res, requestCheck.status, { error: requestCheck.error });
+        }
+        const body = (await readBody(req)) as { slideId?: unknown; index?: unknown };
+        const slideId = typeof body?.slideId === 'string' ? body.slideId : '';
+        const index = typeof body?.index === 'number' ? body.index : Number.NaN;
+        if (!Number.isInteger(index) || index < 0) {
+          return json(res, 400, { error: 'invalid index' });
+        }
+        const entry = resolveSlideEntry(ctx.slidesRoot, slideId);
+        if (!entry) return json(res, 400, { error: 'invalid slideId' });
+
+        let source: string;
+        try {
+          source = await fs.readFile(entry, 'utf8');
+        } catch {
+          return json(res, 404, { error: 'slide not found' });
+        }
+
+        const withPage = insertBlankPageInDefaultExportInSource(source, index);
+        if (withPage === null) {
+          return json(res, 422, {
+            error: 'could not insert a page — index out of range or default export is not an array',
+          });
+        }
+        const withNotes = insertNotesElementInSource(withPage, index);
+        if (withNotes === null) {
+          return json(res, 422, {
+            error: 'could not insert a page — `notes` export has an unexpected shape',
+          });
+        }
+        if (withNotes !== source) {
+          await fs.writeFile(entry, withNotes, 'utf8');
+        }
+        return json(res, 200, { ok: true, slideId, index });
       }
 
       if (method === 'GET' && url.pathname === '/entries') {

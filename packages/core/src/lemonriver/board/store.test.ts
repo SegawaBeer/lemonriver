@@ -7,7 +7,7 @@ import {
   readBoardStructure,
   updateBoardFile,
   writeBoardStructure,
-} from './board.ts';
+} from './store.ts';
 
 async function withFile<T>(fn: (file: string) => Promise<T>): Promise<T> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'board-file-'));

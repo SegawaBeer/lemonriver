@@ -1,7 +1,7 @@
 import type { Plugin } from 'vite';
+import { registerLemonRiverRoutes } from '../lemonriver/routes.ts';
 import { registerAgentRoutes } from './routes/agent.ts';
 import { registerAssetRoutes } from './routes/assets.ts';
-import { registerBoardRoutes } from './routes/board.ts';
 import { registerCommentRoutes } from './routes/comments.ts';
 import { type ApiPluginOptions, makeContext } from './routes/context.ts';
 import { registerEditRoutes } from './routes/edit.ts';
@@ -26,7 +26,7 @@ export function apiPlugin(opts: ApiPluginOptions): Plugin {
       registerEditRoutes(server, ctx);
       registerCommentRoutes(server, ctx);
       registerSlideRoutes(server, ctx);
-      registerBoardRoutes(server, ctx);
+      registerLemonRiverRoutes(server, ctx);
       registerAssetRoutes(server, ctx);
       registerSvglRoutes(server);
       registerGfontsRoutes(server);

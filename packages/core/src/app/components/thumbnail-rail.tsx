@@ -24,7 +24,6 @@ import {
   type LucideIcon,
   Sparkles,
   Trash2,
-  Workflow,
 } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useOptionalInspector } from '@/components/inspector/inspector-provider';
@@ -74,8 +73,6 @@ type Props = {
   moduleTransition?: SlideTransition;
   /** When provided, the vertical rail header renders a button that opens the overview grid. */
   onOverview?: () => void;
-  /** When provided, the vertical rail header renders a button that opens the story board. */
-  onBoard?: () => void;
 };
 
 // Per-page pending comment counts, shown on the rail only while the
@@ -132,7 +129,6 @@ export function ThumbnailRail({
   width,
   moduleTransition,
   onOverview,
-  onBoard,
 }: Props) {
   const activeRef = useRef<HTMLButtonElement | null>(null);
   const virtualListRef = useRef<HTMLDivElement | null>(null);
@@ -335,7 +331,7 @@ export function ThumbnailRail({
       <div className="-mx-3 sticky top-0 z-10 bg-sidebar px-4 pt-3 pb-1">
         <div className="flex items-center justify-between gap-2">
           <span className="eyebrow">{t.thumbnailRail.pages}</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" data-lr-rail-actions="">
             <span className="folio">{pad2(pages.length)}</span>
             {onOverview && (
               <Tooltip>
@@ -357,29 +353,6 @@ export function ThumbnailRail({
                 />
                 <TooltipContent side="bottom" sideOffset={6}>
                   {t.thumbnailRail.overviewAria}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {onBoard && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <button
-                      type="button"
-                      onClick={onBoard}
-                      aria-label={t.board.openBoard}
-                      className={cn(
-                        'flex size-5 items-center justify-center rounded-[3px] text-muted-foreground/70 outline-none',
-                        'motion-safe:transition-colors hover:bg-muted hover:text-foreground',
-                        'focus-visible:ring-1 focus-visible:ring-brand',
-                      )}
-                    >
-                      <Workflow className="size-3.5" strokeWidth={1.75} />
-                    </button>
-                  }
-                />
-                <TooltipContent side="bottom" sideOffset={6}>
-                  {t.board.openBoard}
                 </TooltipContent>
               </Tooltip>
             )}

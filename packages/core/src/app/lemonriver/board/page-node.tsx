@@ -15,19 +15,20 @@ import {
 } from '@/components/ui/context-menu';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
+import { SlideCanvas } from '../../components/slide-canvas';
+import type { DesignSystem } from '../../lib/design';
+import { useNotes } from '../../lib/inspector/use-notes';
+import { SlidePageProvider } from '../../lib/page-context';
+import { CANVAS_WIDTH, type Page } from '../../lib/sdk';
+import { useLrText } from '../text';
+import { CARD_H, CARD_W, MEMO_H, NOTE_H } from './layout';
 import {
   type BoardCard,
   CARD_STATUSES,
   type CardPatch,
   type CardStatus,
   isCardStatus,
-} from '../../../files/board-cards';
-import type { DesignSystem } from '../../lib/design';
-import { useNotes } from '../../lib/inspector/use-notes';
-import { SlidePageProvider } from '../../lib/page-context';
-import { CANVAS_WIDTH, type Page } from '../../lib/sdk';
-import { SlideCanvas } from '../slide-canvas';
-import { CARD_H, CARD_W, MEMO_H, NOTE_H } from './layout';
+} from './model/cards';
 
 export type PageNodeData = {
   slideId: string;
@@ -58,12 +59,12 @@ const STATUS_STYLE: Record<CardStatus, { dot: string; ring: string }> = {
 };
 
 export function useStatusLabels(): Record<CardStatus, string> {
-  const t = useLocale();
+  const lr = useLrText();
   return {
-    todo: t.board.statusTodo,
-    doing: t.board.statusDoing,
-    review: t.board.statusReview,
-    done: t.board.statusDone,
+    todo: lr.board.statusTodo,
+    doing: lr.board.statusDoing,
+    review: lr.board.statusReview,
+    done: lr.board.statusDone,
   };
 }
 
@@ -82,6 +83,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
     ...actions
   } = data as unknown as PageNodeData;
   const t = useLocale();
+  const lr = useLrText();
   const labels = useStatusLabels();
   const status = card?.status;
   const [renaming, setRenaming] = useState(false);
@@ -166,10 +168,10 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
               setRenaming(true);
             }}
           >
-            {t.board.renameCard}
+            {lr.board.renameCard}
           </ContextMenuItem>
           <ContextMenuSub>
-            <ContextMenuSubTrigger disabled={!cardsReady}>{t.board.status}</ContextMenuSubTrigger>
+            <ContextMenuSubTrigger disabled={!cardsReady}>{lr.board.status}</ContextMenuSubTrigger>
             <ContextMenuSubContent className="min-w-[150px]">
               <ContextMenuRadioGroup
                 value={status ?? ''}
@@ -178,7 +180,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
                 }
               >
                 <ContextMenuRadioItem value="" closeOnClick>
-                  {t.board.statusNone}
+                  {lr.board.statusNone}
                 </ContextMenuRadioItem>
                 {CARD_STATUSES.map((value) => (
                   <ContextMenuRadioItem key={value} value={value} closeOnClick>
@@ -199,7 +201,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
             onClick={() => actions.onMoveToEnd(index)}
           >
             <MoveRight />
-            {t.board.moveToEnd}
+            {lr.board.moveToEnd}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -226,7 +228,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
         type="source"
         id="link"
         position={Position.Right}
-        title={t.board.linkHandle}
+        title={lr.board.linkHandle}
         className={cn('osd-board-link-handle', !canLink && 'hidden')}
         isConnectableStart={canLink}
         isConnectableEnd={false}
@@ -273,7 +275,7 @@ function CardTitle({
   onEditingChange: (editing: boolean) => void;
   onCommit: (title: string) => void;
 }) {
-  const t = useLocale();
+  const lr = useLrText();
   const ref = useRef<HTMLInputElement | null>(null);
 
   // Opened from the context menu, the field mounts while the menu is still
@@ -289,8 +291,8 @@ function CardTitle({
       <input
         ref={ref}
         defaultValue={title ?? ''}
-        aria-label={t.board.renameCard}
-        placeholder={t.board.cardTitlePlaceholder}
+        aria-label={lr.board.renameCard}
+        placeholder={lr.board.cardTitlePlaceholder}
         onKeyDown={(e) => {
           e.stopPropagation();
           if (e.key === 'Enter') e.currentTarget.blur();
@@ -314,7 +316,7 @@ function CardTitle({
       type="button"
       disabled={disabled}
       onClick={() => onEditingChange(true)}
-      aria-label={t.board.renameCard}
+      aria-label={lr.board.renameCard}
       className={cn(
         'nodrag nopan min-w-0 truncate rounded-[4px] px-1.5 py-0.5 text-left text-[12.5px]',
         'motion-safe:transition-[background-color,opacity] hover:bg-muted/60 disabled:pointer-events-none',
@@ -323,7 +325,7 @@ function CardTitle({
           : 'text-muted-foreground/45 opacity-0 group-hover/card:opacity-100',
       )}
     >
-      {title || t.board.cardTitlePlaceholder}
+      {title || lr.board.cardTitlePlaceholder}
     </button>
   );
 }
@@ -343,6 +345,7 @@ function NoteStrip({
   initial?: string;
 }) {
   const t = useLocale();
+  const lr = useLrText();
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLTextAreaElement | null>(null);
   const { value, setValue, status, flush } = useNotes(slideId, index, initial);
@@ -370,7 +373,7 @@ function NoteStrip({
               e.currentTarget.blur();
             }
           }}
-          placeholder={t.board.notesPlaceholder}
+          placeholder={lr.board.notesPlaceholder}
           className={cn(
             shared,
             'nowheel h-full resize-none bg-muted/50 text-foreground outline-none',
@@ -392,7 +395,7 @@ function NoteStrip({
           )}
         >
           <span className="line-clamp-3 whitespace-pre-wrap">
-            {value || t.board.notesPlaceholder}
+            {value || lr.board.notesPlaceholder}
           </span>
         </button>
       )}
@@ -419,7 +422,7 @@ function MemoStrip({
   disabled: boolean;
   onCommit: (memo: string) => void;
 }) {
-  const t = useLocale();
+  const lr = useLrText();
   const [draft, setDraft] = useState<string | null>(null);
   const ref = useRef<HTMLTextAreaElement | null>(null);
   const editing = draft !== null;
@@ -436,7 +439,7 @@ function MemoStrip({
         <textarea
           ref={ref}
           value={draft}
-          aria-label={t.board.memoPlaceholder}
+          aria-label={lr.board.memoPlaceholder}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => {
             const next = draft.trim();
@@ -447,7 +450,7 @@ function MemoStrip({
             e.stopPropagation();
             if (e.key === 'Escape') e.currentTarget.blur();
           }}
-          placeholder={t.board.memoPlaceholder}
+          placeholder={lr.board.memoPlaceholder}
           className={cn(
             shared,
             'nowheel h-full resize-none bg-amber-500/10 text-foreground outline-none',
@@ -469,7 +472,7 @@ function MemoStrip({
           )}
         >
           <span className="line-clamp-2 whitespace-pre-wrap">
-            {memo || t.board.memoPlaceholder}
+            {memo || lr.board.memoPlaceholder}
           </span>
         </button>
       )}

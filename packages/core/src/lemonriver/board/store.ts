@@ -1,8 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { type BoardStructure, sanitizeStructure } from './board-structure.ts';
+import {
+  type BoardStructure,
+  sanitizeStructure,
+} from '../../app/lemonriver/board/model/structure.ts';
 
-export type { BoardColumn, BoardStructure } from './board-structure.ts';
+export type { BoardColumn, BoardStructure } from '../../app/lemonriver/board/model/structure.ts';
 
 export function boardStructurePath(userCwd: string, slideId: string): string {
   return path.join(userCwd, '.open-slide', 'board', `${slideId}.json`);

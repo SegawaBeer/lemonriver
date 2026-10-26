@@ -5,7 +5,7 @@ import {
   columnsAfterMove,
   reconcileColumns,
   sanitizeStructure,
-} from './board-structure.ts';
+} from './structure.ts';
 
 const deck = (): BoardColumn[] => [
   { title: 'Cover', size: 2 },

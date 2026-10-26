@@ -3,16 +3,17 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useDocumentTitle } from '@/lib/use-document-title';
-import { format, useLocale } from '@/lib/use-locale';
+import { format } from '@/lib/use-locale';
 import { pad2 } from '@/lib/utils';
-import { columnStarts } from '../../files/board-structure';
-import { useBoardCards } from '../components/board/use-board-cards';
-import { useBoardColumns } from '../components/board/use-board-columns';
-import { usePageOrder } from '../components/board/use-page-order';
-import type { Page } from '../lib/sdk';
-import { useSlideModule } from '../lib/use-slide-module';
+import type { Page } from '../../lib/sdk';
+import { useSlideModule } from '../../lib/use-slide-module';
+import { useLrText } from '../text';
+import { columnStarts } from './model/structure';
+import { useBoardCards } from './use-board-cards';
+import { useBoardColumns } from './use-board-columns';
+import { usePageOrder } from './use-page-order';
 
-const BoardCanvas = lazy(() => import('../components/board/board-canvas'));
+const BoardCanvas = lazy(() => import('./board-canvas'));
 
 // A fresh [] on every render would restart the page-order state in a loop while
 // the deck module is still loading.
@@ -36,15 +37,15 @@ export function Board() {
   const { slideId = '' } = useParams();
   const navigate = useNavigate();
   const { slide, error } = useSlideModule(slideId);
-  const t = useLocale();
+  const lr = useLrText();
   useDocumentTitle(slide?.meta?.title);
 
   const modulePages = slide?.default ?? NO_PAGES;
   const { pages, reorder, duplicate, insert, remove } = usePageOrder(slideId, modulePages);
 
   const columnTitle = useCallback(
-    (n: number) => format(t.board.columnFallback, { n }),
-    [t.board.columnFallback],
+    (n: number) => format(lr.board.columnFallback, { n }),
+    [lr.board.columnFallback],
   );
   const { columns, moveBetweenColumns, resizeColumnAt, growColumn, renameColumn } = useBoardColumns(
     slideId,
@@ -123,18 +124,18 @@ export function Board() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label={t.board.backToDeck}
+          aria-label={lr.board.backToDeck}
           onClick={() => navigate(`/s/${encodeURIComponent(slideId)}`)}
         >
           <ChevronLeft />
         </Button>
-        <span className="eyebrow">{t.board.title}</span>
+        <span className="eyebrow">{lr.board.title}</span>
         <span className="truncate text-[13px] text-muted-foreground">
           {slide?.meta?.title ?? slideId}
         </span>
         <span className="folio ml-auto">{pad2(pages.length)}</span>
         <span className="hidden text-[11.5px] text-muted-foreground/70 sm:inline">
-          {t.board.hint}
+          {lr.board.hint}
         </span>
       </header>
       <div className="relative min-h-0 flex-1">
@@ -144,7 +145,7 @@ export function Board() {
           </p>
         ) : pages.length === 0 || !columns ? (
           <p className="grid h-full place-items-center text-[13px] text-muted-foreground">
-            {t.board.loading}
+            {lr.board.loading}
           </p>
         ) : (
           <Suspense fallback={null}>

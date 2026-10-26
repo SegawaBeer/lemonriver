@@ -149,6 +149,9 @@ function merge() {
 
   console.log('\nMerged. Next:');
   console.log('  pnpm check && pnpm typecheck && pnpm test');
+  console.log(
+    '  pnpm --filter @lemonriver/core build && pnpm --filter @lemonriver/core exec playwright test e2e/tests/lemonriver-board.spec.ts',
+  );
   console.log('\nThen review and push:');
   console.log('  git push origin main');
 }

@@ -91,6 +91,7 @@ import { SlideCanvas } from '../components/slide-canvas';
 import { isDeckWarmed, markDeckWarmed, SlidePreloadLayer } from '../components/slide-preload-layer';
 import { SlideTransitionLayer } from '../components/slide-transition-layer';
 import { type ThumbnailActions, ThumbnailRail } from '../components/thumbnail-rail';
+import { SlideExtensions } from '../lemonriver/slide-extensions';
 import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf, isSafari, type PdfExportProgress } from '../lib/export-pdf';
 import {
@@ -354,11 +355,6 @@ export function Slide() {
         setOverviewOpen((v) => !v);
         return;
       }
-      if (import.meta.env.DEV && !overviewOpen && (e.key === 'b' || e.key === 'B')) {
-        e.preventDefault();
-        navigate(`/s/${encodeURIComponent(slideId)}/board`);
-        return;
-      }
       // Once overview owns focus, swallow everything else here — its
       // capture-phase listener drives the focused thumbnail.
       if (overviewOpen) return;
@@ -387,7 +383,7 @@ export function Slide() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [index, goTo, playMode, slideId, overviewOpen, navigate, toggleAgent]);
+  }, [index, goTo, playMode, slideId, overviewOpen, toggleAgent]);
 
   if (error) {
     return (
@@ -544,7 +540,7 @@ export function Slide() {
       if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
       linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 1200);
     } catch (err) {
-      console.error('[lemonriver] copy link failed', err);
+      console.error('[open-slide] copy link failed', err);
       toast.error(t.slide.toastCopyLinkFailed);
     }
   };
@@ -555,7 +551,7 @@ export function Slide() {
     try {
       await exportSlideAsHtml(slide, slideId);
     } catch (err) {
-      console.error('[lemonriver] export failed', err);
+      console.error('[open-slide] export failed', err);
     } finally {
       setExporting(false);
     }
@@ -579,7 +575,7 @@ export function Slide() {
       await opts.run(show);
       toast.dismiss(toastId);
     } catch (err) {
-      console.error(`[lemonriver] ${opts.kind} export failed`, err);
+      console.error(`[open-slide] ${opts.kind} export failed`, err);
       // Reuses the progress toast's id, so it must outlive this handler.
       toast.error(opts.failedMessage, { id: toastId, duration: 4000 });
     } finally {
@@ -862,6 +858,7 @@ export function Slide() {
             <DesignProvider slideId={slideId}>
               <div className="relative flex min-h-0 flex-1 flex-col">
                 <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+                  <SlideExtensions slideId={slideId} overviewOpen={overviewOpen} />
                   <ResizableRail
                     pages={pages}
                     design={slide.design}
@@ -871,11 +868,6 @@ export function Slide() {
                     actions={thumbnailActions}
                     moduleTransition={slide.transition}
                     onOverview={() => setOverviewOpen(true)}
-                    onBoard={
-                      import.meta.env.DEV
-                        ? () => navigate(`/s/${encodeURIComponent(slideId)}/board`)
-                        : undefined
-                    }
                   />
                   <main
                     ref={slideViewportRef}
@@ -1005,7 +997,6 @@ function ResizableRail(props: {
   actions?: ThumbnailActions;
   moduleTransition?: SlideModule['transition'];
   onOverview?: () => void;
-  onBoard?: () => void;
 }) {
   const t = useLocale();
   const [width, setWidth] = useStoredWidth(

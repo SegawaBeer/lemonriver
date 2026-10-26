@@ -25,12 +25,10 @@ import {
 import { Link2, Link2Off, Maximize2, Minus, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useLocale } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
-import type { BoardCard, CardPatch } from '../../../files/board-cards';
-import { type BoardColumn, columnsAfterMove } from '../../../files/board-structure';
 import type { DesignSystem } from '../../lib/design';
 import type { Page } from '../../lib/sdk';
+import { useLrText } from '../text';
 import {
   type BoardLayout,
   type Box,
@@ -43,6 +41,8 @@ import {
   orderAfterMove,
   slotAtPoint,
 } from './layout';
+import type { BoardCard, CardPatch } from './model/cards';
+import { type BoardColumn, columnsAfterMove } from './model/structure';
 import { PageNode, type PageNodeData } from './page-node';
 import '@xyflow/react/dist/base.css';
 import './board.css';
@@ -81,7 +81,7 @@ type ColumnLabelData = {
 
 function ColumnLabel({ data }: NodeProps) {
   const { title, count, index, onRename, onAddPage } = data as unknown as ColumnLabelData;
-  const t = useLocale();
+  const lr = useLrText();
   const [editing, setEditing] = useState(false);
 
   return (
@@ -94,8 +94,8 @@ function ColumnLabel({ data }: NodeProps) {
           // biome-ignore lint/a11y/noAutofocus: the field only exists once the title is clicked
           autoFocus
           defaultValue={title}
-          aria-label={t.board.renameColumn}
-          placeholder={t.board.columnTitlePlaceholder}
+          aria-label={lr.board.renameColumn}
+          placeholder={lr.board.columnTitlePlaceholder}
           onKeyDown={(e) => {
             e.stopPropagation();
             if (e.key === 'Enter') e.currentTarget.blur();
@@ -115,7 +115,7 @@ function ColumnLabel({ data }: NodeProps) {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          aria-label={t.board.renameColumn}
+          aria-label={lr.board.renameColumn}
           className="eyebrow min-w-0 truncate rounded-[4px] px-1.5 py-1 text-left motion-safe:transition-colors hover:bg-muted/60"
         >
           {title}
@@ -125,7 +125,7 @@ function ColumnLabel({ data }: NodeProps) {
       <button
         type="button"
         onClick={() => onAddPage(index)}
-        aria-label={t.board.addPage}
+        aria-label={lr.board.addPage}
         className={cn(
           'ml-auto flex size-6 items-center justify-center rounded-[4px] text-muted-foreground/60',
           'motion-safe:transition-colors hover:bg-muted hover:text-foreground',
@@ -167,7 +167,7 @@ function boxOf(node: InternalNode | undefined): Box | null {
  * never be read as the deck's order, and it follows the cards as they move.
  */
 function LinkEdge({ id, source, target, data }: EdgeProps) {
-  const t = useLocale();
+  const lr = useLrText();
   const { a, b, onUnlink } = data as unknown as LinkEdgeData;
   const from = boxOf(useInternalNode(source));
   const to = boxOf(useInternalNode(target));
@@ -180,8 +180,8 @@ function LinkEdge({ id, source, target, data }: EdgeProps) {
       <EdgeLabelRenderer>
         <button
           type="button"
-          aria-label={t.board.removeLink}
-          title={t.board.removeLink}
+          aria-label={lr.board.removeLink}
+          title={lr.board.removeLink}
           onClick={() => onUnlink(a, b)}
           className="osd-board-link-remove nodrag nopan"
           style={{ transform: `translate(-50%, -50%) translate(${curve.x}px, ${curve.y}px)` }}
@@ -323,7 +323,7 @@ function BoardFlow({
   onUnlink,
   onToggleLinks,
 }: Props) {
-  const t = useLocale();
+  const lr = useLrText();
   const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
 
   const layout = useMemo(() => layoutBoard(columns), [columns]);
@@ -530,7 +530,7 @@ function BoardFlow({
         <Button
           variant="outline"
           size="icon-sm"
-          aria-label={t.board.zoomOut}
+          aria-label={lr.board.zoomOut}
           onClick={() => zoomOut()}
         >
           <Minus />
@@ -538,20 +538,20 @@ function BoardFlow({
         <Button
           variant="outline"
           size="icon-sm"
-          aria-label={t.board.zoomIn}
+          aria-label={lr.board.zoomIn}
           onClick={() => zoomIn()}
         >
           <Plus />
         </Button>
-        <Button variant="outline" size="icon-sm" aria-label={t.board.fitView} onClick={fitAll}>
+        <Button variant="outline" size="icon-sm" aria-label={lr.board.fitView} onClick={fitAll}>
           <Maximize2 />
         </Button>
         <Button
           variant="outline"
           size="icon-sm"
-          aria-label={showLinks ? t.board.hideLinks : t.board.showLinks}
+          aria-label={showLinks ? lr.board.hideLinks : lr.board.showLinks}
           aria-pressed={showLinks}
-          title={showLinks ? t.board.hideLinks : t.board.showLinks}
+          title={showLinks ? lr.board.hideLinks : lr.board.showLinks}
           onClick={onToggleLinks}
         >
           {showLinks ? <Link2 /> : <Link2Off />}

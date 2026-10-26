@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useLocale } from '@/lib/use-locale';
+import type { Page } from '../../lib/sdk';
+import { useLrText } from '../text';
+import { seedColumns } from './layout';
 import {
   type BoardColumn,
   columnOfPosition,
   columnsAfterMove,
   reconcileColumns,
-} from '../../../files/board-structure';
-import type { Page } from '../../lib/sdk';
-import { seedColumns } from './layout';
+} from './model/structure';
 
 /**
  * The board's columns live beside the project, never in the deck file. The deck
@@ -21,7 +21,7 @@ export function useBoardColumns(
   columnTitle: (index: number) => string,
 ) {
   const [columns, setColumns] = useState<BoardColumn[] | null>(null);
-  const t = useLocale();
+  const lr = useLrText();
   const seedRef = useRef<{ pages: Page[]; title: (index: number) => string }>({
     pages,
     title: columnTitle,
@@ -38,10 +38,10 @@ export function useBoardColumns(
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } catch (err) {
-        toast.error(`${t.board.saveFailed}: ${String((err as Error).message ?? err)}`);
+        toast.error(`${lr.board.saveFailed}: ${String((err as Error).message ?? err)}`);
       }
     },
-    [slideId, t.board],
+    [slideId, lr.board],
   );
 
   // Load once the deck has pages. A deck with no stored structure gets one seeded

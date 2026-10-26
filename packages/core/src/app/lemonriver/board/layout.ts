@@ -1,6 +1,6 @@
-import type { BoardColumn } from '../../../files/board-structure';
 import type { Page } from '../../lib/sdk';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../../lib/sdk';
+import type { BoardColumn } from './model/structure';
 
 /** 1/4 of the authoring canvas, so a preview scales by exactly 0.25. */
 export const CARD_W = 480;

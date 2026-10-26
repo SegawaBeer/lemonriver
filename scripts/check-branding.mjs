@@ -54,6 +54,8 @@ const INTERNAL = [
   // Prompt markers the agent panel and its parsers agree on. Only this package
   // reads them, so they stay as-is to keep prompt.ts mergeable.
   /open-slide-(context|questions|note)/,
+  // Console log prefixes in upstream files; only developers see them.
+  /\[open-slide\]/,
 ];
 
 const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
