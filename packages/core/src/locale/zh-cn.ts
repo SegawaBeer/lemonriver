@@ -177,6 +177,7 @@ export const zhCN: Locale = {
     helpAria: '键盘快捷键 (?)',
     exitAria: '退出 (Esc)',
     elapsedTime: '已用时',
+    lastSlideHint: '已是最后一页 · 按 Esc 退出放映',
     helpEyebrow: '演示模式',
     helpTitle: '键盘快捷键',
     shortcutNext: '下一张',
