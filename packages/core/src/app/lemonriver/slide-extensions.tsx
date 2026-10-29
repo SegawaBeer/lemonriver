@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { hasModifier, isShortcutControlTarget, isTypingTarget } from '@/lib/keys';
+import { hasModifier, isTypingTarget } from '@/lib/keys';
 import { cn } from '@/lib/utils';
 import { useSlot } from './chrome/use-slot';
 import { isFeatureEnabled } from './features';
@@ -15,6 +15,18 @@ type Props = {
   slideId: string;
   overviewOpen: boolean;
 };
+
+/**
+ * A key pressed with focus inside a menu or dialog belongs to that overlay. A
+ * focused button does not: the shortcut has to reach the page from any view,
+ * including the asset grid, whose own controls sit under the pointer.
+ */
+function isInsideOverlay(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    !!target.closest('[role="dialog"], [role="menu"], [role="listbox"]')
+  );
+}
 
 export function SlideExtensions({ slideId, overviewOpen }: Props) {
   const enabled = isFeatureEnabled('board');
@@ -28,7 +40,7 @@ export function SlideExtensions({ slideId, overviewOpen }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (
         isTypingTarget(e.target) ||
-        isShortcutControlTarget(e.target) ||
+        isInsideOverlay(e.target) ||
         e.isComposing ||
         e.keyCode === 229 ||
         e.defaultPrevented

@@ -911,6 +911,7 @@ export function Slide() {
             </div>
           </header>
 
+          <SlideExtensions slideId={slideId} overviewOpen={overviewOpen} />
           {view === 'assets' ? (
             <div className="min-h-0 flex-1 overflow-hidden md:mx-2 md:mb-2 md:rounded-[10px] md:bg-background md:shadow-edge md:ring-1 md:ring-foreground/[0.06]">
               <AssetView slideId={slideId} />
@@ -919,7 +920,6 @@ export function Slide() {
             <DesignProvider slideId={slideId}>
               <div className="relative flex min-h-0 flex-1 flex-col">
                 <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-                  <SlideExtensions slideId={slideId} overviewOpen={overviewOpen} />
                   <ResizableRail
                     pages={pages}
                     design={slide.design}
