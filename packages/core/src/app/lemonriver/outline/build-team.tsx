@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { format } from '@/lib/use-locale';
+import { format, plural } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import {
   HelperMascot,
@@ -123,7 +123,7 @@ export function BuildTeam({ slideId }: { slideId: string }) {
         : action === 'paused'
           ? lr.statusPaused
           : action === 'interrupted'
-            ? format(lr.interruptedTitle, { k: Math.min(built + 1, total) })
+            ? lr.statusStopped
             : outline.stage === 'review'
               ? lr.statusReview
               : format(lr.statusWorking, { k: Math.min(built + 1, total) });
@@ -140,7 +140,9 @@ export function BuildTeam({ slideId }: { slideId: string }) {
       label: lr.research,
       state: team.research,
       sub:
-        outline.files.length > 0 ? format(lr.readFiles, { n: outline.files.length }) : lr.noFiles,
+        outline.files.length > 0
+          ? format(plural(outline.files.length, lr.readFiles), { n: outline.files.length })
+          : lr.noFiles,
       subMuted: outline.files.length === 0,
     },
     { role: 'outline', label: lr.outline, state: team.outline, sub: null, subMuted: false },
@@ -201,6 +203,7 @@ export function BuildTeam({ slideId }: { slideId: string }) {
           </div>
         </div>
         {state === 'building' &&
+          action !== 'interrupted' &&
           (outline.paused ? (
             <Button type="button" variant="outline" size="xs" onClick={() => void resume()}>
               {lr.resume}

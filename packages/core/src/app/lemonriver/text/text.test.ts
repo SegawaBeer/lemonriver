@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { format } from '../../../locale/format';
+import { format, plural } from '../../../locale/format';
 import { en } from './en';
 import { es } from './es';
 import { ja } from './ja';
@@ -58,13 +58,18 @@ describe('LemonRiver text', () => {
 
   it('spells the build progress and pending lines out', () => {
     const cases = [
-      [en, 'Page 3 / 8', 'Costs', 'Page 4 · Costs'],
-      [zhCN, '第 3 / 8 页', '成本', '第 4 页 · 成本'],
+      [en, '3 of 8 pages done', 'Costs', 'Page 4 · Costs'],
+      [zhCN, '已排 3 / 8 页', '成本', '第 4 页 · 成本'],
     ] as const;
     for (const [text, progress, title, pending] of cases) {
       expect(format(text.build.progress, { k: 3, n: 8 })).toBe(progress);
       expect(format(text.build.pendingPage, { k: 4, title })).toBe(pending);
       expect(format(text.build.done, { n: 8 })).not.toContain('{');
     }
+  });
+
+  it('says one file, not one files', () => {
+    expect(format(plural(1, en.build.readFiles), { n: 1 })).toBe('Read 1 file');
+    expect(format(plural(2, en.build.readFiles), { n: 2 })).toBe('Read 2 files');
   });
 });

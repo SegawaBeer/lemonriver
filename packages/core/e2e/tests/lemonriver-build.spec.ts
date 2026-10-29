@@ -166,8 +166,8 @@ test.describe('LemonRiver one-page-at-a-time build', () => {
       'data-lr-helper-state',
       'done',
     );
-    await expect(page.getByText('Read 1 files')).toBeVisible();
-    await expect(page.getByText('Page 0 / 8')).toBeVisible();
+    await expect(page.getByText('Read 1 file')).toBeVisible();
+    await expect(page.getByText('0 of 8 pages done')).toBeVisible();
   });
 
   test('the next turn writes page 2 and the rail loses one pending row', async ({ page }) => {
@@ -193,7 +193,7 @@ test.describe('LemonRiver one-page-at-a-time build', () => {
     expect(mock.sent[1].text).toContain('Page 2 of 8');
     expect(mock.sent[1].text).toContain('Write only this page');
     await expect(pendingRows(page)).toHaveCount(7);
-    await expect(page.getByText('Page 1 / 8')).toBeVisible();
+    await expect(page.getByText('1 of 8 pages done')).toBeVisible();
   });
 
   test('pausing holds the next page until the user continues', async ({ page }) => {
@@ -242,7 +242,9 @@ test.describe('LemonRiver one-page-at-a-time build', () => {
     await page.reload();
 
     await expect(page.locator('[data-lr-build-interrupted]')).toBeVisible();
-    await expect(page.getByText('Stopped at page 2').first()).toBeVisible();
+    await expect(page.getByText('Stopped at page 2')).toBeVisible();
+    await expect(page.getByText('Waiting for you to continue')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Pause' })).toHaveCount(0);
     await expect(page.getByText('The first 1 pages are saved.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Continue building' }).click();

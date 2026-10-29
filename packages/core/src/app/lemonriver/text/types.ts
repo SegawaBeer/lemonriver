@@ -187,7 +187,7 @@ export type LrText = {
     design: string;
     review: string;
     /** template: "Read {n} files" */
-    readFiles: string;
+    readFiles: Plural;
     noFiles: string;
     /** template: "Page {k} / {n}" */
     progress: string;
@@ -195,6 +195,7 @@ export type LrText = {
     statusWorking: string;
     statusReview: string;
     statusPaused: string;
+    statusStopped: string;
     /** template: "{n} pages are ready" */
     statusDone: string;
     statusWaiting: string;
