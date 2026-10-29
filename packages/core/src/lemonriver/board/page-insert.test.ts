@@ -1,6 +1,10 @@
 import { parse as babelParse } from '@babel/parser';
 import { describe, expect, it } from 'vitest';
-import { insertBlankPageInDefaultExportInSource, insertNotesElementInSource } from './page-insert';
+import {
+  insertBlankPageInDefaultExportInSource,
+  insertNotesElementInSource,
+  insertPageEntryInDefaultExportInSource,
+} from './page-insert';
 
 describe('insertBlankPageInDefaultExportInSource', () => {
   const multiline = `import type { Page } from '@lemonriver/core';
@@ -88,5 +92,35 @@ describe('insertNotesElementInSource', () => {
     expect(
       insertNotesElementInSource(`export const notes = ['a'];\nexport default [A];\n`, -1),
     ).toBeNull();
+  });
+});
+
+describe('insertPageEntryInDefaultExportInSource', () => {
+  const source = `const A = () => null;
+const B = () => null;
+
+export default [A, B];
+`;
+
+  it('puts a removed page back at the index it was taken from', () => {
+    expect(insertPageEntryInDefaultExportInSource(source, 1, 'B')).toContain(
+      'export default [A, B, B];',
+    );
+    expect(insertPageEntryInDefaultExportInSource(source, 0, 'A')).toContain(
+      'export default [A, A, B];',
+    );
+  });
+
+  it('restores a page into a deck whose last page was removed', () => {
+    const empty = 'export default [];\n';
+    expect(insertPageEntryInDefaultExportInSource(empty, 0, 'A')).toContain(
+      'export default [\n  A,\n];',
+    );
+  });
+
+  it('refuses an index past the end and an empty entry', () => {
+    expect(insertPageEntryInDefaultExportInSource(source, 3, 'A')).toBeNull();
+    expect(insertPageEntryInDefaultExportInSource(source, 0, '  ')).toBeNull();
+    expect(insertPageEntryInDefaultExportInSource('export default build();', 0, 'A')).toBeNull();
   });
 });

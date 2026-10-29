@@ -79,6 +79,11 @@ export function patchCard(cards: BoardCards, key: string, patch: CardPatch): Boa
   return next;
 }
 
+/** One change across several cards, so a multi-card edit is a single write. */
+export function patchCards(cards: BoardCards, keys: string[], patch: CardPatch): BoardCards {
+  return keys.reduce((next, key) => patchCard(next, key, patch), cards);
+}
+
 /**
  * Keys a page by its entry in the page array, so its card follows it through a
  * reorder made anywhere — the thumbnail rail, or an agent editing the file —
@@ -117,9 +122,14 @@ export function linkedPairs(keys: string[], links: BoardLink[]): [number, number
 
 export type PageOp =
   | { kind: 'move'; from: number; to: number }
+  | { kind: 'moveMany'; moving: number[]; to: number }
+  | { kind: 'reorder'; order: number[] }
   | { kind: 'duplicate'; index: number }
   | { kind: 'insert'; index: number }
-  | { kind: 'delete'; index: number };
+  /** A page put back as the source text it was removed as, with what it carried. */
+  | { kind: 'restore'; index: number; entry: string; card?: BoardCard | null }
+  | { kind: 'delete'; index: number }
+  | { kind: 'deleteMany'; indices: number[] };
 
 /** Where each page sat before `op`; -1 marks the page `op` created. */
 export function originAfter(op: PageOp, total: number): number[] {
@@ -130,15 +140,27 @@ export function originAfter(op: PageOp, total: number): number[] {
       order.splice(op.to, 0, moved);
       return order;
     }
+    case 'moveMany': {
+      const moving = [...new Set(op.moving)].sort((a, b) => a - b);
+      const staying = order.filter((index) => !moving.includes(index));
+      const before = moving.filter((index) => index < op.to).length;
+      const at = Math.max(0, Math.min(staying.length, op.to - before));
+      return [...staying.slice(0, at), ...moving, ...staying.slice(at)];
+    }
+    case 'reorder':
+      return op.order;
     case 'duplicate':
       order.splice(op.index + 1, 0, -1);
       return order;
     case 'insert':
+    case 'restore':
       order.splice(op.index, 0, -1);
       return order;
     case 'delete':
       order.splice(op.index, 1);
       return order;
+    case 'deleteMany':
+      return order.filter((index) => !op.indices.includes(index));
   }
 }
 
@@ -150,7 +172,11 @@ export function entriesAfter<E extends string[] | null | undefined>(
   if (!entries || entries.length !== count) return entries;
   return originAfter(op, count).map((from) => {
     if (from >= 0) return entries[from];
-    return op.kind === 'duplicate' ? entries[op.index] : BLANK_ENTRY;
+    if (op.kind === 'duplicate') return entries[op.index];
+    // A restored page already knows the name it was written as, so its card is
+    // found again straight away instead of waiting to be adopted under a blank.
+    if (op.kind === 'restore') return op.entry;
+    return BLANK_ENTRY;
   }) as E;
 }
 

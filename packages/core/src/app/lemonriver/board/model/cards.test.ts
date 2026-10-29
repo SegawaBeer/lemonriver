@@ -20,7 +20,14 @@ import {
 function run(state: CardState, entries: string[], op: PageOp) {
   const count = entries.length;
   const next = entriesAfter(op, entries, count);
-  const nextCount = op.kind === 'move' ? count : op.kind === 'delete' ? count - 1 : count + 1;
+  const nextCount =
+    op.kind === 'delete'
+      ? count - 1
+      : op.kind === 'deleteMany'
+        ? count - op.indices.length
+        : op.kind === 'move' || op.kind === 'moveMany' || op.kind === 'reorder'
+          ? count
+          : count + 1;
   const carried = carryCards(
     state,
     pageKeys(entries, count),
@@ -235,5 +242,54 @@ describe('sanitize', () => {
     expect(sanitizeLinks([{ a: 'A', b: 'B' }, { a: 'B', b: 'A' }, { a: 'A' }, null])).toEqual([
       { a: 'A', b: 'B' },
     ]);
+  });
+});
+
+describe('batch and structural operations', () => {
+  const state: CardState = {
+    cards: { Cover: { memo: 'one' }, Q3: { memo: 'two' }, Close: { memo: 'three' } },
+    links: [{ a: 'Q3', b: 'Close' }],
+  };
+
+  it('carries every card through a whole-deck reorder', () => {
+    const order = [3, 1, 0, 2];
+    const { state: next, entries } = run(state, deck, { kind: 'reorder', order });
+    expect(entries).toEqual(['Close', 'Agenda', 'Cover', 'Q3']);
+    expect(memos(next, entries, 4)).toEqual(['three', null, 'one', 'two']);
+    expect(next.links).toEqual([{ a: 'Q3', b: 'Close' }]);
+  });
+
+  it('keeps the relative order of several pages moved at once', () => {
+    const { state: next, entries } = run(state, deck, { kind: 'moveMany', moving: [0, 2], to: 3 });
+    expect(entries).toEqual(['Agenda', 'Cover', 'Q3', 'Close']);
+    expect(memos(next, entries, 4)).toEqual([null, 'one', 'two', 'three']);
+  });
+
+  it('drops the cards of every page removed at once', () => {
+    const { state: next, entries } = run(state, deck, { kind: 'deleteMany', indices: [0, 2] });
+    expect(entries).toEqual(['Agenda', 'Close']);
+    expect(memos(next, entries, 2)).toEqual([null, 'three']);
+  });
+});
+
+describe('restore', () => {
+  it('puts the page back under its own name, not a blank the deck must explain', () => {
+    const { entries } = run({ cards: {}, links: [] }, ['Cover', 'Q3', 'Close'], {
+      kind: 'restore',
+      index: 1,
+      entry: 'Agenda',
+    });
+    expect(entries).toEqual(deck);
+    expect(pageKeys(entries, 4).every(isSettledKey)).toBe(true);
+  });
+
+  it('lets a card written back under that name show up again', () => {
+    const { entries } = run({ cards: {}, links: [] }, ['Cover', 'Q3', 'Close'], {
+      kind: 'restore',
+      index: 1,
+      entry: 'Agenda',
+    });
+    const state = { cards: { Agenda: { memo: 'back' } }, links: [] };
+    expect(memos(state, entries, 4)).toEqual([null, 'back', null, null]);
   });
 });

@@ -6,9 +6,13 @@ import {
   CARD_H,
   CARD_W,
   cardAtPoint,
+  cardMetrics,
+  gapAtPoint,
   layoutBoard,
   linkCurve,
+  NOTE_H,
   orderAfterMove,
+  orderAfterMoveMany,
   seedColumns,
   slotAtPoint,
 } from './layout';
@@ -157,5 +161,82 @@ describe('linkCurve', () => {
     expect(forward.path).toBe(backward.path);
     expect(forward.path.startsWith('M 100,18')).toBe(true);
     expect(forward.path.endsWith('300,218')).toBe(true);
+  });
+});
+
+describe('card sizes', () => {
+  it('keeps the large card at the preview size it has always had', () => {
+    expect(cardMetrics('large')).toMatchObject({ cardW: CARD_W, cardH: CARD_H, noteH: NOTE_H });
+  });
+
+  it('halves the preview at small, and drops the strips that need the room', () => {
+    expect(cardMetrics('small').cardW).toBe(CARD_W / 2);
+    expect(cardMetrics('small').cardH).toBeCloseTo(CARD_H / 2);
+    expect(cardMetrics('small').memoH).toBe(0);
+  });
+
+  it('draws no preview at all when only the title is shown', () => {
+    expect(cardMetrics('title').cardH).toBe(0);
+    expect(cardMetrics('title').boxH).toBeLessThan(cardMetrics('small').boxH);
+  });
+
+  it('lays the same structure out with the metrics of the chosen size', () => {
+    const columns = [{ title: 'A', size: 2 }];
+    expect(layoutBoard(columns, { size: 'small' }).metrics.cardW).toBe(CARD_W / 2);
+    expect(layoutBoard(columns).metrics.cardW).toBe(CARD_W);
+  });
+});
+
+describe('folded chapters', () => {
+  const columns = [
+    { title: 'A', size: 2 },
+    { title: 'B', size: 3 },
+  ];
+
+  it('draws no cards for a folded chapter but keeps its pages numbered', () => {
+    const layout = layoutBoard(columns, { collapsed: [false, true] });
+    expect(layout.slots.map((s) => s.index)).toEqual([0, 1]);
+    expect(layout.columns[1].collapsed).toBe(true);
+  });
+
+  it('keeps the folded chapter label in place while its cards are gone', () => {
+    const open = layoutBoard(columns);
+    const folded = layoutBoard(columns, { collapsed: [true, false] });
+    expect(folded.columns[0].x).toBe(open.columns[0].x);
+    expect(folded.columns[0].size).toBe(2);
+    expect(folded.slots.map((s) => s.index)).toEqual([2, 3, 4]);
+  });
+});
+
+describe('gapAtPoint', () => {
+  const layout = layoutBoard([
+    { title: 'A', size: 2 },
+    { title: 'B', size: 2 },
+  ]);
+
+  it('names the boundary a point between two chapters sits on', () => {
+    const right = layout.columns[0].x + layout.columns[0].boxW;
+    expect(gapAtPoint(layout, right + 10, 100)).toBe(1);
+  });
+
+  it('reports no boundary over a column or past the last one', () => {
+    expect(gapAtPoint(layout, layout.columns[0].x + 20, 100)).toBeNull();
+    expect(gapAtPoint(layout, layout.columns[1].x + 400, 100)).toBeNull();
+  });
+});
+
+describe('orderAfterMoveMany', () => {
+  it('carries the picked cards as one block, in deck order', () => {
+    expect(orderAfterMoveMany(5, [3, 1], 0)).toEqual([1, 3, 0, 2, 4]);
+  });
+
+  it('lands the block where the last card was dropped', () => {
+    expect(orderAfterMoveMany(6, [0, 1], 4)).toEqual([2, 3, 0, 1, 4, 5]);
+    expect(orderAfterMoveMany(6, [4, 5], 1)).toEqual([0, 4, 5, 1, 2, 3]);
+  });
+
+  it('keeps every page exactly once', () => {
+    const order = orderAfterMoveMany(7, [2, 5, 6], 1);
+    expect([...order].sort((a, b) => a - b)).toEqual([...Array(7).keys()]);
   });
 });

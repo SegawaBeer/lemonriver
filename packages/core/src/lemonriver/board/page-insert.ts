@@ -197,6 +197,27 @@ export function insertBlankPageInDefaultExportInSource(
 }
 
 /**
+ * Put a page back where it was, as the source text it was removed as. Undoing a
+ * deletion needs nothing else: removing a page only takes its entry out of the
+ * array, so the component it names is still declared above.
+ */
+export function insertPageEntryInDefaultExportInSource(
+  source: string,
+  index: number,
+  entry: string,
+): string | null {
+  const found = findDefaultExportArray(source);
+  if (!found) return null;
+  const n = found.elements.length;
+  if (!Number.isInteger(index) || index < 0 || index > n) return null;
+  if (!entry.trim()) return null;
+  if (n === 0) {
+    return `${source.slice(0, found.arrayStart)}[\n  ${entry},\n]${source.slice(found.arrayEnd)}`;
+  }
+  return insertIntoDefaultExportArray(source, found, index, entry);
+}
+
+/**
  * Insert an empty note slot at `index` so `notes` stays aligned with the pages
  * after a page is inserted. Trailing empty slots are dropped again by
  * {@link rebuildNotesArray}, which is correct: an absent note is `undefined`.

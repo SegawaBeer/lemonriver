@@ -3,17 +3,16 @@ import { toast } from 'sonner';
 import type { Page } from '../../lib/sdk';
 import { useLrText } from '../text';
 import { seedColumns } from './layout';
-import {
-  type BoardColumn,
-  columnOfPosition,
-  columnsAfterMove,
-  reconcileColumns,
-} from './model/structure';
+import { type BoardColumn, reconcileColumns } from './model/structure';
 
 /**
  * The board's columns live beside the project, never in the deck file. The deck
  * only ever seeds them: from then on a chapter page is an ordinary card, so
  * moving it cannot re-group the pages it used to head.
+ *
+ * Every change to the structure is worked out as a whole new list by a pure
+ * function and handed here, so an undo can replay the list it took away instead
+ * of re-deriving it from a board that has already moved on.
  */
 export function useBoardColumns(
   slideId: string,
@@ -89,61 +88,13 @@ export function useBoardColumns(
     });
   }, [pages.length, save]);
 
-  /** A card crossing a column boundary hands one page over; nothing else moves. */
-  const moveBetweenColumns = useCallback(
-    (from: number, to: number) => {
-      setColumns((current) => {
-        if (!current) return current;
-        const next = columnsAfterMove(current, from, to);
-        if (next !== current) void save(next);
-        return next;
-      });
+  const applyColumns = useCallback(
+    (next: BoardColumn[]) => {
+      setColumns(next);
+      void save(next);
     },
     [save],
   );
 
-  /** A page added or removed at `index` grows or shrinks the column holding it. */
-  const resizeColumnAt = useCallback(
-    (index: number, delta: number) => {
-      setColumns((current) => {
-        if (!current) return current;
-        const column = columnOfPosition(current, index);
-        const next = current.map((c, i) =>
-          i === column ? { ...c, size: Math.max(0, c.size + delta) } : c,
-        );
-        void save(next);
-        return next;
-      });
-    },
-    [save],
-  );
-
-  /** Grows one column by `delta`, for a page added straight into that column. */
-  const growColumn = useCallback(
-    (index: number, delta: number) => {
-      setColumns((current) => {
-        if (!current?.[index]) return current;
-        const next = current.map((column, i) =>
-          i === index ? { ...column, size: Math.max(0, column.size + delta) } : column,
-        );
-        void save(next);
-        return next;
-      });
-    },
-    [save],
-  );
-
-  const renameColumn = useCallback(
-    (index: number, title: string) => {
-      setColumns((current) => {
-        if (!current?.[index]) return current;
-        const next = current.map((column, i) => (i === index ? { ...column, title } : column));
-        void save(next);
-        return next;
-      });
-    },
-    [save],
-  );
-
-  return { columns, moveBetweenColumns, resizeColumnAt, growColumn, renameColumn };
+  return { columns, applyColumns };
 }

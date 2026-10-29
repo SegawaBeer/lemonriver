@@ -18,6 +18,7 @@ import { defaultExportEntriesInSource } from './page-entries.ts';
 import {
   insertBlankPageInDefaultExportInSource,
   insertNotesElementInSource,
+  insertPageEntryInDefaultExportInSource,
 } from './page-insert.ts';
 import {
   boardStructurePath,
@@ -33,6 +34,7 @@ import {
 // PUT /__board/cards               { slideId, cards, links }
 // GET /__board/entries?slideId=…   → { entries: string[] | null }
 // POST /__board/pages/insert       { slideId, index } → insert a blank page
+// POST /__board/pages/restore      { slideId, index, entry } → put a removed page back
 
 type PutBody = { slideId?: string; columns?: unknown };
 type CardsBody = { slideId?: string; cards?: unknown; links?: unknown };
@@ -143,6 +145,49 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
         if (withNotes !== source) {
           await fs.writeFile(entry, withNotes, 'utf8');
         }
+        return json(res, 200, { ok: true, slideId, index });
+      }
+
+      if (method === 'POST' && url.pathname === '/pages/restore') {
+        const requestCheck = validateMutationRequest(req, { requireJsonBody: true });
+        if (!requestCheck.ok) {
+          return json(res, requestCheck.status, { error: requestCheck.error });
+        }
+        const body = (await readBody(req)) as {
+          slideId?: unknown;
+          index?: unknown;
+          entry?: unknown;
+        };
+        const slideId = typeof body?.slideId === 'string' ? body.slideId : '';
+        const index = typeof body?.index === 'number' ? body.index : Number.NaN;
+        const entry = typeof body?.entry === 'string' ? body.entry : '';
+        if (!Number.isInteger(index) || index < 0 || !entry.trim()) {
+          return json(res, 400, { error: 'invalid index or entry' });
+        }
+        const target = resolveSlideEntry(ctx.slidesRoot, slideId);
+        if (!target) return json(res, 400, { error: 'invalid slideId' });
+
+        let source: string;
+        try {
+          source = await fs.readFile(target, 'utf8');
+        } catch {
+          return json(res, 404, { error: 'slide not found' });
+        }
+
+        const withPage = insertPageEntryInDefaultExportInSource(source, index, entry);
+        if (withPage === null) {
+          return json(res, 422, {
+            error:
+              'could not restore the page — index out of range or default export is not an array',
+          });
+        }
+        const withNotes = insertNotesElementInSource(withPage, index);
+        if (withNotes === null) {
+          return json(res, 422, {
+            error: 'could not restore the page — notes export is malformed',
+          });
+        }
+        if (withNotes !== source) await fs.writeFile(target, withNotes, 'utf8');
         return json(res, 200, { ok: true, slideId, index });
       }
 

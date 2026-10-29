@@ -12,6 +12,46 @@ export const MEMO_H = 40;
 /** Card box = preview plus the card's padding, title row, note strip and memo strip. */
 export const CARD_BOX_W = CARD_W + 12;
 export const CARD_BOX_H = CARD_H + 60 + NOTE_H + MEMO_H;
+
+/** How much of a page a card shows. `title` is a single row, for reading a long deck. */
+export type CardSize = 'large' | 'small' | 'title';
+export const CARD_SIZES: readonly CardSize[] = ['large', 'small', 'title'];
+
+export type CardMetrics = {
+  cardW: number;
+  cardH: number;
+  /** Height of the speaker-note strip; 0 hides it. */
+  noteH: number;
+  /** Height of the work-memo strip; 0 hides it. */
+  memoH: number;
+  boxW: number;
+  boxH: number;
+};
+
+const METRICS: Record<CardSize, CardMetrics> = {
+  large: {
+    cardW: CARD_W,
+    cardH: CARD_H,
+    noteH: NOTE_H,
+    memoH: MEMO_H,
+    boxW: CARD_BOX_W,
+    boxH: CARD_BOX_H,
+  },
+  small: {
+    cardW: 240,
+    cardH: (240 * CANVAS_HEIGHT) / CANVAS_WIDTH,
+    noteH: 0,
+    memoH: 0,
+    boxW: 252,
+    boxH: 179,
+  },
+  title: { cardW: 340, cardH: 0, noteH: 0, memoH: 0, boxW: 352, boxH: 40 },
+};
+
+export function cardMetrics(size: CardSize = 'large'): CardMetrics {
+  return METRICS[size] ?? METRICS.large;
+}
+
 /** Gap between columns, and between cards inside a column. */
 const COL_GAP = 88;
 const ROW_GAP = 52;
@@ -28,8 +68,19 @@ export type LaidColumn = {
   y: number;
   from: number;
   to: number;
+  /** Column width at the current card size; the gap between columns starts after it. */
+  boxW: number;
+  collapsed: boolean;
 };
-export type BoardLayout = { slots: Slot[]; columns: LaidColumn[]; width: number; height: number };
+export type BoardLayout = {
+  slots: Slot[];
+  columns: LaidColumn[];
+  width: number;
+  height: number;
+  metrics: CardMetrics;
+};
+
+export type BoardView = { size?: CardSize; collapsed?: boolean[] };
 
 const CHAPTER_NAME = /chapter|section|章/i;
 
@@ -76,14 +127,17 @@ export function seedColumns(pages: Page[], columnTitle: (index: number) => strin
 }
 
 /** Geometry for a structure: columns left to right, pages top to bottom. */
-export function layoutBoard(columns: BoardColumn[]): BoardLayout {
+export function layoutBoard(columns: BoardColumn[], view: BoardView = {}): BoardLayout {
+  const metrics = cardMetrics(view.size);
+  const collapsed = view.collapsed ?? [];
   const slots: Slot[] = [];
   const laid: LaidColumn[] = [];
   let position = 0;
   let tallest = 0;
+  let x = 0;
 
   columns.forEach((column, index) => {
-    const x = index * (CARD_BOX_W + COL_GAP);
+    const folded = collapsed[index] === true;
     laid.push({
       title: column.title,
       size: column.size,
@@ -91,20 +145,33 @@ export function layoutBoard(columns: BoardColumn[]): BoardLayout {
       y: 0,
       from: position,
       to: position + column.size - 1,
+      boxW: metrics.boxW,
+      collapsed: folded,
     });
-    for (let row = 0; row < column.size; row++) {
-      slots.push({ index: position, x, y: HEADER_H + row * (CARD_BOX_H + ROW_GAP), column: index });
-      position += 1;
+    // A folded chapter keeps its pages' positions but draws no cards, so the
+    // columns after it close up instead of leaving a long empty lane.
+    if (!folded) {
+      for (let row = 0; row < column.size; row++) {
+        slots.push({
+          index: position + row,
+          x,
+          y: HEADER_H + row * (metrics.boxH + ROW_GAP),
+          column: index,
+        });
+      }
+      const height = HEADER_H + column.size * (metrics.boxH + ROW_GAP);
+      if (height > tallest) tallest = height;
     }
-    const height = HEADER_H + column.size * (CARD_BOX_H + ROW_GAP);
-    if (height > tallest) tallest = height;
+    position += column.size;
+    x += metrics.boxW + COL_GAP;
   });
 
   return {
     slots,
     columns: laid,
-    width: columns.length * (CARD_BOX_W + COL_GAP),
+    width: x,
     height: tallest,
+    metrics,
   };
 }
 
@@ -124,10 +191,29 @@ export function slotAtPoint(layout: BoardLayout, x: number, y: number, dragged: 
   return best;
 }
 
+/**
+ * The chapter boundary a point falls on, expressed as the number of chapters to
+ * its left, or null when the point is over a column rather than between two.
+ */
+export function gapAtPoint(layout: BoardLayout, x: number, y: number): number | null {
+  if (y < -HEADER_H || y > Math.max(layout.height, HEADER_H) + 80) return null;
+  for (let i = 0; i + 1 < layout.columns.length; i++) {
+    const right = layout.columns[i].x + layout.columns[i].boxW;
+    const left = layout.columns[i + 1].x;
+    if (x > right && x < left) return i + 1;
+  }
+  return null;
+}
+
 /** Deck position of the card under a point, or null over empty canvas. */
 export function cardAtPoint(layout: BoardLayout, x: number, y: number): number | null {
   for (const slot of layout.slots) {
-    if (x >= slot.x && x <= slot.x + CARD_BOX_W && y >= slot.y && y <= slot.y + CARD_BOX_H) {
+    if (
+      x >= slot.x &&
+      x <= slot.x + layout.metrics.boxW &&
+      y >= slot.y &&
+      y <= slot.y + layout.metrics.boxH
+    ) {
       return slot.index;
     }
   }
@@ -178,4 +264,17 @@ export function orderAfterMove(total: number, from: number, to: number): number[
   const [moved] = order.splice(from, 1);
   order.splice(to, 0, moved);
   return order;
+}
+
+/**
+ * The deck's order once several cards move together: they travel as one block
+ * and keep their order among themselves, whatever order they were picked in.
+ */
+export function orderAfterMoveMany(total: number, moving: number[], to: number): number[] {
+  const lifted = [...new Set(moving)].sort((a, b) => a - b);
+  if (lifted.length === 0) return identityOrder(total);
+  const staying = identityOrder(total).filter((index) => !lifted.includes(index));
+  const before = lifted.filter((index) => index < to).length;
+  const at = Math.max(0, Math.min(staying.length, to - before));
+  return [...staying.slice(0, at), ...lifted, ...staying.slice(at)];
 }

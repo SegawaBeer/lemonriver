@@ -17,6 +17,7 @@ import {
   type PageOp,
   pageKeys,
   patchCard,
+  patchCards,
   sanitizeCards,
   sanitizeLinks,
   unlinkCards,
@@ -32,8 +33,22 @@ type BoardState = {
 
 const INITIAL: BoardState = { cards: {}, links: [], entries: undefined, loaded: false };
 
-const countAfter = (op: PageOp, count: number) =>
-  op.kind === 'move' ? count : op.kind === 'delete' ? count - 1 : count + 1;
+const countAfter = (op: PageOp, count: number) => {
+  switch (op.kind) {
+    case 'delete':
+      return count - 1;
+    case 'deleteMany':
+      return count - op.indices.length;
+    case 'move':
+    case 'moveMany':
+    case 'reorder':
+      return count;
+    case 'restore':
+      return count + 1;
+    default:
+      return count + 1;
+  }
+};
 
 /**
  * Titles, statuses, work memos and links: board-only data that never reaches
@@ -138,9 +153,9 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
    * write puts the cards back as they were.
    */
   const beginOp = useCallback(
-    (op: PageOp) => {
+    (op: PageOp, countOverride?: number) => {
       const snapshot = boardRef.current;
-      const count = countRef.current;
+      const count = countOverride ?? countRef.current;
       opsInFlight.current += 1;
       entrySeq.current += 1;
 
@@ -149,6 +164,9 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
       if (before.every(isSettledKey)) {
         const after = pageKeys(entries, countAfter(op, count));
         const carried = carryCards(snapshot, before, after, originAfter(op, count));
+        // A restored page brings its card back in the same write: written later,
+        // it could be wiped by the deck reload the restore itself triggers.
+        if (op.kind === 'restore' && op.card) carried.cards[op.entry] = op.card;
         commit({ ...snapshot, ...carried, entries }, true);
       } else {
         commit({ ...snapshot, entries }, false);
@@ -181,6 +199,38 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
     [keyAt, commit],
   );
 
+  /** One change across several cards, written once. */
+  const patchMany = useCallback(
+    (indices: number[], change: CardPatch) => {
+      const keys = indices
+        .map((index) => keyAt(index))
+        .filter((key): key is string => key !== null);
+      if (keys.length === 0) return;
+      const current = boardRef.current;
+      commit({ ...current, cards: patchCards(current.cards, keys, change) }, true);
+    },
+    [keyAt, commit],
+  );
+
+  /** Puts links back, ignoring any that are already there. */
+  const addLinks = useCallback(
+    (pairs: BoardLink[]) => {
+      if (pairs.length === 0) return;
+      const current = boardRef.current;
+      if (!current.loaded) return;
+      const links = pairs.reduce((kept, { a, b }) => linkCards(kept, a, b), current.links);
+      if (links !== current.links) commit({ ...current, links }, true);
+    },
+    [commit],
+  );
+
+  /** The deck source a page is written as, for putting the page back later. */
+  const entryAt = useCallback((index: number): string | null => {
+    const entries = boardRef.current.entries;
+    if (!entries || entries.length !== countRef.current) return null;
+    return entries[index] ?? null;
+  }, []);
+
   const setLink = useCallback(
     (a: number, b: number, linked: boolean) => {
       const from = keyAt(a);
@@ -206,5 +256,17 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
   );
   const pairs = useMemo(() => linkedPairs(keys, board.links), [keys, board.links]);
 
-  return { ready, cards, pairs, patch, link, unlink, beginOp };
+  return {
+    ready,
+    cards,
+    pairs,
+    links: board.links,
+    patch,
+    patchMany,
+    link,
+    unlink,
+    beginOp,
+    entryAt,
+    addLinks,
+  };
 }
