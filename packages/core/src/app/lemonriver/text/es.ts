@@ -202,6 +202,8 @@ export const es: LrText = {
     draftingNoFiles: 'Preparando el esquema…',
     failedTitle: 'El esquema no llegó',
     failedHint: 'Inténtalo de nuevo; si sigue fallando, ajusta la petición.',
+    failedReason: 'Motivo: {reason}',
+    openAgent: 'Abrir el panel del agente para ver los detalles',
     retry: 'Reintentar',
     editBrief: 'Editar petición',
     addPage: 'Añadir página',

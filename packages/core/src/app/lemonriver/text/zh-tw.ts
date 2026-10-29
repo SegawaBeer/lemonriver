@@ -193,6 +193,8 @@ export const zhTW: LrText = {
     draftingNoFiles: '正在列大綱…',
     failedTitle: '大綱沒列出來',
     failedHint: '再試一次；還不行就改改需求。',
+    failedReason: '原因：{reason}',
+    openAgent: '開啟 Agent 面板查看詳情',
     retry: '重試',
     editBrief: '改需求',
     addPage: '加一頁',

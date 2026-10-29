@@ -44,6 +44,7 @@ describe('readFrameworkDependency', () => {
       key: '@lemonriver/core',
       pkg: '@lemonriver/core',
       addTarget: '@lemonriver/core@latest',
+      workspace: false,
     });
   });
 
@@ -55,6 +56,29 @@ describe('readFrameworkDependency', () => {
       key: '@open-slide/core',
       pkg: '@lemonriver/core',
       addTarget: '@open-slide/core@npm:@lemonriver/core@latest',
+      workspace: false,
+    });
+  });
+
+  it('resolves a workspace alias to the package it points at', async () => {
+    const cwd = await project({
+      dependencies: { '@open-slide/core': 'workspace:@lemonriver/core@*' },
+    });
+    expect(readFrameworkDependency(cwd)).toEqual({
+      key: '@open-slide/core',
+      pkg: '@lemonriver/core',
+      addTarget: '@open-slide/core@npm:@lemonriver/core@latest',
+      workspace: true,
+    });
+  });
+
+  it('keeps workspace:* on the declared name', async () => {
+    const cwd = await project({ dependencies: { '@lemonriver/core': 'workspace:*' } });
+    expect(readFrameworkDependency(cwd)).toEqual({
+      key: '@lemonriver/core',
+      pkg: '@lemonriver/core',
+      addTarget: '@lemonriver/core@latest',
+      workspace: true,
     });
   });
 

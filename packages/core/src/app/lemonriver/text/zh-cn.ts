@@ -193,6 +193,8 @@ export const zhCN: LrText = {
     draftingNoFiles: '正在列大纲…',
     failedTitle: '大纲没列出来',
     failedHint: '再试一次；还不行就改改需求。',
+    failedReason: '原因：{reason}',
+    openAgent: '打开 Agent 面板看详情',
     retry: '重试',
     editBrief: '改需求',
     addPage: '加一页',

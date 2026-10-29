@@ -1,3 +1,4 @@
+import type { AgentItem } from '../../../agent/types';
 import { type AgentPrefs, prefsLines, sanitizePrefs } from '../agent-prefs/prefs';
 
 export const PAGE_KINDS = ['cover', 'kpi', 'chart', 'list', 'page', 'end'] as const;
@@ -412,6 +413,17 @@ export type TeamState = {
   design: TeamHelperState;
   review: TeamHelperState;
 };
+
+// The failure the user needs to see is the last one after the message they sent.
+export function lastErrorText(items: AgentItem[], userItemId: string | null): string | null {
+  const start = userItemId ? items.findIndex((item) => item.id === userItemId) : -1;
+  const after = start === -1 ? items : items.slice(start + 1);
+  for (let i = after.length - 1; i >= 0; i--) {
+    const item = after[i];
+    if (item.kind === 'error') return item.text.slice(0, 200);
+  }
+  return null;
+}
 
 export function teamState(
   outline: Outline,

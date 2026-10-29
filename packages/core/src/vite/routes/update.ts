@@ -191,7 +191,8 @@ async function updatePackage(ctx: ApiContext): Promise<UpdateResult> {
 export function registerUpdateRoutes(server: ViteDevServer, ctx: ApiContext): void {
   server.middlewares.use('/__update-check', async (req, res, next) => {
     if ((req.method ?? 'GET') !== 'GET') return next();
-    const latest = await fetchLatest(readFrameworkDependency(ctx.userCwd).pkg, Date.now());
+    const dependency = readFrameworkDependency(ctx.userCwd);
+    const latest = dependency.workspace ? null : await fetchLatest(dependency.pkg, Date.now());
     const result: CheckResult = {
       current: ctx.coreVersion,
       latest,

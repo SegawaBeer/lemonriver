@@ -201,6 +201,8 @@ export const en: LrText = {
     draftingNoFiles: 'Listing the outline…',
     failedTitle: 'The outline did not come through',
     failedHint: 'Try again; if it keeps failing, adjust the brief.',
+    failedReason: 'Reason: {reason}',
+    openAgent: 'Open the agent panel for details',
     retry: 'Retry',
     editBrief: 'Edit brief',
     addPage: 'Add page',

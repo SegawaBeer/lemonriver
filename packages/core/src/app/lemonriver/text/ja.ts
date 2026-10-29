@@ -202,6 +202,8 @@ export const ja: LrText = {
     draftingNoFiles: 'アウトラインを作成しています…',
     failedTitle: 'アウトラインを作成できませんでした',
     failedHint: 'もう一度試してください。続く場合は要件を調整してください。',
+    failedReason: '理由：{reason}',
+    openAgent: 'Agent パネルで詳細を見る',
     retry: '再試行',
     editBrief: '要件を編集',
     addPage: 'ページを追加',

@@ -31,15 +31,25 @@ export type FrameworkDependency = {
   pkg: string;
   /** What to hand the package manager's `add` to move it to the latest version. */
   addTarget: string;
+  /** Declared through the `workspace:` protocol: this checkout is the source. */
+  workspace: boolean;
 };
 
-// `npm:@lemonriver/core@^0.1.0` → `@lemonriver/core`. A scoped name starts with
-// `@`, so the version separator is the last `@` past the first character.
-function aliasTarget(value: string): string | null {
-  if (!value.startsWith('npm:')) return null;
-  const rest = value.slice('npm:'.length);
+// `npm:@lemonriver/core@^0.1.0` and `workspace:@lemonriver/core@*` both name
+// another package; `workspace:*` and workspace ranges mean this same package,
+// so the version separator is the last `@` past the first character.
+function aliasTarget(key: string, value: string): string | null {
+  if (value.startsWith('npm:')) {
+    const rest = value.slice('npm:'.length);
+    const at = rest.lastIndexOf('@');
+    return at > 0 ? rest.slice(0, at) : rest;
+  }
+  if (!value.startsWith('workspace:')) return null;
+  const rest = value.slice('workspace:'.length);
+  if (!rest.includes('@')) return null;
   const at = rest.lastIndexOf('@');
-  return at > 0 ? rest.slice(0, at) : rest;
+  const target = at > 0 ? rest.slice(0, at) : rest;
+  return target === key ? null : target;
 }
 
 // An update has to keep the shape the workspace declares: an aliased dependency
@@ -50,12 +60,13 @@ export function readFrameworkDependency(userCwd: string): FrameworkDependency {
   for (const name of PKG_NAMES) {
     const value = deps[name];
     if (value === undefined) continue;
-    const aliased = aliasTarget(value);
+    const aliased = aliasTarget(name, value);
     return {
       key: name,
       pkg: aliased ?? name,
       addTarget: aliased ? `${name}@npm:${aliased}@latest` : `${name}@latest`,
+      workspace: value.startsWith('workspace:'),
     };
   }
-  return { key: PKG_NAME, pkg: PKG_NAME, addTarget: `${PKG_NAME}@latest` };
+  return { key: PKG_NAME, pkg: PKG_NAME, addTarget: `${PKG_NAME}@latest`, workspace: false };
 }

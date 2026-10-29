@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import type { AgentItem } from '../../../agent/types';
 import { DEFAULT_PREFS } from '../agent-prefs/prefs';
 import {
   afterTurn,
   collectDecisions,
   driverAction,
   insertPage,
+  lastErrorText,
   MAX_BRIEF,
   MAX_DECISIONS,
   MAX_ITEMS,
@@ -629,5 +631,42 @@ describe('collectDecisions', () => {
       answered(`q${i}`, [{ question: `Q${i}` }], { [`Q${i}`]: 'A' }),
     );
     expect(collectDecisions([], many)).toHaveLength(MAX_DECISIONS);
+  });
+});
+
+describe('lastErrorText', () => {
+  const user = (id: string): AgentItem => ({ kind: 'user', id, ts: '', text: 'go' });
+  const error = (id: string, text: string): AgentItem => ({ kind: 'error', id, ts: '', text });
+  const assistant = (id: string): AgentItem => ({
+    kind: 'assistant',
+    id,
+    ts: '',
+    text: 'ok',
+    streaming: false,
+  });
+
+  it('returns the last error after the message the user sent', () => {
+    const items = [user('u1'), error('e1', 'old'), assistant('a1'), error('e2', 'new')];
+    expect(lastErrorText(items, 'u1')).toBe('new');
+  });
+
+  it('ignores errors that came before the user message', () => {
+    const items = [error('e0', 'before'), user('u1'), assistant('a1'), user('u2')];
+    expect(lastErrorText(items, 'u2')).toBeNull();
+  });
+
+  it('returns null when the turn carried no error', () => {
+    expect(lastErrorText([user('u1'), assistant('a1')], 'u1')).toBeNull();
+    expect(lastErrorText([], null)).toBeNull();
+  });
+
+  it('reads every item when the user message is unknown', () => {
+    expect(lastErrorText([error('e1', 'one'), assistant('a1')], null)).toBe('one');
+    expect(lastErrorText([user('u1'), error('e1', 'one')], 'missing')).toBe('one');
+  });
+
+  it('clips the text to 200 characters', () => {
+    const long = 'x'.repeat(500);
+    expect(lastErrorText([user('u1'), error('e1', long)], 'u1')).toHaveLength(200);
   });
 });

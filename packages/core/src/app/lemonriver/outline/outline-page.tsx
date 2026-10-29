@@ -33,6 +33,7 @@ import {
   sendMessage,
   setActiveSession,
   setDockOpen,
+  useAgentSession,
   useAgentSessions,
   useAgentStatus,
 } from '@/lib/agent/use-agent';
@@ -44,6 +45,7 @@ import { useLrText } from '../text';
 import type { LrText } from '../text/types';
 import {
   insertPage,
+  lastErrorText,
   movePage,
   type Outline,
   type OutlinePage,
@@ -84,6 +86,16 @@ export function OutlineView() {
   const navigate = useNavigate();
   const { sessions } = useAgentSessions();
   const { provider } = useAgentStatus();
+  const latestSession = sessions
+    .filter((session) => session.slideId === slideId)
+    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+    .at(-1);
+  const session = useAgentSession(latestSession?.id ?? null);
+  const sessionItems = session?.items ?? [];
+  const failureReason = lastErrorText(
+    sessionItems,
+    [...sessionItems].reverse().find((item) => item.kind === 'user')?.id ?? null,
+  );
   const [outline, setOutline] = useState<Outline | null | undefined>(undefined);
   const [items, setItems] = useState<OutlinePage[]>([]);
   const [building, setBuilding] = useState(false);
@@ -270,7 +282,15 @@ export function OutlineView() {
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-semibold">{lr.failedTitle}</p>
               <p className="mt-1 text-[13px] text-muted-foreground">{lr.failedHint}</p>
-              <div className="mt-3 flex gap-2">
+              {failureReason && (
+                <p
+                  data-lr-outline-error
+                  className="mt-1.5 select-text text-[12px] leading-relaxed text-muted-foreground"
+                >
+                  {format(lr.failedReason, { reason: failureReason })}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -283,6 +303,19 @@ export function OutlineView() {
                 <Button type="button" variant="ghost" size="sm" onClick={editBrief}>
                   {lr.editBrief}
                 </Button>
+                {failureReason && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDockOpen(true);
+                      window.location.assign(`${basePath()}/s/${encodeURIComponent(slideId)}`);
+                    }}
+                  >
+                    {lr.openAgent}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

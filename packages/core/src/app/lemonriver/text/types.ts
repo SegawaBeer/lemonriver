@@ -214,6 +214,9 @@ export type LrText = {
     draftingNoFiles: string;
     failedTitle: string;
     failedHint: string;
+    /** template: "Reason: {reason}" */
+    failedReason: string;
+    openAgent: string;
     retry: string;
     editBrief: string;
     addPage: string;
