@@ -55,3 +55,29 @@ export function updateBoardFile(file: string, fields: Record<string, unknown>): 
 export async function writeBoardStructure(file: string, structure: BoardStructure): Promise<void> {
   await updateBoardFile(file, { columns: structure.columns });
 }
+
+/**
+ * Follows a deck renamed out of its placeholder id. A record already sitting at
+ * the new id is left alone: it belongs to whatever deck that id means now.
+ */
+export async function moveBoardRecord(
+  userCwd: string,
+  fromId: string,
+  toId: string,
+): Promise<void> {
+  const from = boardStructurePath(userCwd, fromId);
+  const to = boardStructurePath(userCwd, toId);
+  if (from === to) return;
+  try {
+    await fs.access(from);
+  } catch {
+    return;
+  }
+  try {
+    await fs.access(to);
+    return;
+  } catch {}
+  try {
+    await fs.rename(from, to);
+  } catch {}
+}

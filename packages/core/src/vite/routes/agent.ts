@@ -30,6 +30,8 @@ import {
 } from '../../editing/slide-ops.ts';
 import { readManifest, writeManifest } from '../../files/folders.ts';
 import { isLoopbackRequest, validateMutationRequest } from '../../http/request-guard.ts';
+import { moveBoardRecord } from '../../lemonriver/board/store.ts';
+import { collectOutline } from '../../lemonriver/outline/turn-end.ts';
 import { invalidateSlidesModule } from '../open-slide-plugin.ts';
 import { recordWrite } from '../recent-writes.ts';
 import { type ApiContext, BodyTooLargeError, json, readBody } from './context.ts';
@@ -127,6 +129,7 @@ async function renamePlaceholderDeck(
   recordWrite(entry);
   const renamed = await renameSlideDir(ctx.slidesRoot, slideId, desired);
   if (!renamed.ok) return;
+  await moveBoardRecord(ctx.userCwd, slideId, renamed.slideId);
   recordWrite(path.join(renamed.to, 'index.tsx'));
 
   const manifest = await readManifest(ctx.manifestPath);
@@ -192,7 +195,10 @@ export function registerAgentRoutes(server: ViteDevServer, ctx: ApiContext): voi
     writableRoots: [ctx.slidesRoot, ctx.globalAssetsRoot],
     store,
     providers,
-    onTurnEnd: (turn) => renamePlaceholderDeck(server, ctx, store, broadcast, turn),
+    onTurnEnd: async (turn) => {
+      await collectOutline(ctx, store, turn.sessionId, turn.userItemId);
+      await renamePlaceholderDeck(server, ctx, store, broadcast, turn);
+    },
   });
 
   store.subscribe(broadcast);

@@ -1,0 +1,75 @@
+import type { SessionStore } from '../../agent/store.ts';
+import { pageKeys, patchCard, sanitizeCards } from '../../app/lemonriver/board/model/cards.ts';
+import {
+  type OutlinePage,
+  parseOutlineBlock,
+  sanitizeOutline,
+  stripOutlineBlock,
+} from '../../app/lemonriver/outline/model.ts';
+import { resolveSlideEntry } from '../../editing/slide-ops.ts';
+import type { ApiContext } from '../../vite/routes/context.ts';
+import { readSlideSource } from '../../vite/routes/context.ts';
+import { defaultExportEntriesInSource } from '../board/page-entries.ts';
+import { boardStructurePath, readBoardFile, updateBoardFile } from '../board/store.ts';
+
+type OutlineStore = Pick<SessionStore, 'get' | 'updateItem'>;
+
+/**
+ * Turns the agent's last reply into the board's outline, and once the deck is
+ * being built, its page titles back into the board's cards. Both live in the
+ * same file, so the outline stays the single source the board shows.
+ */
+export async function collectOutline(
+  ctx: ApiContext,
+  store: OutlineStore,
+  sessionId: string,
+  userItemId: string,
+): Promise<void> {
+  const session = store.get(sessionId);
+  const slideId = session?.slideId;
+  if (!session || !slideId) return;
+
+  const file = boardStructurePath(ctx.userCwd, slideId);
+  const stored = await readBoardFile(file);
+  const outline = sanitizeOutline(stored.outline);
+  if (!outline) return;
+  const now = Date.now();
+
+  if (outline.state === 'drafting') {
+    const start = session.items.findIndex((item) => item.id === userItemId);
+    let found: OutlinePage[] | null = null;
+    for (const item of session.items.slice(start + 1)) {
+      if (item.kind !== 'assistant') continue;
+      const parsed = parseOutlineBlock(item.text);
+      if (!parsed) continue;
+      found = parsed;
+      store.updateItem(sessionId, item.id, 'assistant', { text: stripOutlineBlock(item.text) });
+    }
+    await updateBoardFile(file, {
+      outline: found
+        ? { ...outline, state: 'ready', items: found, updatedAt: now }
+        : { ...outline, state: 'failed', updatedAt: now },
+    });
+    return;
+  }
+
+  if (outline.state !== 'building') return;
+
+  const entry = resolveSlideEntry(ctx.slidesRoot, slideId);
+  const source = entry ? await readSlideSource(entry) : null;
+  const entries = source ? defaultExportEntriesInSource(source) : null;
+  const next = { ...outline, state: 'built' as const, updatedAt: now };
+
+  if (!entries || entries.length !== outline.items.length) {
+    await updateBoardFile(file, { outline: next });
+    return;
+  }
+
+  const keys = pageKeys(entries, outline.items.length);
+  let cards = sanitizeCards(stored.cards);
+  outline.items.forEach((item, index) => {
+    const title = item.title.trim();
+    if (title) cards = patchCard(cards, keys[index], { title });
+  });
+  await updateBoardFile(file, { outline: next, cards });
+}

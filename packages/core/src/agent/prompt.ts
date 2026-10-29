@@ -1,4 +1,5 @@
 import { UNTITLED_SLIDE_ID_RE } from '../editing/placeholder-id.ts';
+import { OUTLINE_RULE } from '../lemonriver/outline/rule.ts';
 import { parseQuestions } from './provider.ts';
 import type { AgentQuestion, AgentTurnContext } from './types.ts';
 
@@ -14,6 +15,7 @@ export function systemPromptAppend(askInstruction: string): string {
     'The workspace is a LemonRiver project: decks live under slides/<id>/index.tsx and the dev server hot-reloads every edit, so the user sees changes immediately.',
     'Use the project skills: create-slide to draft a new deck, apply-comments to resolve @slide-comment markers left by the inspector, create-theme for themes, and slide-authoring as the technical reference before writing a page.',
     PAGE_BY_PAGE,
+    OUTLINE_RULE,
     'Keep replies short and concrete: the panel is narrow. Prefer doing the work over describing it, and finish with a one-line summary of what changed.',
     askInstruction,
   ].join(' ');

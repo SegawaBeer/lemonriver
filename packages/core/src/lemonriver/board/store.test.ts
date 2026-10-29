@@ -3,6 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  boardStructurePath,
+  moveBoardRecord,
   readBoardFile,
   readBoardStructure,
   updateBoardFile,
@@ -58,5 +60,48 @@ describe('board file', () => {
       await fs.mkdir(path.dirname(file), { recursive: true });
       await fs.writeFile(file, '{ not json');
       expect(await readBoardFile(file)).toEqual({});
+    }));
+});
+
+describe('moveBoardRecord', () => {
+  async function withCwd<T>(fn: (cwd: string) => Promise<T>): Promise<T> {
+    const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'board-move-'));
+    try {
+      return await fn(cwd);
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true });
+    }
+  }
+
+  const write = (cwd: string, id: string, body: unknown) =>
+    updateBoardFile(boardStructurePath(cwd, id), body as Record<string, unknown>);
+
+  it('moves the record to the new id', () =>
+    withCwd(async (cwd) => {
+      await write(cwd, 'untitled-1', { cards: { A: { title: 'x' } } });
+      await moveBoardRecord(cwd, 'untitled-1', 'real-deck');
+      expect(await readBoardFile(boardStructurePath(cwd, 'real-deck'))).toEqual({
+        cards: { A: { title: 'x' } },
+      });
+      expect(await readBoardFile(boardStructurePath(cwd, 'untitled-1'))).toEqual({});
+    }));
+
+  it('does nothing when there is no record to move', () =>
+    withCwd(async (cwd) => {
+      await moveBoardRecord(cwd, 'untitled-1', 'real-deck');
+      expect(await readBoardFile(boardStructurePath(cwd, 'real-deck'))).toEqual({});
+    }));
+
+  it('keeps the record already at the new id', () =>
+    withCwd(async (cwd) => {
+      await write(cwd, 'untitled-1', { cards: { A: { title: 'old' } } });
+      await write(cwd, 'real-deck', { cards: { B: { title: 'kept' } } });
+      await moveBoardRecord(cwd, 'untitled-1', 'real-deck');
+      expect(await readBoardFile(boardStructurePath(cwd, 'real-deck'))).toEqual({
+        cards: { B: { title: 'kept' } },
+      });
+      expect(await readBoardFile(boardStructurePath(cwd, 'untitled-1'))).toEqual({
+        cards: { A: { title: 'old' } },
+      });
     }));
 });
