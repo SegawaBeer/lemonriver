@@ -176,10 +176,7 @@ test.describe('LemonRiver guided outline', () => {
     }
   });
 
-  test('building sends the outline to the agent and opens the editor', async ({
-    page,
-    request,
-  }) => {
+  test('building opens the editor, which sends the first page', async ({ page, request }) => {
     await agentReady(page);
     const sent: { text?: string }[] = [];
     await mockAgent(page, sent);
@@ -193,9 +190,10 @@ test.describe('LemonRiver guided outline', () => {
       await expect(rows(page)).toHaveCount(2);
       await page.getByRole('button', { name: 'Build from this outline' }).click();
 
-      await expect.poll(() => sent.length).toBe(1);
-      expect(sent[0].text).toContain('"title":"Cover"');
       await expect(page).toHaveURL(new RegExp(`/s/${slideId}$`));
+      await expect.poll(() => sent.length).toBe(1);
+      expect(sent[0].text).toContain('write page 1 only');
+      expect(sent[0].text).toContain('1. [cover] Cover');
     } finally {
       expect((await request.delete(`/__slides/${slideId}`)).status()).toBe(200);
     }
