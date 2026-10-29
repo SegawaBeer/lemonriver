@@ -1,5 +1,15 @@
 # @lemonriver/core
 
+## 0.3.0
+
+### Minor Changes
+
+- d030fe0: Restyle the app with the LemonRiver design: four themes including Lime, Lemon status feedback, a new home page, a 30-day trash with undo, and a Settings page.
+
+### Patch Changes
+
+- de09f6f: Fix the story board failing to open in installed workspaces: it imported files the package did not ship.
+
 ## 0.2.0
 
 ### Minor Changes

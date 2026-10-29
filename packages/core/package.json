@@ -1,6 +1,6 @@
 {
   "name": "@lemonriver/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Runtime and CLI for LemonRiver — write slides in slides/, we handle the rest.",
   "type": "module",
   "exports": {
