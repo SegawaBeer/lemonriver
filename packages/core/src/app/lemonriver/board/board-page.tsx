@@ -140,7 +140,11 @@ function useFolded(slideId: string): [boolean[], (index: number) => void, (count
   // A chapter that went away takes its folded state with it, so a chapter that
   // later lands on that index does not open folded for no reason.
   const trim = useCallback(
-    (count: number) => setFolded((current) => current.filter((index) => index < count)),
+    (count: number) =>
+      setFolded((current) => {
+        const next = current.filter((index) => index < count);
+        return next.length === current.length ? current : next;
+      }),
     [],
   );
 
