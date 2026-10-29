@@ -1,23 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { deleteSlide, duplicateSlide, openSlide, TINY_PNG } from './helpers.ts';
 
-type ProviderStatus = { id: string; cliFound: boolean; ready: boolean };
-
-async function agentReady(page: Page): Promise<void> {
-  await page.route('**/__agent/status', async (route) => {
-    const res = await route.fetch();
-    const body = (await res.json()) as { providers: ProviderStatus[] };
-    await route.fulfill({
-      json: {
-        ...body,
-        providers: body.providers.map((p) =>
-          p.id === 'claude' ? { ...p, ready: true } : { ...p, cliFound: false },
-        ),
-      },
-    });
-  });
-}
-
 test.describe('LemonRiver themes', () => {
   test('the theme menu offers lime, and lime stays off the editor', async ({ page }) => {
     await page.goto('/');
@@ -179,49 +162,14 @@ test.describe('LemonRiver home', () => {
     await expect(card.getByText(/^3 pages · /)).toBeVisible();
   });
 
-  test('one sentence creates a deck and becomes the agent’s first message', async ({
-    page,
-    request,
-  }) => {
-    await agentReady(page);
-    const sent: { text?: string; context?: { newDeck?: boolean } }[] = [];
-    const ts = new Date().toISOString();
-    await page.route('**/__agent/sessions', (route) => {
-      if (route.request().method() !== 'POST') {
-        return route.fulfill({ json: { sessions: [] } });
-      }
-      const { slideId } = route.request().postDataJSON() as { slideId: string };
-      return route.fulfill({
-        json: {
-          id: 's-brief',
-          provider: 'claude',
-          title: '',
-          createdAt: ts,
-          updatedAt: ts,
-          status: 'idle',
-          slideId,
-          providerSessionId: null,
-          items: [],
-        },
-      });
-    });
-    await page.route('**/__agent/sessions/s-brief/messages', (route) => {
-      sent.push(route.request().postDataJSON());
-      return route.fulfill({ status: 202, json: { ok: true } });
-    });
-
+  test('one sentence opens the guided flow with the sentence filled in', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Describe a new deck').fill('A talk on the expense process');
     await page.getByRole('button', { name: 'Start' }).click();
-    await expect(page).toHaveURL(/\/s\/untitled[^/]*$/);
-    const slideId = new URL(page.url()).pathname.split('/').pop() ?? '';
-    try {
-      await expect.poll(() => sent.length).toBe(1);
-      expect(sent[0].text).toBe('A talk on the expense process');
-      expect(sent[0].context?.newDeck).toBe(true);
-    } finally {
-      expect((await request.delete(`/__slides/${slideId}`)).status()).toBe(200);
-    }
+    await expect(page).toHaveURL(/\/new$/);
+    await expect(page.getByLabel('What are you presenting today?')).toHaveValue(
+      'A talk on the expense process',
+    );
   });
 
   test('unknown routes offer a way back', async ({ page }) => {
