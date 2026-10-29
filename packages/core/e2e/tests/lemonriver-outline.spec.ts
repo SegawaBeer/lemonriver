@@ -99,6 +99,8 @@ test.describe('LemonRiver guided outline', () => {
     });
 
     await expect(page.getByText('The file is over 25 MB')).toBeVisible();
+    await expect(page.getByText('big.pdf is 30 MB.')).toBeVisible();
+    await expect(page.getByText('MB MB')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'List outline' })).toBeDisabled();
     await page.getByRole('button', { name: 'Remove', exact: true }).click();
     await expect(page.getByText('The file is over 25 MB')).toHaveCount(0);

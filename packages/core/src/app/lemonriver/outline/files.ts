@@ -65,5 +65,5 @@ export async function checkFileObject(file: File): Promise<FileVerdict> {
 
 export function formatSize(bytes: number): string {
   const mb = bytes / (1024 * 1024);
-  return `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB`;
+  return String(mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10);
 }

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { format } from '../../../locale/format';
+import { lrTextFor } from '../text/all';
 import { checkFile, extensionOf, formatSize, MAX_FILE_BYTES } from './files';
 
 const bytes = (values: number[], fill = 16): Uint8Array => {
@@ -69,9 +71,20 @@ describe('helpers', () => {
     expect(extensionOf('no-dot')).toBe('');
   });
 
-  it('shows sizes the way the card needs them', () => {
-    expect(formatSize(30 * 1024 * 1024)).toBe('30 MB');
-    expect(formatSize(26.5 * 1024 * 1024)).toBe('27 MB');
-    expect(formatSize(1.4 * 1024 * 1024)).toBe('1.4 MB');
+  it('shows sizes as bare numbers', () => {
+    expect(formatSize(30 * 1024 * 1024)).toBe('30');
+    expect(formatSize(26.5 * 1024 * 1024)).toBe('27');
+    expect(formatSize(1.4 * 1024 * 1024)).toBe('1.4');
+  });
+
+  it('states the unit once in the too-large hint', () => {
+    const size = formatSize(30 * 1024 * 1024);
+    const hint = (id: 'en' | 'zh-CN') =>
+      format(lrTextFor(id).outline.tooLargeHint, { name: 'expense-policy.pdf', size });
+
+    expect(hint('en')).toContain('expense-policy.pdf is 30 MB.');
+    expect(hint('zh-CN')).toContain('expense-policy.pdf 有 30 MB。');
+    expect(hint('en')).not.toContain('MB MB');
+    expect(hint('zh-CN')).not.toContain('MB MB');
   });
 });
