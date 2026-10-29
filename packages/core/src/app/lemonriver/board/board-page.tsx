@@ -1,11 +1,13 @@
 import {
   ChevronLeft,
   Columns3,
+  Copy,
   Filter,
   Grid2X2,
   Image as ImageIcon,
   List,
   Redo2,
+  Trash2,
   Undo2,
   X,
 } from 'lucide-react';
@@ -715,6 +717,24 @@ export function Board() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t.thumbnailRail.duplicatePage}
+                  title={t.thumbnailRail.duplicatePage}
+                  onClick={() => duplicatePages(selected)}
+                >
+                  <Copy />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t.thumbnailRail.deletePage}
+                  title={t.thumbnailRail.deletePage}
+                  onClick={() => setPendingDelete([...selected])}
+                >
+                  <Trash2 />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon-sm"

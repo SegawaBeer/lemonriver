@@ -189,6 +189,22 @@ test.describe('story board structure', () => {
     expect(body.cards?.Two?.status).toBe('done');
   });
 
+  test('duplicates every selected card and takes the copies back', async ({ page, request }) => {
+    await openBoard(page);
+    await cards(page).nth(0).click();
+    await cards(page).nth(1).click({ modifiers: ['Shift'] });
+    await expect(page.getByText('2 selected')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
+    await expect(cards(page)).toHaveCount(5);
+    await expect.poll(async () => (await readEntries(request))?.length).toBe(5);
+
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(cards(page)).toHaveCount(3);
+    await expect.poll(async () => (await readEntries(request))?.join(',')).toBe('One,Two,Three');
+    expect((await readColumns(request)).map((c) => c.size)).toEqual([2, 1]);
+  });
+
   test('switches between the three card sizes', async ({ page }) => {
     await openBoard(page);
     const first = cards(page).first();
