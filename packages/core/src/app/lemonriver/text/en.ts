@@ -119,6 +119,18 @@ export const en: LrText = {
     reduceMotionHint:
       'Lemon stops floating and bouncing and the interface skips its animations. Also on when your system asks for less motion.',
   },
+  agents: {
+    title: 'Agents',
+    hint: 'Claude Code and Codex are always on. Turn on another agent you have installed and it shows up in the panel’s model menu.',
+    detected: 'Found',
+    missing: 'Not installed',
+    missingHint: 'Not found — install it, then reopen this page.',
+    alwaysOn: 'Always on',
+    unlock: 'Turn on {name}',
+    dumateReason:
+      'DuMate can’t be called from here yet: it ships as a desktop app only, with no command line another program can start.',
+    saveFailed: 'Couldn’t save — try again.',
+  },
   feedback: {
     notFoundHint: 'The link may be out of date, or the slide was deleted.',
     backHome: 'Back to slides',

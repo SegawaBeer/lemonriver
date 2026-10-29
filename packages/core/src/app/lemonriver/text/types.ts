@@ -126,6 +126,18 @@ export type LrText = {
     reduceMotion: string;
     reduceMotionHint: string;
   };
+  agents: {
+    title: string;
+    hint: string;
+    detected: string;
+    missing: string;
+    missingHint: string;
+    alwaysOn: string;
+    /** template: "Turn on {name}" */
+    unlock: string;
+    dumateReason: string;
+    saveFailed: string;
+  };
   feedback: {
     notFoundHint: string;
     backHome: string;

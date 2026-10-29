@@ -113,6 +113,17 @@ export const zhCN: LrText = {
     reduceMotion: '减少动效',
     reduceMotionHint: '柠檬不再漂浮和弹跳，界面动画也一起关掉。系统设了减少动态效果时也会打开。',
   },
+  agents: {
+    title: 'Agent',
+    hint: 'Claude Code 和 Codex 一直在。装了别的 Agent 可以在这里打开，打开后会出现在 Agent 面板的模型菜单里。',
+    detected: '已检测到',
+    missing: '没装',
+    missingHint: '没找到，装好后重新打开这一页。',
+    alwaysOn: '一直开着',
+    unlock: '打开 {name}',
+    dumateReason: 'DuMate 还不能从这里调用：它只有桌面版，没有别的程序能启动的命令行。',
+    saveFailed: '没保存上，再试一次。',
+  },
   feedback: {
     notFoundHint: '可能链接过期了，或者这份幻灯片已经删除。',
     backHome: '回到幻灯片',

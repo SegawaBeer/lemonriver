@@ -116,6 +116,18 @@ export const ja: LrText = {
     reduceMotionHint:
       'Lemon が浮いたり跳ねたりせず、画面のアニメーションも止まります。システムで視差効果を減らしている場合もオンになります。',
   },
+  agents: {
+    title: 'エージェント',
+    hint: 'Claude Code と Codex は常に有効です。インストール済みの別のエージェントをここでオンにすると、パネルのモデルメニューに表示されます。',
+    detected: '検出済み',
+    missing: '未インストール',
+    missingHint: '見つかりません。インストールしてから、このページを開き直してください。',
+    alwaysOn: '常に有効',
+    unlock: '{name} をオンにする',
+    dumateReason:
+      'DuMate はまだここから呼び出せません。デスクトップアプリのみで、他のプログラムが起動できるコマンドラインがありません。',
+    saveFailed: '保存できませんでした。もう一度お試しください。',
+  },
   feedback: {
     notFoundHint: 'リンクが古いか、デッキが削除された可能性があります。',
     backHome: 'デッキ一覧に戻る',

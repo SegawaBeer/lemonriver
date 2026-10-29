@@ -118,6 +118,18 @@ export const es: LrText = {
     reduceMotionHint:
       'Lemon deja de flotar y rebotar y la interfaz omite sus animaciones. También se activa si tu sistema pide menos movimiento.',
   },
+  agents: {
+    title: 'Agentes',
+    hint: 'Claude Code y Codex siempre están activos. Activa otro agente que tengas instalado y aparecerá en el menú de modelos del panel.',
+    detected: 'Detectado',
+    missing: 'No instalado',
+    missingHint: 'No se encontró: instálalo y vuelve a abrir esta página.',
+    alwaysOn: 'Siempre activo',
+    unlock: 'Activar {name}',
+    dumateReason:
+      'DuMate todavía no se puede usar desde aquí: solo existe como aplicación de escritorio, sin una línea de comandos que otro programa pueda iniciar.',
+    saveFailed: 'No se guardó. Inténtalo de nuevo.',
+  },
   feedback: {
     notFoundHint:
       'Puede que el enlace esté desactualizado o que la presentación se haya eliminado.',

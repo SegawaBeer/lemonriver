@@ -5,6 +5,7 @@ import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { AgentPrefs } from '../agent-prefs/prefs';
 import { updateAgentPrefs, useAgentPrefs } from '../agent-prefs/use-prefs';
+import { AgentProvidersSection } from '../agent-providers/section';
 import { HelperMascot, type HelperRole } from '../brand/mascot';
 import { ONBOARDED_KEY } from '../onboarding/onboarding';
 import { useLrText } from '../text';
@@ -163,6 +164,8 @@ export function SettingsPage() {
           />
         </div>
       </section>
+
+      {import.meta.env.DEV && <AgentProvidersSection />}
 
       {import.meta.env.DEV && (
         <section
