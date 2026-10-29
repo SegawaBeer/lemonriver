@@ -221,6 +221,10 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
         }
         const removed = await rmSlideDir(ctx.slidesRoot, slideId);
         if (!removed) return json(res, 404, { error: 'slide not found' });
+        // Removing the directory fires no watched file event, so without this
+        // the slides module keeps listing the deck until some other slide changes.
+        invalidateSlidesModule(server);
+        server.ws.send({ type: 'full-reload' });
 
         const manifest = await readManifest(ctx.manifestPath);
         delete manifest.assignments[slideId];
