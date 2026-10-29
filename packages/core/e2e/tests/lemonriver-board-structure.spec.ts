@@ -192,7 +192,9 @@ test.describe('story board structure', () => {
   test('duplicates every selected card and takes the copies back', async ({ page, request }) => {
     await openBoard(page);
     await cards(page).nth(0).click();
-    await cards(page).nth(1).click({ modifiers: ['Shift'] });
+    await cards(page)
+      .nth(1)
+      .click({ modifiers: ['Shift'] });
     await expect(page.getByText('2 selected')).toBeVisible();
 
     await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
