@@ -35,6 +35,31 @@ export type LrText = {
     showLinks: string;
     hideLinks: string;
     removeLink: string;
+    undo: string;
+    redo: string;
+    /** Shown instead of the undo hint when the newest step removed a page whose source is unreadable. */
+    undoUnavailable: string;
+    undoFailed: string;
+    addChapter: string;
+    newChapterTitle: string;
+    deleteChapter: string;
+    moveChapter: string;
+    collapse: string;
+    expand: string;
+    /** template: "{n} selected" */
+    selected: string;
+    /** template: "Delete {n} pages?" */
+    deleteSelectedTitle: string;
+    deleteSelectedHint: string;
+    clearSelection: string;
+    sizeLarge: string;
+    sizeSmall: string;
+    sizeTitle: string;
+    filter: string;
+    filterStatus: string;
+    filterMemo: string;
+    filterComments: string;
+    filterClear: string;
   };
   theme: {
     lime: string;

@@ -21,7 +21,7 @@ import { useNotes } from '../../lib/inspector/use-notes';
 import { SlidePageProvider } from '../../lib/page-context';
 import { CANVAS_WIDTH, type Page } from '../../lib/sdk';
 import { useLrText } from '../text';
-import { CARD_H, CARD_W, MEMO_H, NOTE_H } from './layout';
+import type { CardMetrics, CardSize } from './layout';
 import {
   type BoardCard,
   CARD_STATUSES,
@@ -43,6 +43,10 @@ export type PageNodeData = {
   canLink: boolean;
   design?: DesignSystem;
   canDelete: boolean;
+  size: CardSize;
+  metrics: CardMetrics;
+  /** True when a filter is on and this card is not one of the ones picked out. */
+  dimmed: boolean;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
   onMoveToEnd: (index: number) => void;
@@ -80,6 +84,9 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
     canLink,
     design,
     canDelete,
+    size,
+    metrics,
+    dimmed,
     ...actions
   } = data as unknown as PageNodeData;
   const t = useLocale();
@@ -91,52 +98,88 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
   // straight out of the name field "Rename" just opened.
   const renameFromMenu = useRef(false);
 
-  const view = (
-    <div
-      className={cn(
-        'osd-board-card group/card flex flex-col gap-2 rounded-[8px] bg-card p-1.5',
-        'motion-safe:transition-[box-shadow,ring-color,scale]',
-        selected
-          ? 'ring-2 ring-brand'
-          : status
-            ? cn('ring-2', STATUS_STYLE[status].ring)
-            : 'ring-1 ring-hairline hover:ring-muted-foreground/30',
-        dragging ? 'cursor-grabbing' : 'cursor-grab',
-      )}
-      style={{ width: CARD_W + 12 }}
-    >
+  const ring = selected
+    ? 'ring-2 ring-brand'
+    : status
+      ? cn('ring-2', STATUS_STYLE[status].ring)
+      : 'ring-1 ring-hairline hover:ring-muted-foreground/30';
+
+  const statusLabel = status && (
+    <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className={cn('size-2 rounded-full', STATUS_STYLE[status].dot)} />
+      {labels[status]}
+    </span>
+  );
+
+  const title = (
+    <CardTitle
+      title={card?.title}
+      editing={renaming}
+      disabled={!cardsReady}
+      onEditingChange={setRenaming}
+      onCommit={(next) => actions.onPatchCard(index, { title: next })}
+    />
+  );
+
+  const view =
+    size === 'title' ? (
       <div
-        className="relative overflow-hidden rounded-[4px] bg-white ring-1 ring-hairline"
-        style={{ width: CARD_W, height: CARD_H }}
+        className={cn(
+          'osd-board-card group/card flex items-center gap-2 rounded-[8px] bg-card px-2.5',
+          'motion-safe:transition-[box-shadow,ring-color,scale,opacity]',
+          ring,
+          dragging ? 'cursor-grabbing' : 'cursor-grab',
+        )}
+        style={{ width: metrics.boxW, height: metrics.boxH, opacity: dimmed ? 0.35 : 1 }}
       >
-        <PagePreview page={PageComp} index={index} total={total} design={design} />
-      </div>
-      <div className="flex h-6 items-center gap-2 px-0.5">
         <span className="font-mono text-[10.5px] tracking-[0.08em] tabular-nums text-muted-foreground/70">
           {pad2(index + 1)}
         </span>
-        <CardTitle
-          title={card?.title}
-          editing={renaming}
-          disabled={!cardsReady}
-          onEditingChange={setRenaming}
-          onCommit={(title) => actions.onPatchCard(index, { title })}
-        />
-        {status && (
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className={cn('size-2 rounded-full', STATUS_STYLE[status].dot)} />
-            {labels[status]}
+        {title}
+        {statusLabel}
+      </div>
+    ) : (
+      <div
+        className={cn(
+          'osd-board-card group/card flex flex-col gap-2 rounded-[8px] bg-card p-1.5',
+          'motion-safe:transition-[box-shadow,ring-color,scale,opacity]',
+          ring,
+          dragging ? 'cursor-grabbing' : 'cursor-grab',
+        )}
+        style={{ width: metrics.boxW, opacity: dimmed ? 0.35 : 1 }}
+      >
+        <div
+          className="relative overflow-hidden rounded-[4px] bg-white ring-1 ring-hairline"
+          style={{ width: metrics.cardW, height: metrics.cardH }}
+        >
+          <PagePreview
+            page={PageComp}
+            index={index}
+            total={total}
+            design={design}
+            scale={metrics.cardW / CANVAS_WIDTH}
+          />
+        </div>
+        <div className="flex h-6 items-center gap-2 px-0.5">
+          <span className="font-mono text-[10.5px] tracking-[0.08em] tabular-nums text-muted-foreground/70">
+            {pad2(index + 1)}
           </span>
+          {title}
+          {statusLabel}
+        </div>
+        {size === 'large' && (
+          <NoteStrip slideId={slideId} index={index} initial={note} height={metrics.noteH} />
+        )}
+        {size === 'large' && (
+          <MemoStrip
+            memo={card?.memo}
+            disabled={!cardsReady}
+            height={metrics.memoH}
+            onCommit={(memo) => actions.onPatchCard(index, { memo })}
+          />
         )}
       </div>
-      <NoteStrip slideId={slideId} index={index} initial={note} />
-      <MemoStrip
-        memo={card?.memo}
-        disabled={!cardsReady}
-        onCommit={(memo) => actions.onPatchCard(index, { memo })}
-      />
-    </div>
-  );
+    );
 
   return (
     <>
@@ -246,14 +289,16 @@ const PagePreview = memo(function PagePreview({
   index,
   total,
   design,
+  scale,
 }: {
   page: Page;
   index: number;
   total: number;
   design?: DesignSystem;
+  scale: number;
 }) {
   return (
-    <SlideCanvas scale={CARD_W / CANVAS_WIDTH} center={false} flat freezeMotion design={design}>
+    <SlideCanvas scale={scale} center={false} flat freezeMotion design={design}>
       <SlidePageProvider index={index} total={total}>
         <PageComp />
       </SlidePageProvider>
@@ -339,10 +384,12 @@ function NoteStrip({
   slideId,
   index,
   initial,
+  height,
 }: {
   slideId: string;
   index: number;
   initial?: string;
+  height: number;
 }) {
   const t = useLocale();
   const lr = useLrText();
@@ -357,7 +404,7 @@ function NoteStrip({
   const shared = 'w-full rounded-[4px] px-1.5 py-1 text-left text-[11px] leading-[1.45]';
 
   return (
-    <div className="nodrag nopan" style={{ height: NOTE_H }}>
+    <div className="nodrag nopan" style={{ height }}>
       {editing ? (
         <textarea
           ref={ref}
@@ -416,10 +463,12 @@ function NoteStrip({
 function MemoStrip({
   memo,
   disabled,
+  height,
   onCommit,
 }: {
   memo?: string;
   disabled: boolean;
+  height: number;
   onCommit: (memo: string) => void;
 }) {
   const lr = useLrText();
@@ -434,7 +483,7 @@ function MemoStrip({
   const shared = 'w-full rounded-[4px] px-1.5 py-1 text-left text-[11px] leading-[1.45]';
 
   return (
-    <div className="nodrag nopan" style={{ height: MEMO_H }}>
+    <div className="nodrag nopan" style={{ height }}>
       {editing ? (
         <textarea
           ref={ref}

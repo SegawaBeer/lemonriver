@@ -22,7 +22,18 @@ import {
   useInternalNode,
   useReactFlow,
 } from '@xyflow/react';
-import { Link2, Link2Off, Maximize2, Minus, Plus, X } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Columns3,
+  GripVertical,
+  Link2,
+  Link2Off,
+  Maximize2,
+  Minus,
+  Plus,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn, pad2 } from '@/lib/utils';
@@ -32,17 +43,18 @@ import { useLrText } from '../text';
 import {
   type BoardLayout,
   type Box,
-  CARD_BOX_H,
-  CARD_BOX_W,
+  type CardSize,
   cardAtPoint,
+  cardMetrics,
+  gapAtPoint,
   identityOrder,
   layoutBoard,
   linkCurve,
-  orderAfterMove,
+  orderAfterMoveMany,
   slotAtPoint,
 } from './layout';
 import type { BoardCard, CardPatch } from './model/cards';
-import { type BoardColumn, columnsAfterMove } from './model/structure';
+import { type BoardColumn, columnsAfterMoveMany } from './model/structure';
 import { PageNode, type PageNodeData } from './page-node';
 import '@xyflow/react/dist/base.css';
 import './board.css';
@@ -58,10 +70,23 @@ type Props = {
   links: [number, number][];
   showLinks: boolean;
   design?: DesignSystem;
+  size: CardSize;
+  /** One flag per chapter: folded chapters draw no cards. */
+  collapsed: boolean[];
+  /** One flag per page: cards the filter does not pick out are drawn faint. */
+  dimmed: boolean[];
+  /** Selected pages, by deck position. */
+  selected: number[];
+  onSelect: (indices: number[]) => void;
   onOpenPage: (index: number) => void;
-  onMovePage: (from: number, to: number) => void;
+  onMovePages: (moving: number[], to: number) => void;
+  onMoveToNewChapter: (from: number, boundary: number) => void;
   onRenameColumn: (index: number, title: string) => void;
   onAddPage: (columnIndex: number) => void;
+  onAddChapter: (after: number) => void;
+  onDeleteChapter: (index: number) => void;
+  onToggleCollapse: (index: number) => void;
+  onMoveChapter: (from: number, to: number) => void;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
   onMoveToEnd: (index: number) => void;
@@ -75,20 +100,52 @@ type ColumnLabelData = {
   title: string;
   count: number;
   index: number;
+  width: number;
+  collapsed: boolean;
+  canDelete: boolean;
   onRename: (index: number, title: string) => void;
   onAddPage: (index: number) => void;
+  onAddChapter: (after: number) => void;
+  onDelete: (index: number) => void;
+  onToggleCollapse: (index: number) => void;
 };
 
 function ColumnLabel({ data }: NodeProps) {
-  const { title, count, index, onRename, onAddPage } = data as unknown as ColumnLabelData;
+  const {
+    title,
+    count,
+    index,
+    width,
+    collapsed,
+    canDelete,
+    onRename,
+    onAddPage,
+    onAddChapter,
+    onDelete,
+    onToggleCollapse,
+  } = data as unknown as ColumnLabelData;
   const lr = useLrText();
   const [editing, setEditing] = useState(false);
 
   return (
-    <div
-      className="nodrag pointer-events-auto flex items-baseline gap-2"
-      style={{ width: CARD_BOX_W }}
-    >
+    <div className="pointer-events-auto flex items-baseline gap-1.5" style={{ width }}>
+      <GripVertical
+        className="size-3.5 shrink-0 cursor-grab self-center text-muted-foreground/40"
+        strokeWidth={1.8}
+      />
+      <button
+        type="button"
+        onClick={() => onToggleCollapse(index)}
+        aria-label={collapsed ? lr.board.expand : lr.board.collapse}
+        aria-expanded={!collapsed}
+        className="nodrag flex size-5 shrink-0 items-center justify-center rounded-[4px] text-muted-foreground/60 motion-safe:transition-colors hover:bg-muted hover:text-foreground"
+      >
+        {collapsed ? (
+          <ChevronRight className="size-3.5" strokeWidth={2} />
+        ) : (
+          <ChevronDown className="size-3.5" strokeWidth={2} />
+        )}
+      </button>
       {editing ? (
         <input
           // biome-ignore lint/a11y/noAutofocus: the field only exists once the title is clicked
@@ -109,41 +166,70 @@ function ColumnLabel({ data }: NodeProps) {
             const next = e.currentTarget.value.trim();
             if (next && next !== title) onRename(index, next);
           }}
-          className="eyebrow min-w-0 flex-1 rounded-[4px] bg-muted/60 px-1.5 py-1 text-foreground outline-none ring-1 ring-brand/40"
+          className="nodrag eyebrow min-w-0 flex-1 rounded-[4px] bg-muted/60 px-1.5 py-1 text-foreground outline-none ring-1 ring-brand/40"
         />
       ) : (
         <button
           type="button"
           onClick={() => setEditing(true)}
           aria-label={lr.board.renameColumn}
-          className="eyebrow min-w-0 truncate rounded-[4px] px-1.5 py-1 text-left motion-safe:transition-colors hover:bg-muted/60"
+          className="nodrag eyebrow min-w-0 truncate rounded-[4px] px-1.5 py-1 text-left motion-safe:transition-colors hover:bg-muted/60"
         >
           {title}
         </button>
       )}
       <span className="folio">{pad2(count)}</span>
-      <button
-        type="button"
-        onClick={() => onAddPage(index)}
-        aria-label={lr.board.addPage}
-        className={cn(
-          'ml-auto flex size-6 items-center justify-center rounded-[4px] text-muted-foreground/60',
-          'motion-safe:transition-colors hover:bg-muted hover:text-foreground',
-        )}
-      >
-        <Plus className="size-3.5" strokeWidth={1.9} />
-      </button>
+      <div className="ml-auto flex items-center">
+        <button
+          type="button"
+          onClick={() => onAddPage(index)}
+          aria-label={lr.board.addPage}
+          className={cn(
+            'nodrag flex size-6 items-center justify-center rounded-[4px] text-muted-foreground/60',
+            'motion-safe:transition-colors hover:bg-muted hover:text-foreground',
+          )}
+        >
+          <Plus className="size-3.5" strokeWidth={1.9} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onAddChapter(index)}
+          aria-label={lr.board.addChapter}
+          className="nodrag flex size-6 items-center justify-center rounded-[4px] text-muted-foreground/60 motion-safe:transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Columns3 className="size-3.5" strokeWidth={1.9} />
+        </button>
+        <button
+          type="button"
+          disabled={!canDelete}
+          onClick={() => onDelete(index)}
+          aria-label={lr.board.deleteChapter}
+          className="nodrag flex size-6 items-center justify-center rounded-[4px] text-muted-foreground/60 motion-safe:transition-colors hover:bg-muted hover:text-destructive disabled:pointer-events-none disabled:opacity-30"
+        >
+          <X className="size-3.5" strokeWidth={1.9} />
+        </button>
+      </div>
     </div>
   );
 }
 
 /** Marks the slot a dragged card will take, so the drop point is visible. */
-function DropSlot() {
+function DropSlot({ data }: NodeProps) {
+  const { width, height, newChapter } = data as unknown as {
+    width: number;
+    height: number;
+    newChapter: boolean;
+  };
   return (
     <div
-      className="rounded-[8px] border-2 border-dashed border-brand/45 bg-brand/[0.04]"
-      style={{ width: CARD_BOX_W, height: CARD_BOX_H }}
-    />
+      className={cn(
+        'rounded-[8px] border-2 border-dashed border-brand/45 bg-brand/[0.04]',
+        newChapter && 'flex items-center justify-center border-brand/70 bg-brand/[0.08]',
+      )}
+      style={{ width, height }}
+    >
+      {newChapter && <Plus className="size-6 text-brand/70" strokeWidth={1.8} />}
+    </div>
   );
 }
 
@@ -157,8 +243,8 @@ function boxOf(node: InternalNode | undefined): Box | null {
   return {
     x,
     y,
-    width: node.measured.width ?? CARD_BOX_W,
-    height: node.measured.height ?? CARD_BOX_H,
+    width: node.measured.width ?? 0,
+    height: node.measured.height ?? 0,
   };
 }
 
@@ -221,11 +307,14 @@ type BuildArgs = {
   cards: (BoardCard | undefined)[];
   cardsReady: boolean;
   design?: DesignSystem;
+  dimmed: boolean[];
+  selected: Set<number>;
+  size: CardSize;
   actions: Pick<PageNodeData, 'onDuplicate' | 'onDelete' | 'onMoveToEnd' | 'onPatchCard'>;
-  columnActions: {
-    onRename: (index: number, title: string) => void;
-    onAddPage: (index: number) => void;
-  };
+  columnActions: Pick<
+    ColumnLabelData,
+    'onRename' | 'onAddPage' | 'onAddChapter' | 'onDelete' | 'onToggleCollapse'
+  > & { columns: number };
 };
 
 /**
@@ -241,48 +330,64 @@ function buildNodes({
   cards,
   cardsReady,
   design,
+  dimmed,
+  selected,
+  size,
   actions,
   columnActions,
 }: BuildArgs): Node[] {
+  const { metrics } = layout;
   const labels: Node[] = layout.columns.map((column, i) => ({
     id: `column-${i}`,
     type: 'columnLabel',
     position: { x: column.x, y: column.y },
-    width: CARD_BOX_W,
+    width: column.boxW,
     height: 24,
     data: {
       title: column.title,
       count: column.size,
       index: i,
-      ...columnActions,
+      width: column.boxW,
+      collapsed: column.collapsed,
+      canDelete: columnActions.columns > 1,
+      onRename: columnActions.onRename,
+      onAddPage: columnActions.onAddPage,
+      onAddChapter: columnActions.onAddChapter,
+      onDelete: columnActions.onDelete,
+      onToggleCollapse: columnActions.onToggleCollapse,
     },
-    draggable: false,
+    draggable: true,
     selectable: false,
     deletable: false,
     // React Flow switches pointer events off for a node that is neither
     // selectable nor draggable, which would make the buttons in here dead.
-    style: { pointerEvents: 'all' },
+    style: { pointerEvents: 'all' as const },
   }));
   const drop: Node = {
     id: 'drop-slot',
     type: 'dropSlot',
     position: { x: 0, y: 0 },
-    width: CARD_BOX_W,
-    height: CARD_BOX_H,
+    width: metrics.boxW,
+    height: metrics.boxH,
     draggable: false,
     selectable: false,
     deletable: false,
     hidden: true,
-    data: {},
+    data: { width: metrics.boxW, height: metrics.boxH, newChapter: false },
   };
-  const pageNodes: Node[] = layout.slots.map((slot) => {
+  // The structure and the deck are written by separate requests, so for a
+  // moment a chapter can still count a page the deck no longer has. Drawing
+  // that slot would mount an undefined page.
+  const pageNodes: Node[] = layout.slots.flatMap((slot) => {
     const pageIndex = order[slot.index] ?? slot.index;
+    if (pageIndex < 0 || pageIndex >= pages.length) return [];
     return {
       id: `page-${pageIndex}`,
       type: 'page',
       position: { x: slot.x, y: slot.y },
-      width: CARD_BOX_W,
-      height: CARD_BOX_H,
+      width: metrics.boxW,
+      height: metrics.boxH,
+      selected: selected.has(pageIndex),
       data: {
         slideId,
         page: pages[pageIndex],
@@ -294,11 +399,20 @@ function buildNodes({
         total: pages.length,
         design,
         canDelete: pages.length > 1,
+        size,
+        metrics,
+        dimmed: dimmed[pageIndex] === true,
         ...actions,
       } satisfies PageNodeData as unknown as Record<string, unknown>,
     };
   });
-  return [...labels, drop, ...pageNodes];
+  return [...labels, drop, ...pageNodes] as Node[];
+}
+
+function sameSelection(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((value) => set.has(value));
 }
 
 function BoardFlow({
@@ -311,10 +425,20 @@ function BoardFlow({
   links,
   showLinks,
   design,
+  size,
+  collapsed,
+  dimmed,
+  selected,
+  onSelect,
   onOpenPage,
-  onMovePage,
+  onMovePages,
+  onMoveToNewChapter,
   onRenameColumn,
   onAddPage,
+  onAddChapter,
+  onDeleteChapter,
+  onToggleCollapse,
+  onMoveChapter,
   onDuplicate,
   onDelete,
   onMoveToEnd,
@@ -325,8 +449,14 @@ function BoardFlow({
 }: Props) {
   const lr = useLrText();
   const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
+  const metrics = cardMetrics(size);
 
-  const layout = useMemo(() => layoutBoard(columns), [columns]);
+  const layout = useMemo(
+    () => layoutBoard(columns, { size, collapsed }),
+    [columns, size, collapsed],
+  );
+
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   const actions = useMemo(
     () => ({ onDuplicate, onDelete, onMoveToEnd, onPatchCard }),
@@ -334,25 +464,42 @@ function BoardFlow({
   );
 
   const columnActions = useMemo(
-    () => ({ onRename: onRenameColumn, onAddPage }),
-    [onRenameColumn, onAddPage],
+    () => ({
+      onRename: onRenameColumn,
+      onAddPage,
+      onAddChapter,
+      onDelete: onDeleteChapter,
+      onToggleCollapse,
+      columns: columns.length,
+    }),
+    [onRenameColumn, onAddPage, onAddChapter, onDeleteChapter, onToggleCollapse, columns.length],
+  );
+
+  const buildArgs = useMemo(
+    () => ({
+      slideId,
+      pages,
+      notes,
+      cards,
+      cardsReady,
+      design,
+      dimmed,
+      size,
+      actions,
+      columnActions,
+    }),
+    [slideId, pages, notes, cards, cardsReady, design, dimmed, size, actions, columnActions],
   );
 
   const baseNodes = useMemo<Node[]>(
     () =>
       buildNodes({
+        ...buildArgs,
         layout,
         order: identityOrder(pages.length),
-        slideId,
-        pages,
-        notes,
-        cards,
-        cardsReady,
-        design,
-        actions,
-        columnActions,
+        selected: selectedSet,
       }),
-    [layout, slideId, pages, notes, cards, cardsReady, design, actions, columnActions],
+    [buildArgs, layout, pages.length, selectedSet],
   );
 
   const [nodes, setNodes] = useState<Node[]>(baseNodes);
@@ -361,46 +508,122 @@ function BoardFlow({
   useEffect(() => setNodes(baseNodes), [baseNodes]);
 
   const dropIndexRef = useRef<number | null>(null);
+  const dropGapRef = useRef<number | null>(null);
+  const shiftAnchorRef = useRef<number | null>(null);
 
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((current) => applyNodeChanges(changes, current)),
-    [],
+    (changes: NodeChange[]) => {
+      // A box selection arrives as one change per node; the board keeps its own
+      // list so the toolbar can act on it, and rebuilds the flags from there.
+      const selecting = changes.some((change) => change.type === 'select');
+      if (selecting) {
+        setNodes((current) =>
+          applyNodeChanges(
+            changes.filter((c) => c.type !== 'select'),
+            current,
+          ),
+        );
+        const picked = new Set(selected);
+        for (const change of changes) {
+          if (change.type !== 'select') continue;
+          const index = pageIndexOf(change.id);
+          if (change.selected) picked.add(index);
+          else picked.delete(index);
+        }
+        const next = [...picked].filter((index) => Number.isInteger(index)).sort((a, b) => a - b);
+        if (!sameSelection(next, selected)) onSelect(next);
+        return;
+      }
+      setNodes((current) => applyNodeChanges(changes, current));
+    },
+    [onSelect, selected],
+  );
+
+  /** The pages a drag carries: the whole selection when the card is part of it. */
+  const movingFor = useCallback(
+    (from: number) => (selectedSet.has(from) && selected.length > 1 ? [...selected] : [from]),
+    [selected, selectedSet],
   );
 
   const handleDrag = useCallback<OnNodeDrag>(
     (_event, node) => {
       if (node.type !== 'page') return;
       const from = pageIndexOf(node.id);
+      const moving = movingFor(from).sort((a, b) => a - b);
+
+      // Dropping in the gap between two chapters starts a chapter there.
+      const gap =
+        moving.length === 1
+          ? gapAtPoint(
+              layout,
+              node.position.x + metrics.boxW / 2,
+              node.position.y + metrics.boxH / 2,
+            )
+          : null;
+      if (gap !== dropGapRef.current) {
+        dropGapRef.current = gap;
+        dropIndexRef.current = null;
+      }
+      if (gap !== null) {
+        const left = layout.columns[gap - 1];
+        const right = layout.columns[gap];
+        const center = (left.x + left.boxW + right.x) / 2;
+        dropIndexRef.current = null;
+        setNodes((current) =>
+          current.map((n) =>
+            n.id === 'drop-slot'
+              ? {
+                  ...n,
+                  hidden: false,
+                  position: { x: center - metrics.boxW / 2, y: 48 },
+                  data: { width: metrics.boxW, height: metrics.boxH, newChapter: true },
+                }
+              : n.id === node.id
+                ? { ...n, position: n.position, dragging: true, zIndex: 20 }
+                : n,
+          ),
+        );
+        return;
+      }
+
       // Hit-testing stays on the settled layout: testing against the preview
       // would move the target out from under the cursor and oscillate.
-      const to = slotAtPoint(layout, node.position.x, node.position.y, from);
+      const to = slotAtPoint(layout, node.position.x, node.position.y, moving[0]);
       if (dropIndexRef.current === to) return;
       dropIndexRef.current = to;
 
       // Chapters re-form when a chapter page moves, and a column's length decides
       // where the next column starts — so the preview has to be laid out from the
       // prospective deck rather than by shuffling cards through today's geometry.
-      const order = orderAfterMove(pages.length, from, to);
-      const previewLayout = layoutBoard(columnsAfterMove(columns, from, to));
+      const order = orderAfterMoveMany(pages.length, moving, to);
+      const previewLayout = layoutBoard(columnsAfterMoveMany(columns, moving, to), {
+        size,
+        collapsed,
+      });
       const preview = buildNodes({
+        ...buildArgs,
         layout: previewLayout,
         order,
-        slideId,
-        pages,
-        notes,
-        cards,
-        cardsReady,
-        design,
-        actions,
-        columnActions,
+        selected: selectedSet,
       });
-      const target = previewLayout.slots[order.indexOf(from)];
+      const target = previewLayout.slots[order.indexOf(moving[0])];
 
       setNodes((current) => {
         const live = current.find((n) => n.id === node.id);
         return preview.map((n) => {
           if (n.id === 'drop-slot') {
-            return target ? { ...n, hidden: false, position: { x: target.x, y: target.y } } : n;
+            return target
+              ? {
+                  ...n,
+                  hidden: false,
+                  position: { x: target.x, y: target.y },
+                  data: {
+                    width: metrics.boxW,
+                    height: metrics.boxH,
+                    newChapter: false,
+                  },
+                }
+              : n;
           }
           // The card under the cursor keeps following the pointer.
           if (n.id === node.id) {
@@ -410,26 +633,64 @@ function BoardFlow({
         });
       });
     },
-    [layout, columns, slideId, pages, notes, cards, cardsReady, design, actions, columnActions],
+    [layout, columns, collapsed, size, metrics, pages.length, buildArgs, movingFor, selectedSet],
   );
 
   const handleDragStop = useCallback<OnNodeDrag>(
     (_event, node) => {
-      if (node.type !== 'page') return;
-      const from = pageIndexOf(node.id);
-      const to = dropIndexRef.current ?? from;
+      const gap = dropGapRef.current;
+      const to = dropIndexRef.current;
+      dropGapRef.current = null;
       dropIndexRef.current = null;
+
       setNodes((current) =>
         current.map((n) => (n.id === 'drop-slot' ? { ...n, hidden: true } : n)),
       );
-      if (to === from) {
+
+      if (node.type === 'columnLabel') {
+        const from = Number(node.id.replace('column-', ''));
+        const center = node.position.x + metrics.boxW / 2;
+        let to1 = from;
+        let best = Number.POSITIVE_INFINITY;
+        layout.columns.forEach((column, i) => {
+          const distance = Math.abs(column.x + column.boxW / 2 - center);
+          if (distance < best) {
+            best = distance;
+            to1 = i;
+          }
+        });
+        setNodes(baseNodes);
+        if (to1 !== from) onMoveChapter(from, to1);
+        return;
+      }
+      if (node.type !== 'page') return;
+
+      const from = pageIndexOf(node.id);
+      if (gap !== null) {
+        setNodes(baseNodes);
+        onMoveToNewChapter(from, gap);
+        return;
+      }
+      const moving = movingFor(from).sort((a, b) => a - b);
+      const target = to ?? from;
+      const order = orderAfterMoveMany(pages.length, moving, target);
+      if (order.every((value, i) => value === i)) {
         // Snap the card back to its own slot instead of leaving it where it was dropped.
         setNodes(baseNodes);
         return;
       }
-      onMovePage(from, to);
+      onMovePages(moving, target);
     },
-    [baseNodes, onMovePage],
+    [
+      baseNodes,
+      layout,
+      metrics,
+      pages.length,
+      movingFor,
+      onMovePages,
+      onMoveToNewChapter,
+      onMoveChapter,
+    ],
   );
 
   // Opening on the whole board squeezes a long deck down to unreadable cards, so
@@ -439,7 +700,9 @@ function BoardFlow({
     const opening = layout.slots.filter((slot) => slot.column === 0);
     if (opening.length === 0) return;
     fitView({
-      nodes: opening.map((slot) => ({ id: `page-${slot.index}` })),
+      // The chapter label sits above its first card, so framing only the cards
+      // would cut it off at the top edge.
+      nodes: [{ id: 'column-0' }, ...opening.map((slot) => ({ id: `page-${slot.index}` }))],
       padding: 0.22,
       maxZoom: 0.75,
     });
@@ -503,6 +766,19 @@ function BoardFlow({
       onNodesChange={onNodesChange}
       onNodeDrag={handleDrag}
       onNodeDragStop={handleDragStop}
+      onNodeClick={(event, node) => {
+        if (node.type !== 'page') return;
+        const index = pageIndexOf(node.id);
+        if (event.shiftKey) {
+          const anchor = shiftAnchorRef.current ?? index;
+          const [a, b] = [Math.min(anchor, index), Math.max(anchor, index)];
+          const range: number[] = [];
+          for (let i = a; i <= b; i++) range.push(i);
+          onSelect(range);
+          return;
+        }
+        shiftAnchorRef.current = index;
+      }}
       onNodeDoubleClick={(_, node) => {
         if (node.type === 'page') onOpenPage(pageIndexOf(node.id));
       }}
@@ -515,6 +791,8 @@ function BoardFlow({
       maxZoom={1.5}
       panOnScroll
       selectionOnDrag
+      multiSelectionKeyCode={['Meta', 'Control']}
+      selectionKeyCode={null}
       className="osd-board"
     >
       <Background variant={BackgroundVariant.Dots} gap={28} size={1} className="osd-board-bg" />
