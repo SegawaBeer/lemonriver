@@ -1,5 +1,5 @@
+import { OUTLINE_RULE } from '../app/lemonriver/outline/rule.ts';
 import { UNTITLED_SLIDE_ID_RE } from '../editing/placeholder-id.ts';
-import { OUTLINE_RULE } from '../lemonriver/outline/rule.ts';
 import { parseQuestions } from './provider.ts';
 import type { AgentQuestion, AgentTurnContext } from './types.ts';
 

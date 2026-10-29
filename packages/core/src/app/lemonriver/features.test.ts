@@ -26,4 +26,9 @@ describe('isFeatureEnabled', () => {
   it('offers settings in a built site too', () => {
     expect(isFeatureEnabled('settings', { dev: false })).toBe(true);
   });
+
+  it('keeps the guided outline to dev, where the agent it drives runs', () => {
+    expect(isFeatureEnabled('outline', { dev: true })).toBe(true);
+    expect(isFeatureEnabled('outline', { dev: false })).toBe(false);
+  });
 });

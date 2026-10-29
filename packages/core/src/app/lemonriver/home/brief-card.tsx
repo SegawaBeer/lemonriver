@@ -1,14 +1,17 @@
 import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAgentStatus, useCreateDeck } from '@/lib/agent/use-agent';
 import { Mascot } from '../brand/mascot';
+import { isFeatureEnabled } from '../features';
 import { useLrText } from '../text';
 import { saveBrief } from './brief';
 
-/** "Say it in one sentence": creates a deck, opens the agent there, sends the sentence. */
+/** "Say it in one sentence": opens the guided flow, or creates a deck and tells the agent. */
 export function BriefCard() {
   const lr = useLrText();
+  const navigate = useNavigate();
   const createDeck = useCreateDeck();
   const { connected, loading } = useAgentStatus();
   const [text, setText] = useState('');
@@ -19,6 +22,10 @@ export function BriefCard() {
   const submit = async () => {
     const brief = text.trim();
     if (!brief || busy) return;
+    if (isFeatureEnabled('outline')) {
+      navigate('/new', { state: { brief } });
+      return;
+    }
     setBusy(true);
     saveBrief(brief);
     await createDeck();

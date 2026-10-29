@@ -7,6 +7,12 @@ import { SettingsPage } from './settings/settings-page';
 import { TrashPage } from './trash/trash-page';
 
 const BoardPage = lazy(() => import('./board/board-page').then((m) => ({ default: m.Board })));
+const DescribePage = lazy(() =>
+  import('./outline/describe-page').then((m) => ({ default: m.DescribePage })),
+);
+const OutlinePage = lazy(() =>
+  import('./outline/outline-page').then((m) => ({ default: m.OutlineView })),
+);
 
 /** Routes of our own, outside the home shell. Placed before the official catch-all. */
 export function lemonRiverRoutes() {
@@ -22,6 +28,17 @@ export function lemonRiverRoutes() {
         }
       />
     ),
+    isFeatureEnabled('outline') && (
+      <Route
+        key="outline"
+        path="/s/:slideId/outline"
+        element={
+          <Suspense fallback={null}>
+            <OutlinePage />
+          </Suspense>
+        }
+      />
+    ),
     <Route key="not-found" path="*" element={<NotFound />} />,
   ];
 }
@@ -30,6 +47,17 @@ export function lemonRiverRoutes() {
 export function lemonRiverShellRoutes() {
   return [
     <Route key="home" path="/" element={<LemonRiverHome />} />,
+    isFeatureEnabled('outline') && (
+      <Route
+        key="new"
+        path="/new"
+        element={
+          <Suspense fallback={null}>
+            <DescribePage />
+          </Suspense>
+        }
+      />
+    ),
     isFeatureEnabled('settings') && (
       <Route key="settings" path="/settings" element={<SettingsPage />} />
     ),

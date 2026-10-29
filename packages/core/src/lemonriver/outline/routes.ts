@@ -107,7 +107,7 @@ export function registerOutlineRoutes(server: ViteDevServer, ctx: ApiContext): v
           return json(res, 400, { error: 'invalid slideId' });
         }
         const outline = await readOutline(ctx, slideId);
-        if (!outline || outline.state !== 'ready') {
+        if (outline?.state !== 'ready') {
           return json(res, 409, { error: 'outline is not ready' });
         }
         await updateBoardFile(boardStructurePath(ctx.userCwd, slideId), {

@@ -137,7 +137,9 @@ export function removePage(items: OutlinePage[], index: number): OutlinePage[] {
 
 export function renamePage(items: OutlinePage[], index: number, title: string): OutlinePage[] {
   if (!validIndex(items, index)) return items;
-  const clean = cleanTitle(title);
+  // Not trimmed here: the title is typed into an input, and trailing spaces are
+  // what the next word needs. The server trims when it stores the outline.
+  const clean = typeof title === 'string' ? title.slice(0, MAX_TITLE) : '';
   if (items[index].title === clean) return items;
   return items.map((item, i) => (i === index ? { ...item, title: clean } : item));
 }

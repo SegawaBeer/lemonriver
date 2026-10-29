@@ -18,6 +18,8 @@ const PATHS = [
   '/settings',
   '/trash',
   '/trash/',
+  '/new',
+  '/new/',
   '/s/alpha',
   '/s/alpha/',
   '/s/alpha/board',
@@ -33,6 +35,8 @@ describe('pageForPath', () => {
     expect(pageForPath('/')).toBe('home');
     expect(pageForPath('/themes/plain')).toBe('themes');
     expect(pageForPath('/trash/')).toBe('trash');
+    expect(pageForPath('/new')).toBe('new');
+    expect(pageForPath('/new/')).toBe('new');
     expect(pageForPath('/s/alpha')).toBe('editor');
     expect(pageForPath('/s/alpha/board')).toBe('board');
     expect(pageForPath('/s/alpha/presenter')).toBe('presenter');

@@ -1,5 +1,5 @@
 export type Tier = 'free' | 'pro';
-export type FeatureId = 'board' | 'trash' | 'settings';
+export type FeatureId = 'board' | 'trash' | 'settings' | 'outline';
 
 export type Feature = { id: FeatureId; tier: Tier; devOnly: boolean };
 
@@ -7,6 +7,7 @@ export const FEATURES: readonly Feature[] = [
   { id: 'board', tier: 'free', devOnly: true },
   { id: 'trash', tier: 'free', devOnly: true },
   { id: 'settings', tier: 'free', devOnly: false },
+  { id: 'outline', tier: 'free', devOnly: true },
 ];
 
 /** The single place a paid tier will hook into later; today every tier is unlocked. */

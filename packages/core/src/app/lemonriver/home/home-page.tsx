@@ -1,6 +1,6 @@
 import { ChevronDown, Plus } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -226,12 +226,14 @@ export function LemonRiverHome() {
 
 function NewDeckCard() {
   const lr = useLrText();
+  const navigate = useNavigate();
   const createDeck = useCreateDeck();
+  const guided = isFeatureEnabled('outline');
   return (
     <li>
       <button
         type="button"
-        onClick={() => void createDeck()}
+        onClick={() => (guided ? navigate('/new') : void createDeck())}
         className={cn(
           'flex h-full min-h-[190px] w-full flex-col items-center justify-center gap-2 rounded-[16px]',
           'border-[1.5px] border-dashed border-border text-[14px] font-semibold text-muted-foreground outline-none',
@@ -239,7 +241,7 @@ function NewDeckCard() {
         )}
       >
         <Plus className="size-7" />
-        {lr.shell.newDeckCard}
+        {guided ? lr.shell.newDeckGuided : lr.shell.newDeckCard}
       </button>
     </li>
   );

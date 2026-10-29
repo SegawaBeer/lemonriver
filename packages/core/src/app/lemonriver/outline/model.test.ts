@@ -160,7 +160,8 @@ describe('page edits', () => {
   });
 
   it('renames and retypes one page', () => {
-    expect(renamePage(items, 1, '  New title ')[1].title).toBe('New title');
+    expect(renamePage(items, 1, 'New title')[1].title).toBe('New title');
+    expect(renamePage(items, 1, 'typing ')[1].title).toBe('typing ');
     expect(renamePage(items, 1, 'x'.repeat(MAX_TITLE + 1))[1].title.length).toBe(MAX_TITLE);
     expect(setKind(items, 2, 'chart')[2].kind).toBe('chart');
     expect(setKind(items, 9, 'chart')).toBe(items);

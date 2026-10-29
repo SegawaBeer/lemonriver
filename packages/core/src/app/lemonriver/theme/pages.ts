@@ -4,6 +4,7 @@ export type LrPage =
   | 'assets'
   | 'settings'
   | 'trash'
+  | 'new'
   | 'editor'
   | 'board'
   | 'presenter'
@@ -11,13 +12,20 @@ export type LrPage =
   | 'other';
 
 /** Pages that wear the lime theme when it is picked; the editor and present views stay fresh. */
-const BRAND_PAGES: ReadonlySet<LrPage> = new Set(['home', 'themes', 'assets', 'settings', 'trash']);
+const BRAND_PAGES: ReadonlySet<LrPage> = new Set([
+  'home',
+  'themes',
+  'assets',
+  'settings',
+  'trash',
+  'new',
+]);
 
 /**
  * BRAND_PAGES as a path pattern, for the pre-paint script, which runs before
  * any module loads. pages.test.ts keeps the two in step.
  */
-export const BRAND_PATH_SOURCE = '^/(themes(/.*)?|assets|settings|trash)?/*$';
+export const BRAND_PATH_SOURCE = '^/(themes(/.*)?|assets|settings|trash|new)?/*$';
 
 /** Agent screenshots and thumbnails render through this route; nothing may cover it. */
 export const PREVIEW_PATH_SOURCE = '^/s/[^/]+/preview/*$';
@@ -33,6 +41,7 @@ export function pageForPath(pathname: string): LrPage {
   if (path === '/assets') return 'assets';
   if (path === '/settings') return 'settings';
   if (path === '/trash') return 'trash';
+  if (path === '/new') return 'new';
   if (/^\/s\/[^/]+\/board$/.test(path)) return 'board';
   if (/^\/s\/[^/]+\/presenter$/.test(path)) return 'presenter';
   if (/^\/s\/[^/]+\/preview$/.test(path)) return 'preview';

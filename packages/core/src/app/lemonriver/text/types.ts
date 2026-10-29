@@ -43,6 +43,8 @@ export type LrText = {
     newDeck: string;
     /** The dashed card that opens the grid; differs from newDeck so each control has its own name. */
     newDeckCard: string;
+    /** The dashed card's label when it opens the guided flow instead. */
+    newDeckGuided: string;
     settings: string;
     trash: string;
     offline: string;
@@ -127,5 +129,55 @@ export type LrText = {
     beta: string;
     betaTitle: string;
     betaHint: string;
+  };
+  outline: {
+    stepDescribe: string;
+    stepOutline: string;
+    stepBuild: string;
+    stepDone: string;
+    describeTitle: string;
+    describePlaceholder: string;
+    pagesLabel: string;
+    filesLabel: string;
+    addFile: string;
+    removeFile: string;
+    draftOutline: string;
+    startFailed: string;
+    tooLargeTitle: string;
+    /** template: "{name} is {size} MB. Compress the image, or upload a text version instead." */
+    tooLargeHint: string;
+    replaceFile: string;
+    /** template: "{name} cannot be opened" */
+    lockedTitle: string;
+    lockedHint: string;
+    reupload: string;
+    skipFile: string;
+    /** template: "{name} cannot be read" */
+    unsupportedTitle: string;
+    unsupportedHint: string;
+    /** template: "Reading {n} files, then listing the outline…" */
+    drafting: string;
+    draftingNoFiles: string;
+    failedTitle: string;
+    failedHint: string;
+    retry: string;
+    editBrief: string;
+    addPage: string;
+    /** template: "{n} pages" */
+    total: string;
+    build: string;
+    moveUp: string;
+    moveDown: string;
+    removePage: string;
+    dragPage: string;
+    /** template: "Title of page {n}" */
+    pageTitle: string;
+    kindCover: string;
+    kindKpi: string;
+    kindChart: string;
+    kindList: string;
+    kindPage: string;
+    kindEnd: string;
+    back: string;
   };
 };
