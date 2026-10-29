@@ -163,6 +163,7 @@ test.describe('LemonRiver home', () => {
   });
 
   test('one sentence opens the guided flow with the sentence filled in', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('lemonriver:onboarded', '1'));
     await page.goto('/');
     await page.getByLabel('Describe a new deck').fill('A talk on the expense process');
     await page.getByRole('button', { name: 'Start' }).click();

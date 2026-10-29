@@ -79,6 +79,10 @@ async function createDeck(request: Page['request']): Promise<string> {
 const rows = (page: Page) => page.locator('[data-lr-outline-row]');
 
 test.describe('LemonRiver guided outline', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('lemonriver:onboarded', '1'));
+  });
+
   test('the home brief opens the describe page with the sentence filled in', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Describe a new deck').fill(BRIEF);
