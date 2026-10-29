@@ -1,6 +1,6 @@
 # @lemonriver/core
 
-Runtime and CLI for [LemonRiver](https://github.com/SegawaBeer/lemonriver) — a React-based slide framework where you write slides and the framework handles the Vite/React stack, layout, navigation, hot reload, and fullscreen play mode.
+The runtime behind [LemonRiver](https://github.com/SegawaBeer/lemonriver) — a slide framework built for agents. Describe a deck in one sentence, review the outline, and the agent lays it out page by page; this package supplies everything around the slides themselves.
 
 ## Install
 
@@ -8,11 +8,21 @@ Runtime and CLI for [LemonRiver](https://github.com/SegawaBeer/lemonriver) — a
 pnpm add @lemonriver/core
 ```
 
-Most users get this installed automatically by running `npx @lemonriver/cli init`. Use this package directly only if you're wiring up an existing workspace by hand.
+Most people get this installed automatically by running `npx @lemonriver/cli init`. Use this package directly only if you're wiring up an existing workspace by hand.
 
-## What's inside
+## What you get
 
-- **Runtime** — home page, slide viewer, thumbnail rail, keyboard navigation, and fullscreen presenter mode. Every slide renders into a fixed **1920×1080** canvas; the framework scales it.
+- **A deck you can walk through** — a home page listing your decks, a viewer with a thumbnail rail and keyboard navigation, and fullscreen present mode with presenter view.
+- **Building with an agent** — the in-app agent panel drives Claude Code, Codex or WorkBuddy: outline first, then one page at a time, with pause, resume and undo.
+- **The story board** — every page grouped into chapters, with drag to reorder, folding, multi-select, filters and undo.
+- **Editing in the browser** — comment mode that pins notes to the page, and an inspector for changing the selected element directly.
+- **Export** — static HTML, PDF, and editable PPTX.
+
+Every page renders into a fixed **1920 × 1080** canvas and the framework handles the scaling, so slides look the same in the editor, in present mode and in the exported files.
+
+## What's inside the package
+
+- **Runtime** — home page, deck viewer, thumbnail rail, story board, keyboard navigation, fullscreen presenter mode, and the agent panel.
 - **Vite plugin** — discovers `slides/<id>/index.{tsx,jsx,ts,js}`, exposes them via virtual modules, and reloads when slides are added or removed.
 - **CLI** — `lemonriver dev | build | preview` so workspaces never need to touch Vite, React, or tsconfig directly.
 

@@ -1,67 +1,48 @@
 # LemonRiver
 
-**The slide framework built for agents.** Describe your deck in natural language — your coding agent writes the React. LemonRiver handles the canvas, scaling, navigation, hot reload, and present mode so the agent can focus on content.
+**A slide framework built for agents.** Describe the deck in one sentence, review the outline, and let your agent lay it out page by page — then present it or export it.
 
-Every slide renders into a fixed **1920 × 1080** canvas. Pages are arbitrary React components, not a constrained DSL.
+English · [简体中文](README.zh-CN.md)
 
-```bash
-npx @lemonriver/cli init my-slide
-```
+![LemonRiver](apps/web/public/assets/screenshots/lemonriver-cover.webp)
 
-## Why LemonRiver
-
-Slides are visual code. Agents are great at writing code. LemonRiver is the runtime that turns "make slides about X" into a polished, presentable deck — without you ever leaving the chat.
+Every page renders into a fixed **1920 × 1080** canvas. Pages are ordinary React components, so the agent writes real code rather than filling in a template.
 
 ## Highlights
 
-### 🤖 Agent-native authoring
+### Start from one sentence
 
-Works with any coding agent (Claude Code, Codex, Cursor, …). The scaffolder ships with built-in skills:
+Say what the deck is about — or upload the PDF, Word, Excel or PowerPoint files it should be based on — and LemonRiver drafts an outline for you to review and edit first. It only starts laying out pages once you agree with it. Building happens one page at a time with a team panel showing who is doing what; you can pause, pick up again later, and undo all the way back to the outline. When the numbers in your slides disagree with your files, it stops and asks which one is right.
 
-- **`/create-slide`** — drafts a deck end-to-end. Asks four scoping questions (topic & aesthetic, page count, text density, motion vs. static), picks an id, plans the structure, and writes the pages.
-- **`/slide-authoring`** — the technical reference for the 1920 × 1080 canvas, type scale, palette, and layout rules. The agent reads this before writing.
+### Work with the agent you already use
 
-From a one-line prompt to a polished deck, no boilerplate.
+Claude Code, Codex and WorkBuddy all drive the deck from the agent panel in the browser: start a session, watch it work, answer its questions, stop it, leave and come back. The panel follows the model and settings of your own client by default, so it behaves the same as your terminal.
 
-### 🎯 In-browser inspector
+### See the whole deck at once
 
-Switch the dev server toolbar to comment mode, then click any element or drag across a region and leave a note — *"make this red"*, *"change to 'LemonRiver Rocks'"*, *"shrink the headline"*. Each comment floats as a pin beside its target and is persisted as an `@slide-comment` marker in source. Run `/apply-comments` and the agent applies every pending edit, then clears the markers.
+The story board shows every page grouped into chapters. Drag to reorder, add and delete chapters, fold them away, select several cards at once, filter, and undo. The outline and the board are two views of the same deck — editing one changes the other.
 
-The loop: present → comment → `/apply-comments` → repeat.
+### Fix things in the browser
 
-### 🧑‍💻 In-app agent panel
+Switch to comment mode and click any element or drag over a region to leave a note. Comments sit beside the thing they refer to until the agent applies them; one click in the panel applies every pending comment at once. You can also select an element and describe the change in plain words.
 
-Connect your locally installed Claude Code or Codex once and the whole loop moves into the browser: draft a deck, answer the scoping questions as option cards, apply comments with one click, and edit the selected element by describing the change. Without a connected agent the dev server keeps the terminal-driven flow above.
+### Look after the deck over time
 
-### 🖼️ Assets manager + svgl logo search
+Four themes — follow the system, clean light, night orchard and lime. Deleted decks wait in the trash for 30 days, so a wrong click is never final. New versions of LemonRiver announce themselves in the app and update with one click.
 
-Manage images, videos, and fonts per deck through a built-in assets panel. Search and drop in any brand logo via the integrated [svgl](https://svgl.app/) catalogue — no more hunting for SVGs.
+### Present and export
 
-### 🎬 Professional present mode
-
-Fullscreen playback with keyboard navigation, plus a **presenter mode** with current/next slide preview, speaker notes, and a timer. Built for the stage, not just the browser tab.
-
-### 📦 Export to static HTML, PDF & PPTX
-
-One command exports your deck as a self-contained static HTML site, a print-ready PDF, or an editable PowerPoint file. The PPTX export runs entirely in the browser and turns each page into native text boxes, shapes, and images — no server, no headless browser.
-
-### 📁 Slide manager
-
-Organise decks into folders with custom emoji and drag-and-drop to reorder. Useful once you've built more than three decks and need to find anything.
-
-### 🚀 Deploy-friendly
-
-Outputs a plain static build — one-click deploy to Vercel, Cloudflare Pages, Zeabur, Netlify, or any static host. No server, no runtime, no lock-in.
+Present full screen with presenter view: current and next page, speaker notes and a timer. Export the deck as a static HTML site, a print-ready PDF, or an editable PowerPoint file whose text stays text.
 
 ## Get started
 
 ```bash
-npx @lemonriver/cli init my-slide
+npx @lemonriver/cli init my-slide --use-pnpm
 cd my-slide
 pnpm dev
 ```
 
-The scaffolded workspace ships with agent skills preconfigured for Claude Code. From there you drive the deck through your agent — or edit `slides/<id>/index.tsx` directly. See [CLAUDE.md](CLAUDE.md) for the hard rules.
+`init` installs the dependencies for you — npm, pnpm, yarn and bun are all supported, and `--no-install` skips it. Open the address the dev server prints, press **New deck**, and tell the agent what the deck is about. Everything after that happens in the browser.
 
 ## Repo layout
 
@@ -69,9 +50,9 @@ This repo is a pnpm + Turbo monorepo.
 
 | Path | Description |
 | --- | --- |
-| [packages/core](packages/core) | `@lemonriver/core` — runtime (home page, slide viewer, present mode, inspector), Vite plugin, and the `lemonriver` dev/build/preview CLI. |
-| [packages/cli](packages/cli) | `@lemonriver/cli` — `npx @lemonriver/cli init` scaffolder. Generates a minimal workspace where Vite/React/tsconfig stay hidden inside core. |
-| [apps/demo](apps/demo) | Example workspace that consumes `@lemonriver/core` via `workspace:*`. Used for local development of the framework. |
+| [packages/core](packages/core) | `@lemonriver/core` — the runtime (home page, deck viewer, story board, present mode, inspector), the Vite plugin, and the `lemonriver` dev/build/preview CLI. |
+| [packages/cli](packages/cli) | `@lemonriver/cli` — the `npx @lemonriver/cli init` scaffolder and the workspace template. |
+| [apps/demo](apps/demo) | Example workspace that consumes `@lemonriver/core` from this repo. Used to develop the framework. |
 
 ## Development
 
@@ -85,7 +66,7 @@ pnpm test     # runs vitest
 
 ## Relationship to open-slide
 
-LemonRiver is a fork of [open-slide](https://github.com/1weiho/open-slide) and tracks it as `upstream`. The framework still resolves workspaces written against the pre-rename package name and config file, so decks authored before the fork keep working unchanged.
+LemonRiver is a fork of [open-slide](https://github.com/1weiho/open-slide) and tracks it as `upstream`. Workspaces written against the pre-rename package name and config file keep working unchanged.
 
 ## License
 

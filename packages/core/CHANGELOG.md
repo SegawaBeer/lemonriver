@@ -7,7 +7,7 @@
 - 6522bb7: Agent preferences in Settings, a confirmation card when the review needs your call, and a three-screen welcome on the guided deck page.
 - 7e52187: Build a deck one page at a time with a team panel, pause and resume, pick up where it stopped, and undo back to the outline.
 - f2b219e: Start a deck from a brief: upload reference files, review and edit the outline, then build the deck from it.
-- 17bf156: Prompt in the app when a newer LemonRiver is out, with update and restart in one place; mark the version as Beta.
+- 17bf156: Prompt in the app when a newer LemonRiver is out, with update and restart in one place.
 
 ### Patch Changes
 
