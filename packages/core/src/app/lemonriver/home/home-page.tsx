@@ -261,7 +261,7 @@ function GridSkeleton() {
 
 function EmptyHome({ isDraft, folderName }: { isDraft: boolean; folderName?: string }) {
   const t = useLocale();
-  const { provider } = useAgentStatus();
+  const { enabled, provider } = useAgentStatus();
   const createDeck = useCreateDeck();
   if (!isDraft) {
     return (
@@ -275,14 +275,16 @@ function EmptyHome({ isDraft, folderName }: { isDraft: boolean; folderName?: str
       title={t.home.noSlidesYet}
       actions={
         import.meta.env.DEV &&
-        provider && (
+        enabled && (
           <Button onClick={() => void createDeck()}>
-            {format(t.agent.createDeckWith, { provider: provider.name })}
+            {provider
+              ? format(t.agent.createDeckWith, { provider: provider.name })
+              : t.agent.createDeck}
           </Button>
         )
       }
     >
-      {!provider && (
+      {!enabled && (
         <>
           {t.home.createSlideHintPrefix}
           <code className="rounded-[4px] bg-muted px-1.5 py-0.5 font-mono text-[12.5px] text-foreground">

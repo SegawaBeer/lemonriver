@@ -182,6 +182,7 @@ export type Locale = {
     helpAria: string;
     exitAria: string;
     elapsedTime: string;
+    lastSlideHint: string;
     helpEyebrow: string;
     helpTitle: string;
     shortcutNext: string;
