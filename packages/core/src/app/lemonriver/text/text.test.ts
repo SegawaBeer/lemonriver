@@ -72,4 +72,19 @@ describe('LemonRiver text', () => {
     expect(format(plural(1, en.build.readFiles), { n: 1 })).toBe('Read 1 file');
     expect(format(plural(2, en.build.readFiles), { n: 2 })).toBe('Read 2 files');
   });
+
+  it('spells the page check and the recorded choice out', () => {
+    expect(format(en.prefs.confirmPage, { k: 3 })).toBe(
+      'Page 3 is done — check it, then press Continue',
+    );
+    expect(format(en.prefs.decisionEvent, { question: 'Which number?', answer: '41%' })).toBe(
+      'Check: Which number? → 41%',
+    );
+    expect(format(zhCN.prefs.confirmPage, { k: 3 })).toBe('第 3 页排好了，看看没问题就点继续');
+    expect(format(zhCN.prefs.decisionEvent, { question: '用哪个数字？', answer: '41%' })).toBe(
+      '核对：用哪个数字？ → 41%',
+    );
+    expect(format(en.onboarding.progress, { k: 2 })).toBe('Screen 2 of 3');
+    expect(format(en.prefs.directNotice, {})).not.toContain('{');
+  });
 });

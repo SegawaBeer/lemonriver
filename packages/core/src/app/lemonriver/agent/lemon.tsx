@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
 import type { AgentActivity } from '@/lib/agent/use-agent';
-import { Mascot, type MascotState } from '../brand/mascot';
+import { HelperMascot, type HelperRole, Mascot, type MascotState } from '../brand/mascot';
+import { useBuildOutline } from '../outline/use-build-driver';
 import { useLrText } from '../text';
+
+const REVIEW_ROLE: HelperRole = 'review';
 
 const PHASE_STATE: Record<AgentActivity['phase'], MascotState> = {
   thinking: 'thinking',
@@ -40,6 +43,18 @@ export function ResultLemon({ aborted }: { aborted: boolean }) {
 /** The header of a question the agent asks: the design package's confirmation card. */
 export function ConfirmWho() {
   const lr = useLrText();
+  const outline = useBuildOutline();
+  if (outline?.state === 'building' && outline.stage === 'review') {
+    return (
+      <div
+        data-lr-confirm-who="review"
+        className="mb-2 flex items-center gap-2 px-1.5 text-[12.5px] font-semibold"
+      >
+        <HelperMascot role={REVIEW_ROLE} state="needs-you" size={36} />
+        {lr.feedback.confirmReview}
+      </div>
+    );
+  }
   return (
     <div className="mb-2 flex items-center gap-2 px-1.5 text-[12.5px] font-semibold">
       <Mascot state="needs-you" size={36} />

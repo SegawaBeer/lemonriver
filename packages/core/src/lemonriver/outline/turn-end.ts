@@ -2,6 +2,8 @@ import type { SessionStore } from '../../agent/store.ts';
 import { pageKeys, patchCard, sanitizeCards } from '../../app/lemonriver/board/model/cards.ts';
 import {
   afterTurn,
+  beginBuild,
+  collectDecisions,
   type OutlinePage,
   parseOutlineBlock,
   sanitizeOutline,
@@ -46,11 +48,18 @@ export async function collectOutline(
       found = parsed;
       store.updateItem(sessionId, item.id, 'assistant', { text: stripOutlineBlock(item.text) });
     }
-    await updateBoardFile(file, {
-      outline: found
-        ? { ...outline, state: 'ready', items: found, updatedAt: now }
-        : { ...outline, state: 'failed', updatedAt: now },
-    });
+    if (!found) {
+      await updateBoardFile(file, { outline: { ...outline, state: 'failed', updatedAt: now } });
+      return;
+    }
+    const ready = { ...outline, state: 'ready' as const, items: found, updatedAt: now };
+    if (ready.prefs.outline !== 'direct') {
+      await updateBoardFile(file, { outline: ready });
+      return;
+    }
+    const entry = resolveSlideEntry(ctx.slidesRoot, slideId);
+    const buildBackup = entry ? ((await readSlideSource(entry)) ?? '') : '';
+    await updateBoardFile(file, { outline: beginBuild(ready, now), buildBackup });
     return;
   }
 
@@ -67,8 +76,14 @@ export async function collectOutline(
     !after.some((item) => item.kind === 'error') &&
     !(lastResult?.kind === 'result' && lastResult.aborted);
 
-  const next = afterTurn(outline, { ok, waitingForAnswer }, now);
-  if (next === outline) return;
+  const decisions =
+    outline.stage === 'review'
+      ? collectDecisions(outline.decisions, session.items)
+      : outline.decisions;
+  const grown = decisions.length !== outline.decisions.length;
+  const base = grown ? { ...outline, decisions } : outline;
+  const next = afterTurn(base, { ok, waitingForAnswer }, now);
+  if (next === base && !grown) return;
   if (next.state !== 'built') {
     await updateBoardFile(file, { outline: next });
     return;

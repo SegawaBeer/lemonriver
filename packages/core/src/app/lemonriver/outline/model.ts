@@ -1,3 +1,5 @@
+import { type AgentPrefs, prefsLines, sanitizePrefs } from '../agent-prefs/prefs';
+
 export const PAGE_KINDS = ['cover', 'kpi', 'chart', 'list', 'page', 'end'] as const;
 export type PageKind = (typeof PAGE_KINDS)[number];
 
@@ -12,6 +14,8 @@ export type BuildStep = { kind: 'page' | 'review'; n: number; at: number };
 
 export type BuildTurn = { kind: 'page' | 'review'; n: number; ok: boolean; at: number };
 
+export type Decision = { id: string; question: string; answer: string };
+
 export type Outline = {
   state: OutlineState;
   brief: string;
@@ -24,6 +28,8 @@ export type Outline = {
   stage: BuildStage;
   dispatched: BuildStep | null;
   lastTurn: BuildTurn | null;
+  prefs: AgentPrefs;
+  decisions: Decision[];
 };
 
 export const OUTLINE_PAGE_SIZES = [5, 8, 12] as const;
@@ -31,6 +37,8 @@ export const MAX_ITEMS = 30;
 export const MIN_ITEMS = 2;
 export const MAX_TITLE = 120;
 export const MAX_BRIEF = 2000;
+export const MAX_DECISIONS = 20;
+export const MAX_DECISION_TEXT = 120;
 
 const ID_RE = /^[a-z0-9-]{1,40}$/;
 const BLOCK_RE = /<lemonriver-outline>([\s\S]*?)<\/lemonriver-outline>/gi;
@@ -86,6 +94,61 @@ function cleanTurn(raw: unknown, maxPage: number): BuildTurn | null {
   return { ...step, ok: (raw as Record<string, unknown>).ok === true };
 }
 
+export function sanitizeDecisions(raw: unknown): Decision[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, MAX_DECISIONS).flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const r = entry as Record<string, unknown>;
+    if (typeof r.id !== 'string' || r.id === '') return [];
+    return [
+      {
+        id: r.id.slice(0, 80),
+        question: typeof r.question === 'string' ? r.question.slice(0, MAX_DECISION_TEXT) : '',
+        answer: typeof r.answer === 'string' ? r.answer.slice(0, MAX_DECISION_TEXT) : '',
+      },
+    ];
+  });
+}
+
+export type AnsweredQuestion = {
+  id: string;
+  kind: string;
+  status?: string;
+  questions?: readonly { question: string; header?: string }[];
+  answers?: Record<string, string> | null;
+};
+
+/**
+ * Every answered question in a review session becomes one decision. Ids are
+ * the question item plus its index, so a resumed turn that reports the same
+ * item again does not add a duplicate.
+ */
+export function collectDecisions(
+  existing: readonly Decision[],
+  items: readonly AnsweredQuestion[],
+): Decision[] {
+  const seen = new Set(existing.map((decision) => decision.id));
+  const next = existing.slice();
+  for (const item of items) {
+    if (item.kind !== 'question' || item.status !== 'answered') continue;
+    const questions = item.questions ?? [];
+    for (let index = 0; index < questions.length; index += 1) {
+      if (next.length >= MAX_DECISIONS) return next;
+      const id = `${item.id}:${index}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const question = questions[index];
+      const answer = item.answers?.[question.question] ?? '';
+      next.push({
+        id,
+        question: (question.header || question.question).slice(0, MAX_DECISION_TEXT),
+        answer: answer.slice(0, MAX_DECISION_TEXT),
+      });
+    }
+  }
+  return next;
+}
+
 export function sanitizeOutline(raw: unknown): Outline | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const r = raw as Record<string, unknown>;
@@ -112,6 +175,8 @@ export function sanitizeOutline(raw: unknown): Outline | null {
     stage: r.stage === 'review' ? 'review' : 'pages',
     dispatched: cleanStep(r.dispatched, items.length),
     lastTurn: cleanTurn(r.lastTurn, items.length),
+    prefs: sanitizePrefs(r.prefs),
+    decisions: sanitizeDecisions(r.decisions),
   };
 }
 
@@ -210,6 +275,7 @@ export function outlinePrompt(outline: Outline, slideId: string, lang: string): 
     'each entry shaped like {"title": "…", "kind": "cover"}.',
     `"kind" is one of: ${PAGE_KINDS.join(', ')}. The first page is "cover" and the last is "end".`,
     `Give ${MIN_ITEMS} to ${MAX_ITEMS} entries.`,
+    ...prefsLines(outline.prefs, 'outline'),
   ];
   return lines.join('\n');
 }
@@ -219,7 +285,10 @@ export function pagePrompt(outline: Outline, slideId: string, k: number): string
   const page = outline.items[k - 1];
   if (k >= 2 && page) {
     const title = page.title || '(untitled)';
-    return `Page ${k} of ${outline.items.length}: [${page.kind}] ${title}. Write only this page; leave the others as they are.`;
+    return [
+      `Page ${k} of ${outline.items.length}: [${page.kind}] ${title}. Write only this page; leave the others as they are.`,
+      ...prefsLines(outline.prefs, 'page'),
+    ].join('\n');
   }
   const list = outline.items
     .map((item, i) => `${i + 1}. [${item.kind}] ${item.title || '(untitled)'}`)
@@ -230,20 +299,41 @@ export function pagePrompt(outline: Outline, slideId: string, k: number): string
     'Page kinds and how to write them:',
     ...PAGE_KINDS.map((kind) => `- ${KIND_GUIDE[kind]}`),
     'Numbers from the reference files stay exactly as written there.',
+    ...prefsLines(outline.prefs, 'page'),
   ].join('\n');
 }
 
 export function reviewPrompt(outline: Outline, slideId: string): string {
-  return [
+  const lines = [
     `All ${outline.items.length} pages are written.`,
     `Check each page of slides/${slideId}/index.tsx against the outline and the reference files in slides/${slideId}/assets/:`,
-    'fix typos and any number that differs from the files. If two files give different numbers for the same thing,',
-    'ask the user which to use before changing it. Do not add or remove pages.',
-  ].join(' ');
+    'fix typos and any number that differs from the files.',
+  ];
+  if (outline.prefs.askOnMismatch) {
+    lines.push(
+      'If two files give different numbers for the same thing, ask the user which to use before changing it.',
+    );
+  }
+  lines.push('Do not add or remove pages.', ...prefsLines(outline.prefs, 'review'));
+  return lines.join(' ');
 }
 
 export const DISPATCH_STALE_MS = 30_000;
 export const RESUME_WINDOW_MS = 120_000;
+
+/** Both the build button and a "direct" outline start from a ready record. */
+export function beginBuild(outline: Outline, now: number): Outline {
+  return {
+    ...outline,
+    state: 'building',
+    built: 0,
+    paused: false,
+    stage: 'pages',
+    dispatched: null,
+    lastTurn: null,
+    updatedAt: now,
+  };
+}
 
 export type BuildNext = { kind: 'page'; n: number } | { kind: 'review' } | null;
 
@@ -274,14 +364,26 @@ export function afterTurn(
   if (dispatched.kind === 'review') {
     return { ...outline, state: 'built', dispatched: null, lastTurn, updatedAt: now };
   }
+  const last = dispatched.n >= outline.items.length;
   return {
     ...outline,
     built: dispatched.n,
-    stage: dispatched.n >= outline.items.length ? 'review' : outline.stage,
+    stage: last ? 'review' : outline.stage,
+    paused: last ? false : outline.prefs.confirmEachPage || outline.paused,
     dispatched: null,
     lastTurn,
     updatedAt: now,
   };
+}
+
+/** The page the build is waiting on after a confirm-each-page stop, or null. */
+export function pageAwaitingCheck(outline: Outline): number | null {
+  if (outline.state !== 'building' || !outline.paused) return null;
+  if (!outline.prefs.confirmEachPage) return null;
+  const turn = outline.lastTurn;
+  if (turn?.kind !== 'page' || !turn.ok) return null;
+  if (turn.n >= outline.items.length) return null;
+  return turn.n;
 }
 
 export type DriverAction = 'send' | 'wait' | 'paused' | 'interrupted' | 'idle';

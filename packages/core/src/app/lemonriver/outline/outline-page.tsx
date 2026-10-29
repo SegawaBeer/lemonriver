@@ -38,6 +38,7 @@ import {
 } from '@/lib/agent/use-agent';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import { readPrefs } from '../agent-prefs/prefs';
 import { Mascot } from '../brand/mascot';
 import { useLrText } from '../text';
 import type { LrText } from '../text/types';
@@ -78,6 +79,7 @@ export function OutlineView() {
   const { slideId = '' } = useParams();
   const lr = useLrText().outline;
   const buildLr = useLrText().build;
+  const prefsLr = useLrText().prefs;
   const locale = useLocale();
   const navigate = useNavigate();
   const { sessions } = useAgentSessions();
@@ -87,6 +89,7 @@ export function OutlineView() {
   const [building, setBuilding] = useState(false);
   const dirty = useRef(false);
   const saveTimer = useRef<number | null>(null);
+  const redirected = useRef(false);
 
   const load = useCallback(async () => {
     try {
@@ -107,6 +110,17 @@ export function OutlineView() {
     const timer = window.setInterval(() => void load(), POLL_MS);
     return () => window.clearInterval(timer);
   }, [outline?.state, load]);
+
+  // A "direct" outline starts building on its own at the turn's end; the outline
+  // page hands the user straight to the editor, which writes page 1.
+  useEffect(() => {
+    if (redirected.current || !outline) return;
+    if (outline.state !== 'building' || outline.built !== 0) return;
+    if (outline.prefs.outline !== 'direct') return;
+    redirected.current = true;
+    setDockOpen(true);
+    window.location.assign(`${basePath()}/s/${encodeURIComponent(slideId)}`);
+  }, [outline, slideId]);
 
   useEffect(() => {
     const hot = import.meta.hot;
@@ -163,7 +177,7 @@ export function OutlineView() {
       const res = await fetch('/__lr/outline/build', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ slideId }),
+        body: JSON.stringify({ slideId, prefs: readPrefs(localStorage) }),
       });
       if (!res.ok) throw new Error('build failed');
       setDockOpen(true);
@@ -177,6 +191,7 @@ export function OutlineView() {
   async function retry() {
     if (!outline) return;
     try {
+      const prefs = readPrefs(localStorage);
       const res = await fetch('/__lr/outline/start', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -185,11 +200,14 @@ export function OutlineView() {
           brief: outline.brief,
           pages: outline.pages,
           files: outline.files,
+          prefs,
         }),
       });
       if (!res.ok) throw new Error('start failed');
       const sessionId = await sessionForDeck();
-      await sendMessage(sessionId, outlinePrompt(outline, slideId, locale.id), { slideId });
+      await sendMessage(sessionId, outlinePrompt({ ...outline, prefs }, slideId, locale.id), {
+        slideId,
+      });
       await load();
     } catch {
       toast.error(lr.startFailed);
@@ -352,6 +370,22 @@ export function OutlineView() {
               </div>
             </>
           )}
+
+        {outline && outline.decisions.length > 0 && (
+          <section
+            data-lr-decisions
+            className="mt-8 rounded-[16px] border border-border bg-card px-5 py-4"
+          >
+            <h2 className="text-[13px] font-semibold">{prefsLr.decisionsTitle}</h2>
+            <ul className="mt-2 space-y-1">
+              {outline.decisions.map((decision) => (
+                <li key={decision.id} className="text-[12.5px] leading-snug text-muted-foreground">
+                  {decision.question} → {decision.answer}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </div>
   );

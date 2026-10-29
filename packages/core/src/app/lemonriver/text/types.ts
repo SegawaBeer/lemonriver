@@ -109,6 +109,60 @@ export type LrText = {
     uploadTooLarge: string;
     uploadTooLargeHint: string;
     confirmWho: string;
+    confirmReview: string;
+  };
+  prefs: {
+    title: string;
+    hint: string;
+    confirmEachPage: string;
+    confirmEachPageHint: string;
+    askOnMismatch: string;
+    askOnMismatchHint: string;
+    autoImages: string;
+    autoImagesHint: string;
+    tone: string;
+    toneSteady: string;
+    toneFriendly: string;
+    toneConcise: string;
+    researchUploads: string;
+    researchWeb: string;
+    outlineReview: string;
+    outlineDirect: string;
+    designVisual: string;
+    designBalanced: string;
+    designDense: string;
+    reviewStrict: string;
+    reviewNumbers: string;
+    replayOnboarding: string;
+    directNotice: string;
+    /** template: "Page {k} is done — check it, then press Continue" */
+    confirmPage: string;
+    decisionsTitle: string;
+    /** template: "Check: {question} → {answer}" */
+    decisionEvent: string;
+  };
+  onboarding: {
+    step1Title: string;
+    step1Body: string;
+    step2Title: string;
+    researchLine: string;
+    outlineLine: string;
+    designLine: string;
+    reviewLine: string;
+    step3Title: string;
+    step3Body: string;
+    useReport: string;
+    usePitch: string;
+    useLecture: string;
+    useLaunch: string;
+    useTraining: string;
+    useOther: string;
+    skip: string;
+    back: string;
+    next: string;
+    start: string;
+    /** template: "Screen {k} of 3" */
+    progress: string;
   };
   update: {
     /** template: "LemonRiver {version} is available" */

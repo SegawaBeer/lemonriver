@@ -1,6 +1,12 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import type { AgentPrefs } from '../agent-prefs/prefs';
+import { updateAgentPrefs, useAgentPrefs } from '../agent-prefs/use-prefs';
+import { HelperMascot, type HelperRole } from '../brand/mascot';
+import { ONBOARDED_KEY } from '../onboarding/onboarding';
 import { useLrText } from '../text';
 import { setReduceMotionSetting, useReduceMotionSetting } from '../theme/motion';
 import { LR_THEME_CHOICES, type LrThemeChoice } from '../theme/themes';
@@ -16,6 +22,8 @@ const SWATCH: Record<LrThemeChoice, { bg: string; fg: string }> = {
 export function SettingsPage() {
   const t = useLocale();
   const lr = useLrText();
+  const navigate = useNavigate();
+  const prefs = useAgentPrefs();
   const { theme, setTheme } = useTheme();
   const reduceMotion = useReduceMotionSetting();
   const [mounted, setMounted] = useState(false);
@@ -30,6 +38,63 @@ export function SettingsPage() {
     dark: t.themeToggle.dark,
     lime: lr.theme.lime,
   };
+
+  function replayOnboarding() {
+    try {
+      localStorage.removeItem(ONBOARDED_KEY);
+    } catch {}
+    navigate('/new');
+  }
+
+  const helpers: {
+    role: HelperRole;
+    label: string;
+    value: string;
+    apply: (value: string) => void;
+    options: { value: string; label: string }[];
+  }[] = [
+    {
+      role: 'research',
+      label: lr.build.research,
+      value: prefs.research,
+      apply: (value) => updateAgentPrefs({ research: value as AgentPrefs['research'] }),
+      options: [
+        { value: 'uploads', label: lr.prefs.researchUploads },
+        { value: 'web', label: lr.prefs.researchWeb },
+      ],
+    },
+    {
+      role: 'outline',
+      label: lr.build.outline,
+      value: prefs.outline,
+      apply: (value) => updateAgentPrefs({ outline: value as AgentPrefs['outline'] }),
+      options: [
+        { value: 'review', label: lr.prefs.outlineReview },
+        { value: 'direct', label: lr.prefs.outlineDirect },
+      ],
+    },
+    {
+      role: 'design',
+      label: lr.build.design,
+      value: prefs.design,
+      apply: (value) => updateAgentPrefs({ design: value as AgentPrefs['design'] }),
+      options: [
+        { value: 'visual', label: lr.prefs.designVisual },
+        { value: 'balanced', label: lr.prefs.designBalanced },
+        { value: 'dense', label: lr.prefs.designDense },
+      ],
+    },
+    {
+      role: 'review',
+      label: lr.build.review,
+      value: prefs.review,
+      apply: (value) => updateAgentPrefs({ review: value as AgentPrefs['review'] }),
+      options: [
+        { value: 'strict', label: lr.prefs.reviewStrict },
+        { value: 'numbers', label: lr.prefs.reviewNumbers },
+      ],
+    },
+  ];
 
   return (
     <div data-lr-settings className="max-w-[760px]">
@@ -98,6 +163,152 @@ export function SettingsPage() {
           />
         </div>
       </section>
+
+      {import.meta.env.DEV && (
+        <section
+          data-lr-agent-prefs
+          className="mt-5 rounded-[16px] border border-border bg-card px-6 py-5 shadow-[var(--lr-shadow-1)]"
+        >
+          <h2 className="text-[16px] font-semibold">{lr.prefs.title}</h2>
+          <p className="mt-1 mb-2 text-[14px] text-muted-foreground">{lr.prefs.hint}</p>
+
+          <PrefsSwitch
+            label={lr.prefs.confirmEachPage}
+            hint={lr.prefs.confirmEachPageHint}
+            checked={prefs.confirmEachPage}
+            onChange={(value) => updateAgentPrefs({ confirmEachPage: value })}
+          />
+          <PrefsSwitch
+            label={lr.prefs.askOnMismatch}
+            hint={lr.prefs.askOnMismatchHint}
+            checked={prefs.askOnMismatch}
+            onChange={(value) => updateAgentPrefs({ askOnMismatch: value })}
+          />
+          <PrefsSwitch
+            label={lr.prefs.autoImages}
+            hint={lr.prefs.autoImagesHint}
+            checked={prefs.autoImages}
+            onChange={(value) => updateAgentPrefs({ autoImages: value })}
+          />
+
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-[14px] font-semibold">{lr.prefs.tone}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <PrefPill
+                pressed={prefs.tone === 'steady'}
+                onClick={() => updateAgentPrefs({ tone: 'steady' })}
+              >
+                {lr.prefs.toneSteady}
+              </PrefPill>
+              <PrefPill
+                pressed={prefs.tone === 'friendly'}
+                onClick={() => updateAgentPrefs({ tone: 'friendly' })}
+              >
+                {lr.prefs.toneFriendly}
+              </PrefPill>
+              <PrefPill
+                pressed={prefs.tone === 'concise'}
+                onClick={() => updateAgentPrefs({ tone: 'concise' })}
+              >
+                {lr.prefs.toneConcise}
+              </PrefPill>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2.5 border-t border-border pt-4 sm:grid-cols-4">
+            {helpers.map((helper) => (
+              <div
+                key={helper.role}
+                data-lr-pref-helper={helper.role}
+                className="flex flex-col items-center gap-1.5 rounded-[12px] border border-border bg-muted/30 px-2 py-3 text-center"
+              >
+                <HelperMascot role={helper.role} state="idle" size={32} />
+                <span className="text-[12px] font-semibold">{helper.label}</span>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {helper.options.map((option) => (
+                    <PrefPill
+                      key={option.value}
+                      compact
+                      pressed={helper.value === option.value}
+                      onClick={() => helper.apply(option.value)}
+                    >
+                      {option.label}
+                    </PrefPill>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 border-t border-border pt-3">
+            <button
+              type="button"
+              onClick={replayOnboarding}
+              className="rounded text-[13px] text-muted-foreground underline-offset-2 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
+            >
+              {lr.prefs.replayOnboarding}
+            </button>
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+function PrefsSwitch({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="mt-3 flex items-center gap-4 border-t border-border pt-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-semibold">{label}</p>
+        <p className="text-[12px] text-muted-foreground">{hint}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className="lr-switch outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      />
+    </div>
+  );
+}
+
+function PrefPill({
+  pressed,
+  compact = false,
+  onClick,
+  children,
+}: {
+  pressed: boolean;
+  compact?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={cn(
+        'h-8 rounded-full border text-[12.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40',
+        compact ? 'px-2.5 text-[11.5px]' : 'px-3',
+        pressed
+          ? 'border-[var(--lr-accent)] bg-[var(--lr-accent-soft)] text-foreground'
+          : 'border-border bg-card text-muted-foreground hover:border-[var(--lr-text-3)]',
+      )}
+    >
+      {children}
+    </button>
   );
 }

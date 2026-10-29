@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_PREFS } from '../agent-prefs/prefs';
 import {
   afterTurn,
+  collectDecisions,
   driverAction,
   insertPage,
   MAX_BRIEF,
+  MAX_DECISIONS,
   MAX_ITEMS,
   MAX_TITLE,
   movePage,
@@ -11,11 +14,13 @@ import {
   type Outline,
   type OutlinePage,
   outlinePrompt,
+  pageAwaitingCheck,
   pagePrompt,
   parseOutlineBlock,
   removePage,
   renamePage,
   reviewPrompt,
+  sanitizeDecisions,
   sanitizeItems,
   sanitizeOutline,
   setKind,
@@ -42,6 +47,8 @@ const outline: Outline = {
   stage: 'pages',
   dispatched: null,
   lastTurn: null,
+  prefs: DEFAULT_PREFS,
+  decisions: [],
 };
 
 describe('sanitizeOutline', () => {
@@ -65,7 +72,19 @@ describe('sanitizeOutline', () => {
       stage: 'pages',
       dispatched: null,
       lastTurn: null,
+      prefs: DEFAULT_PREFS,
+      decisions: [],
     });
+  });
+
+  it('keeps the preferences a record carries and repairs the ones it cannot trust', () => {
+    expect(
+      sanitizeOutline({ ...outline, prefs: { ...DEFAULT_PREFS, design: 'dense' } })?.prefs.design,
+    ).toBe('dense');
+    expect(sanitizeOutline({ ...outline, prefs: { design: 'sparse' } })?.prefs).toEqual(
+      DEFAULT_PREFS,
+    );
+    expect(sanitizeOutline({ ...outline, decisions: 'none' })?.decisions).toEqual([]);
   });
 
   it('clamps the build fields it cannot trust', () => {
@@ -249,12 +268,13 @@ describe('prompts', () => {
     expect(text).toContain('Numbers from the reference files stay exactly as written there.');
   });
 
-  it('keeps later pages to one line', () => {
+  it('keeps later pages to one line, then the preferences', () => {
     const text = pagePrompt(outline, 'deck-1', 3);
-    expect(text).toBe(
+    expect(text.split('\n')[0]).toBe(
       'Page 3 of 4: [kpi] Numbers. Write only this page; leave the others as they are.',
     );
     expect(text).not.toContain('1. [cover]');
+    expect(text).toContain('Balance text and visuals.');
   });
 
   it('asks for a review pass without changing the pages', () => {
@@ -264,6 +284,30 @@ describe('prompts', () => {
     expect(text).toContain('slides/deck-1/assets/');
     expect(text).toContain('ask the user which to use');
     expect(text).toContain('Do not add or remove pages.');
+  });
+
+  it('ends every step with the preferences', () => {
+    const prefs = { ...DEFAULT_PREFS, tone: 'friendly' as const, research: 'web' as const };
+    const outlineText = outlinePrompt({ ...outline, prefs }, 'deck-1', 'en');
+    expect(outlineText).toContain('Write in a light, friendly tone.');
+    expect(
+      outlineText
+        .trim()
+        .endsWith('You may look up facts the files do not cover; say where each one came from.'),
+    ).toBe(true);
+    expect(pagePrompt({ ...outline, prefs }, 'deck-1', 2)).toContain(
+      'Write in a light, friendly tone.',
+    );
+    expect(reviewPrompt({ ...outline, prefs }, 'deck-1')).toContain(
+      'Write in a light, friendly tone.',
+    );
+  });
+
+  it('stops asking about a mismatch when the user said to use the spreadsheet', () => {
+    const lenient = { ...outline, prefs: { ...DEFAULT_PREFS, askOnMismatch: false } };
+    const text = reviewPrompt(lenient, 'deck-1');
+    expect(text).not.toContain('ask the user which to use');
+    expect(text).toContain('use the one from the spreadsheet');
   });
 });
 
@@ -339,6 +383,63 @@ describe('afterTurn', () => {
     expect(afterTurn(idle, { ok: true, waitingForAnswer: false }, 30)).toBe(idle);
     const ready = outline;
     expect(afterTurn(ready, { ok: true, waitingForAnswer: false }, 30)).toBe(ready);
+  });
+
+  it('stops after each page when the user asked to check them', () => {
+    const ask = building({
+      prefs: { ...DEFAULT_PREFS, confirmEachPage: true },
+      dispatched: { kind: 'page', n: 2, at: 10 },
+    });
+    const next = afterTurn(ask, { ok: true, waitingForAnswer: false }, 30);
+    expect(next.built).toBe(2);
+    expect(next.paused).toBe(true);
+  });
+
+  it('never stops after the last page, so the review can start', () => {
+    const ask = building({
+      built: 3,
+      paused: true,
+      prefs: { ...DEFAULT_PREFS, confirmEachPage: true },
+      dispatched: { kind: 'page', n: 4, at: 10 },
+    });
+    const next = afterTurn(ask, { ok: true, waitingForAnswer: false }, 30);
+    expect(next.built).toBe(4);
+    expect(next.stage).toBe('review');
+    expect(next.paused).toBe(false);
+  });
+
+  it('keeps the user pause between pages when they do not ask for checks', () => {
+    const paused = building({ paused: true, dispatched: { kind: 'page', n: 2, at: 10 } });
+    expect(afterTurn(paused, { ok: true, waitingForAnswer: false }, 30).paused).toBe(true);
+  });
+});
+
+describe('pageAwaitingCheck', () => {
+  const waiting = (patch: Partial<Outline> = {}): Outline =>
+    building({
+      built: 2,
+      paused: true,
+      prefs: { ...DEFAULT_PREFS, confirmEachPage: true },
+      lastTurn: { kind: 'page', n: 2, ok: true, at: 5 },
+      ...patch,
+    });
+
+  it('names the page a confirm-each-page stop is waiting on', () => {
+    expect(pageAwaitingCheck(waiting())).toBe(2);
+  });
+
+  it('says nothing when the pause is not a page check', () => {
+    expect(pageAwaitingCheck(waiting({ paused: false }))).toBeNull();
+    expect(
+      pageAwaitingCheck(waiting({ prefs: { ...DEFAULT_PREFS, confirmEachPage: false } })),
+    ).toBeNull();
+    expect(
+      pageAwaitingCheck(waiting({ lastTurn: { kind: 'page', n: 2, ok: false, at: 5 } })),
+    ).toBeNull();
+    expect(
+      pageAwaitingCheck(waiting({ lastTurn: { kind: 'page', n: 4, ok: true, at: 5 } })),
+    ).toBeNull();
+    expect(pageAwaitingCheck(building({ paused: true }))).toBeNull();
   });
 });
 
@@ -436,5 +537,97 @@ describe('teamState', () => {
         action: 'paused',
       }).lead,
     ).toBe('idle');
+  });
+});
+
+describe('sanitizeDecisions', () => {
+  it('keeps well-formed entries and trims the long ones', () => {
+    const long = 'x'.repeat(200);
+    const cleaned = sanitizeDecisions([
+      { id: 'q1:0', question: long, answer: long },
+      { id: '', question: 'no id', answer: 'x' },
+      { question: 'no id either', answer: 'x' },
+      'nope',
+    ]);
+    expect(cleaned).toHaveLength(1);
+    expect(cleaned[0].id).toBe('q1:0');
+    expect(cleaned[0].question).toHaveLength(120);
+    expect(cleaned[0].answer).toHaveLength(120);
+    expect(sanitizeDecisions('none')).toEqual([]);
+  });
+
+  it('keeps at most twenty decisions', () => {
+    const many = Array.from({ length: MAX_DECISIONS + 5 }, (_, i) => ({
+      id: `q${i}:0`,
+      question: `Q${i}`,
+      answer: 'A',
+    }));
+    expect(sanitizeDecisions(many)).toHaveLength(MAX_DECISIONS);
+  });
+});
+
+describe('collectDecisions', () => {
+  const answered = (
+    id: string,
+    questions: { question: string; header?: string }[],
+    answers: Record<string, string>,
+  ) => ({ id, kind: 'question', status: 'answered', questions, answers });
+
+  it('turns each answered question into a decision', () => {
+    expect(
+      collectDecisions(
+        [],
+        [
+          answered('q1', [{ question: 'Use which number?', header: 'Numbers' }], {
+            'Use which number?': '41%',
+          }),
+        ],
+      ),
+    ).toEqual([{ id: 'q1:0', question: 'Numbers', answer: '41%' }]);
+  });
+
+  it('falls back to the question when it has no header', () => {
+    expect(
+      collectDecisions(
+        [],
+        [answered('q1', [{ question: 'Which page?' }], { 'Which page?': '2' })],
+      )[0].question,
+    ).toBe('Which page?');
+  });
+
+  it('does not add the same question twice when a resumed turn reports it again', () => {
+    const first = collectDecisions(
+      [],
+      [answered('q1', [{ question: 'Which number?' }], { 'Which number?': '41%' })],
+    );
+    const again = collectDecisions(first, [
+      answered('q1', [{ question: 'Which number?' }], { 'Which number?': '41%' }),
+    ]);
+    expect(again).toEqual(first);
+  });
+
+  it('ignores questions that are not answered and items that are not questions', () => {
+    expect(
+      collectDecisions(
+        [],
+        [
+          {
+            id: 'q1',
+            kind: 'question',
+            status: 'pending',
+            questions: [{ question: 'Q' }],
+            answers: null,
+          },
+          { id: 'a1', kind: 'assistant' },
+        ],
+      ),
+    ).toEqual([]);
+  });
+
+  it('stops at twenty decisions', () => {
+    const many = Array.from({ length: MAX_DECISIONS + 4 }, (_, i) =>
+      answered(`q${i}`, [{ question: `Q${i}` }], { [`Q${i}`]: 'A' }),
+    );
+    expect(collectDecisions([], many)).toHaveLength(MAX_DECISIONS);
   });
 });

@@ -284,9 +284,16 @@ html[data-lr-app] [data-lr-confirm] {
 }
 
 html[data-lr-app] [data-lr-confirm] button[aria-pressed] {
-  border-radius: var(--lr-radius-sm);
+  border: 1.5px solid var(--lr-border);
+  border-radius: 12px;
+  padding: 6px 8px;
+}
+
+html[data-lr-app] [data-lr-confirm] button[aria-pressed] + button[aria-pressed] {
+  margin-top: 6px;
 }
 
 html[data-lr-app] [data-lr-confirm] button[aria-pressed="true"] {
+  border-color: var(--lr-accent);
   background: var(--lr-accent-soft);
 }

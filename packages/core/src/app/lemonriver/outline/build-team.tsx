@@ -11,7 +11,7 @@ import {
   type MascotState,
 } from '../brand/mascot';
 import { useLrText } from '../text';
-import { teamState } from './model';
+import { pageAwaitingCheck, teamState } from './model';
 import { useBuildDriver } from './use-build-driver';
 
 function basePath(): string {
@@ -39,6 +39,7 @@ function nextEventId(seq: { current: number }): number {
 
 export function BuildTeam({ slideId }: { slideId: string }) {
   const lr = useLrText().build;
+  const prefsLr = useLrText().prefs;
   const { outline, action, running, waitingForAnswer, connected, pause, resume, undo } =
     useBuildDriver(slideId);
   const [events, setEvents] = useState<Event[]>([]);
@@ -67,8 +68,19 @@ export function BuildTeam({ slideId }: { slideId: string }) {
     if (prev.state !== 'built' && outline.state === 'built') {
       add.push({ id: nextEventId(eventSeq), text: lr.eventReviewed });
     }
+    if (outline.decisions.length > prev.decisions.length) {
+      for (const decision of outline.decisions.slice(prev.decisions.length)) {
+        add.push({
+          id: nextEventId(eventSeq),
+          text: format(prefsLr.decisionEvent, {
+            question: decision.question,
+            answer: decision.answer,
+          }),
+        });
+      }
+    }
     if (add.length > 0) setEvents((list) => [...add.reverse(), ...list].slice(0, 6));
-  }, [outline, lr]);
+  }, [outline, lr, prefsLr]);
 
   useEffect(() => {
     if (state !== 'built') {
@@ -115,13 +127,16 @@ export function BuildTeam({ slideId }: { slideId: string }) {
 
   const team = teamState(outline, { running, waitingForAnswer, action });
   const pct = total > 0 ? Math.min(100, Math.round((built / total) * 100)) : 0;
+  const check = pageAwaitingCheck(outline);
   const status =
     state === 'built'
       ? format(lr.statusDone, { n: total })
       : waitingForAnswer
         ? lr.statusWaiting
         : action === 'paused'
-          ? lr.statusPaused
+          ? check !== null
+            ? format(prefsLr.confirmPage, { k: check })
+            : lr.statusPaused
           : action === 'interrupted'
             ? lr.statusStopped
             : outline.stage === 'review'

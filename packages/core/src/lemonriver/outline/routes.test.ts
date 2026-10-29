@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Outline } from '../../app/lemonriver/outline/model.ts';
-import {
-  beginBuild,
-  claimNextStep,
-  replaceItems,
-  setPaused,
-  startOutline,
-  undoBuild,
-} from './routes.ts';
+import { DEFAULT_PREFS } from '../../app/lemonriver/agent-prefs/prefs.ts';
+import { beginBuild, type Outline } from '../../app/lemonriver/outline/model.ts';
+import { claimNextStep, replaceItems, setPaused, startOutline, undoBuild } from './routes.ts';
 
 const ready: Outline = {
   state: 'ready',
@@ -21,6 +15,8 @@ const ready: Outline = {
   stage: 'pages',
   dispatched: null,
   lastTurn: null,
+  prefs: DEFAULT_PREFS,
+  decisions: [],
 };
 
 const building = (patch: Partial<Outline> = {}): Outline => ({
@@ -50,7 +46,16 @@ describe('startOutline', () => {
       stage: 'pages',
       dispatched: null,
       lastTurn: null,
+      prefs: DEFAULT_PREFS,
+      decisions: [],
     });
+  });
+
+  it('stores the preferences the describe page sent', () => {
+    const prefs = startOutline({ prefs: { design: 'dense', tone: 'loud' } }, 1).prefs;
+    expect(prefs.design).toBe('dense');
+    expect(prefs.tone).toBe('steady');
+    expect(startOutline({}, 1).prefs).toEqual(DEFAULT_PREFS);
   });
 
   it('falls back to eight pages for a size it does not offer', () => {

@@ -13,7 +13,10 @@ import {
 import { uploadWithAutoRename } from '@/lib/assets';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import { readPrefs } from '../agent-prefs/prefs';
+import { useAgentPrefs } from '../agent-prefs/use-prefs';
 import { Mascot } from '../brand/mascot';
+import { Onboarding } from '../onboarding/onboarding';
 import { useLrText } from '../text';
 import { checkFileObject, type FileVerdict, formatSize } from './files';
 import { MAX_BRIEF, OUTLINE_PAGE_SIZES, type Outline, outlinePrompt } from './model';
@@ -54,6 +57,7 @@ export function DescribePage() {
   const lr = useLrText();
   const locale = useLocale();
   const location = useLocation();
+  const prefs = useAgentPrefs();
   const { connected, loading, provider } = useAgentStatus();
   const deckId = new URLSearchParams(location.search).get('deck') ?? '';
   const initialState = (location.state ?? {}) as { brief?: unknown };
@@ -145,6 +149,8 @@ export function DescribePage() {
         stage: 'pages',
         dispatched: null,
         lastTurn: null,
+        prefs: readPrefs(localStorage),
+        decisions: [],
       };
       const started = await fetch('/__lr/outline/start', {
         method: 'POST',
@@ -154,6 +160,7 @@ export function DescribePage() {
           brief: outline.brief,
           pages,
           files: names,
+          prefs: outline.prefs,
         }),
       });
       if (!started.ok) throw new Error('start failed');
@@ -292,6 +299,17 @@ export function DescribePage() {
           {lr.outline.draftOutline}
         </Button>
       </div>
+
+      {prefs.outline === 'direct' && (
+        <p
+          data-lr-direct-notice
+          className="mt-2 text-right text-[12px] leading-snug text-muted-foreground"
+        >
+          {lr.prefs.directNotice}
+        </p>
+      )}
+
+      <Onboarding />
     </div>
   );
 }

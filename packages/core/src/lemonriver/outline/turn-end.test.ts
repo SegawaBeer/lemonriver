@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { AgentSession } from '../../agent/types.ts';
+import { DEFAULT_PREFS } from '../../app/lemonriver/agent-prefs/prefs.ts';
 import { type Outline, sanitizeOutline } from '../../app/lemonriver/outline/model.ts';
 import type { ApiContext } from '../../vite/routes/context.ts';
 import { boardStructurePath, readBoardFile, updateBoardFile } from '../board/store.ts';
@@ -287,5 +288,95 @@ describe('collectOutline', () => {
       await updateBoardFile(file, { outline });
       await collectOutline(ctx, fakeStore([userItem, assistantItem(BLOCK)], []), 's1', 'u1');
       expect(sanitizeOutline((await readBoardFile(file)).outline)).toEqual(outline);
+    }));
+
+  it('starts the build itself when the outline is set to direct', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        outline: board({
+          state: 'drafting',
+          brief: 'b',
+          pages: 8,
+          files: [],
+          items: [],
+          updatedAt: 0,
+          prefs: { ...DEFAULT_PREFS, outline: 'direct' },
+        }),
+      });
+      await collectOutline(ctx, fakeStore([userItem, assistantItem(BLOCK)], []), 's1', 'u1');
+
+      const stored = await readBoardFile(file);
+      const next = sanitizeOutline(stored.outline);
+      expect(next?.state).toBe('building');
+      expect(next?.built).toBe(0);
+      expect(next?.stage).toBe('pages');
+      expect(next?.items).toHaveLength(2);
+      expect(typeof stored.buildBackup).toBe('string');
+      expect(stored.buildBackup).toContain('export default');
+    }));
+
+  it('records what the user chose when the review asked', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        outline: board({
+          state: 'building',
+          brief: 'b',
+          pages: 8,
+          files: [],
+          items: [
+            { id: 'p1', title: 'One', kind: 'cover' },
+            { id: 'p2', title: 'Two', kind: 'end' },
+          ],
+          updatedAt: 0,
+          built: 2,
+          stage: 'review',
+          dispatched: { kind: 'review', n: 0, at: 10 },
+        }),
+      });
+      const question: AgentSession['items'][number] = {
+        kind: 'question',
+        id: 'q1',
+        ts: '',
+        questions: [
+          { question: 'Which number?', header: 'Numbers', options: [], multiSelect: false },
+        ],
+        answers: { 'Which number?': '41%' },
+        status: 'answered',
+      };
+      await collectOutline(ctx, fakeStore([userItem, question, resultItem(false)], []), 's1', 'u1');
+
+      const stored = sanitizeOutline((await readBoardFile(file)).outline);
+      expect(stored?.decisions).toEqual([{ id: 'q1:0', question: 'Numbers', answer: '41%' }]);
+    }));
+
+  it('does not add the same decision twice when a turn reports it again', () =>
+    withWorkspace(async (ctx, file) => {
+      const outline = board({
+        state: 'building',
+        brief: 'b',
+        pages: 8,
+        files: [],
+        items: [{ id: 'p1', title: 'One', kind: 'cover' }],
+        updatedAt: 0,
+        built: 1,
+        stage: 'review',
+        dispatched: { kind: 'review', n: 0, at: 10 },
+        decisions: [{ id: 'q1:0', question: 'Numbers', answer: '41%' }],
+      });
+      await updateBoardFile(file, { outline });
+      const question: AgentSession['items'][number] = {
+        kind: 'question',
+        id: 'q1',
+        ts: '',
+        questions: [
+          { question: 'Which number?', header: 'Numbers', options: [], multiSelect: false },
+        ],
+        answers: { 'Which number?': '41%' },
+        status: 'answered',
+      };
+      await collectOutline(ctx, fakeStore([userItem, question, resultItem(false)], []), 's1', 'u1');
+
+      const stored = sanitizeOutline((await readBoardFile(file)).outline);
+      expect(stored?.decisions).toEqual([{ id: 'q1:0', question: 'Numbers', answer: '41%' }]);
     }));
 });

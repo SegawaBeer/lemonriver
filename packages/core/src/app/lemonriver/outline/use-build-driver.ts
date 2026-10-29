@@ -57,6 +57,15 @@ function getSnapshot(): Snapshot {
   return view;
 }
 
+/** The outline the team panel is following; the confirmation card reads it too. */
+export function useBuildOutline(): Outline | null | undefined {
+  return useSyncExternalStore(
+    subscribe,
+    () => view.outline,
+    () => undefined,
+  );
+}
+
 function currentAction(now: number): DriverAction {
   if (!view.outline) return 'idle';
   const action = driverAction(view.outline, { running: view.running, now });

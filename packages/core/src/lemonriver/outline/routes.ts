@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import type { ViteDevServer } from 'vite';
+import { sanitizePrefs } from '../../app/lemonriver/agent-prefs/prefs.ts';
 import {
+  beginBuild,
   DISPATCH_STALE_MS,
   MAX_BRIEF,
   nextStep,
@@ -29,7 +31,7 @@ import { boardStructurePath, readBoardFile, updateBoardFile } from '../board/sto
 // POST /__lr/outline/undo       { slideId } → { ok }
 
 export function startOutline(
-  input: { brief?: unknown; pages?: unknown; files?: unknown },
+  input: { brief?: unknown; pages?: unknown; files?: unknown; prefs?: unknown },
   now: number,
 ): Outline {
   const brief = typeof input.brief === 'string' ? input.brief.trim().slice(0, MAX_BRIEF) : '';
@@ -48,6 +50,8 @@ export function startOutline(
     stage: 'pages',
     dispatched: null,
     lastTurn: null,
+    prefs: sanitizePrefs(input.prefs),
+    decisions: [],
   };
 }
 
@@ -55,19 +59,6 @@ export function startOutline(
 export function replaceItems(outline: Outline, rawItems: unknown, now: number): Outline | null {
   if (outline.state !== 'ready') return null;
   return sanitizeOutline({ ...outline, items: rawItems, updatedAt: now });
-}
-
-export function beginBuild(outline: Outline, now: number): Outline {
-  return {
-    ...outline,
-    state: 'building',
-    built: 0,
-    paused: false,
-    stage: 'pages',
-    dispatched: null,
-    lastTurn: null,
-    updatedAt: now,
-  };
 }
 
 /** Claims the next page (or the review) for this tab. Null means another tab is ahead. */
@@ -170,7 +161,7 @@ export function registerOutlineRoutes(server: ViteDevServer, ctx: ApiContext): v
         if (!requestCheck.ok) {
           return json(res, requestCheck.status, { error: requestCheck.error });
         }
-        const body = (await readBody(req)) as { slideId?: unknown };
+        const body = (await readBody(req)) as { slideId?: unknown; prefs?: unknown };
         const slideId = typeof body.slideId === 'string' ? body.slideId : '';
         const entry = resolveSlideEntryPath(ctx, slideId);
         if (!entry) {
@@ -182,9 +173,11 @@ export function registerOutlineRoutes(server: ViteDevServer, ctx: ApiContext): v
         if (outline?.state !== 'ready') {
           return json(res, 409, { error: 'outline is not ready' });
         }
+        const withPrefs =
+          body.prefs === undefined ? outline : { ...outline, prefs: sanitizePrefs(body.prefs) };
         const buildBackup = (await readSlideSource(entry)) ?? '';
         await updateBoardFile(file, {
-          outline: beginBuild(outline, Date.now()),
+          outline: beginBuild(withPrefs, Date.now()),
           buildBackup,
         });
         return json(res, 200, { ok: true });
