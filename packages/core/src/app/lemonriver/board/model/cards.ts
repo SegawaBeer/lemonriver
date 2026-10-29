@@ -143,8 +143,7 @@ export function originAfter(op: PageOp, total: number): number[] {
     case 'moveMany': {
       const moving = [...new Set(op.moving)].sort((a, b) => a - b);
       const staying = order.filter((index) => !moving.includes(index));
-      const before = moving.filter((index) => index < op.to).length;
-      const at = Math.max(0, Math.min(staying.length, op.to - before));
+      const at = Math.max(0, Math.min(staying.length, op.to));
       return [...staying.slice(0, at), ...moving, ...staying.slice(at)];
     }
     case 'reorder':

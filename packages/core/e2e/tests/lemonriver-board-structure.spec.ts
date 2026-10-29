@@ -198,11 +198,13 @@ test.describe('story board structure', () => {
     await expect(page.getByText('2 selected')).toBeVisible();
 
     await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
-    await expect(cards(page)).toHaveCount(5);
     await expect.poll(async () => (await readEntries(request))?.length).toBe(5);
+    // React Flow only paints the cards inside the viewport, so the page count
+    // in the header is the signal that covers the whole deck.
+    await expect(page.locator('header .folio')).toHaveText('05');
 
     await page.getByRole('button', { name: 'Undo' }).click();
-    await expect(cards(page)).toHaveCount(3);
+    await expect(page.locator('header .folio')).toHaveText('03');
     await expect.poll(async () => (await readEntries(request))?.join(',')).toBe('One,Two,Three');
     expect((await readColumns(request)).map((c) => c.size)).toEqual([2, 1]);
   });

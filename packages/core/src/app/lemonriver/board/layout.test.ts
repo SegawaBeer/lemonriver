@@ -230,9 +230,12 @@ describe('orderAfterMoveMany', () => {
     expect(orderAfterMoveMany(5, [3, 1], 0)).toEqual([1, 3, 0, 2, 4]);
   });
 
-  it('lands the block where the last card was dropped', () => {
-    expect(orderAfterMoveMany(6, [0, 1], 4)).toEqual([2, 3, 0, 1, 4, 5]);
+  it('lands the block on the slot it was dropped on', () => {
+    expect(orderAfterMoveMany(6, [0, 1], 4)).toEqual([2, 3, 4, 5, 0, 1]);
     expect(orderAfterMoveMany(6, [4, 5], 1)).toEqual([0, 4, 5, 1, 2, 3]);
+    // The same slot a single card takes, so "move to the end" still ends there.
+    expect(orderAfterMoveMany(3, [0], 2)).toEqual(orderAfterMove(3, 0, 2));
+    expect(orderAfterMoveMany(5, [4], 1)).toEqual(orderAfterMove(5, 4, 1));
   });
 
   it('keeps every page exactly once', () => {

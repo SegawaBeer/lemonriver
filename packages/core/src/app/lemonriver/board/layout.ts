@@ -269,12 +269,13 @@ export function orderAfterMove(total: number, from: number, to: number): number[
 /**
  * The deck's order once several cards move together: they travel as one block
  * and keep their order among themselves, whatever order they were picked in.
+ * The block starts at the slot they were dropped on, the same slot a single
+ * card would take.
  */
 export function orderAfterMoveMany(total: number, moving: number[], to: number): number[] {
   const lifted = [...new Set(moving)].sort((a, b) => a - b);
   if (lifted.length === 0) return identityOrder(total);
   const staying = identityOrder(total).filter((index) => !lifted.includes(index));
-  const before = lifted.filter((index) => index < to).length;
-  const at = Math.max(0, Math.min(staying.length, to - before));
+  const at = Math.max(0, Math.min(staying.length, to));
   return [...staying.slice(0, at), ...lifted, ...staying.slice(at)];
 }

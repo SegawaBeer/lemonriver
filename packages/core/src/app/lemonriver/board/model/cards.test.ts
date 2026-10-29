@@ -261,8 +261,8 @@ describe('batch and structural operations', () => {
 
   it('keeps the relative order of several pages moved at once', () => {
     const { state: next, entries } = run(state, deck, { kind: 'moveMany', moving: [0, 2], to: 3 });
-    expect(entries).toEqual(['Agenda', 'Cover', 'Q3', 'Close']);
-    expect(memos(next, entries, 4)).toEqual([null, 'one', 'two', 'three']);
+    expect(entries).toEqual(['Agenda', 'Close', 'Cover', 'Q3']);
+    expect(memos(next, entries, 4)).toEqual([null, 'three', 'one', 'two']);
   });
 
   it('drops the cards of every page removed at once', () => {
