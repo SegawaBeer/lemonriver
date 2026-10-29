@@ -1,13 +1,23 @@
 export const AGENT_PROVIDER_IDS = ['claude', 'codex'] as const;
 
-export type AgentProviderId = (typeof AGENT_PROVIDER_IDS)[number];
+// Extra providers this release adds. They stay out of the panel until the user
+// switches them on in Settings, so a default workspace behaves as before.
+export const LEMONRIVER_PROVIDER_IDS = ['workbuddy', 'dumate'] as const;
+
+export type AgentProviderId =
+  | (typeof AGENT_PROVIDER_IDS)[number]
+  | (typeof LEMONRIVER_PROVIDER_IDS)[number];
 
 export const AGENT_EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
 
 export type AgentEffort = (typeof AGENT_EFFORTS)[number];
 
 export function isAgentProviderId(value: unknown): value is AgentProviderId {
-  return typeof value === 'string' && (AGENT_PROVIDER_IDS as readonly string[]).includes(value);
+  return (
+    typeof value === 'string' &&
+    ((AGENT_PROVIDER_IDS as readonly string[]).includes(value) ||
+      (LEMONRIVER_PROVIDER_IDS as readonly string[]).includes(value))
+  );
 }
 
 export function isAgentEffort(value: unknown): value is AgentEffort {

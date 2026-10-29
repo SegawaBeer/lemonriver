@@ -1,5 +1,6 @@
 import type { SVGProps } from 'react';
 import type { AgentProviderId } from '../../../agent/types';
+import { ExtraProviderLogo } from '../../lemonriver/agent/provider-marks';
 
 // Marks from svgl.app (claude-ai-icon, openai).
 function ClaudeLogo(props: SVGProps<SVGSVGElement>) {
@@ -30,5 +31,8 @@ export function ProviderLogo({
   provider,
   ...props
 }: { provider: AgentProviderId } & SVGProps<SVGSVGElement>) {
+  if (provider !== 'claude' && provider !== 'codex') {
+    return <ExtraProviderLogo provider={provider} {...props} />;
+  }
   return provider === 'claude' ? <ClaudeLogo {...props} /> : <OpenAILogo {...props} />;
 }

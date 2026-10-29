@@ -1,3 +1,4 @@
+import { extraProvider, isListedProvider } from '../lemonriver/agent/providers/index.ts';
 import { type PackageManager, runCommand } from '../vite/routes/update.ts';
 import { commandVersion, findOnPath, resolveWorkspacePackage } from './detect.ts';
 import type { AgentProvider } from './provider.ts';
@@ -10,7 +11,8 @@ async function providerStatus(
   provider: AgentProvider,
 ): Promise<AgentProviderStatus> {
   const sdk = resolveWorkspacePackage(userCwd, provider.sdkPackage);
-  const cliPath = findOnPath(provider.cliCommand);
+  // The add-on providers keep their CLI inside the app bundle, out of PATH.
+  const cliPath = extraProvider(provider)?.resolveCommand() ?? findOnPath(provider.cliCommand);
   const [cliVersion, models] = await Promise.all([
     cliPath ? commandVersion(cliPath) : null,
     provider.models(),
@@ -32,9 +34,12 @@ export async function agentStatus(
   userCwd: string,
   providers: Record<AgentProviderId, AgentProvider>,
   packageManager: PackageManager,
+  enabled: ReadonlySet<string> = new Set(),
 ): Promise<AgentStatus> {
   const list = await Promise.all(
-    Object.values(providers).map((provider) => providerStatus(userCwd, provider)),
+    Object.values(providers)
+      .filter((provider) => isListedProvider(provider, enabled))
+      .map((provider) => providerStatus(userCwd, provider)),
   );
   return { enabled: true, packageManager, providers: list };
 }

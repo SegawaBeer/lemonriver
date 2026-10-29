@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import type { AgentProviderId, AgentProviderStatus } from '../../../agent/types';
 import { ProviderLogo } from './provider-logo';
 
-const CLI_INSTALL: Record<AgentProviderId, string> = {
+const CLI_INSTALL: Partial<Record<AgentProviderId, string>> = {
   claude: 'npm install -g @anthropic-ai/claude-code',
   codex: 'npm install -g @openai/codex',
 };

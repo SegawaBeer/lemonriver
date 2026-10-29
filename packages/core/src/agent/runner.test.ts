@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgentProvider, ProviderRunOptions } from './provider.ts';
 import { createAgentRunner, type TurnEnd } from './runner.ts';
 import { createSessionStore } from './store.ts';
+import type { AgentProviderId } from './types.ts';
 
 function fakeProvider(run: AgentProvider['run'], canRewind = true): AgentProvider {
   return {
@@ -39,7 +40,7 @@ function setup(run: AgentProvider['run'], onTurnEnd?: (turn: TurnEnd) => void, c
     userCwd: '/ws',
     writableRoots: ['/ws/slides'],
     store,
-    providers: { claude: provider, codex: provider },
+    providers: { claude: provider, codex: provider } as Record<AgentProviderId, AgentProvider>,
     onTurnEnd,
   });
   return { store, runner };

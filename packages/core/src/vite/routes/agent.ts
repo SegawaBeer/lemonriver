@@ -30,6 +30,7 @@ import {
 } from '../../editing/slide-ops.ts';
 import { readManifest, writeManifest } from '../../files/folders.ts';
 import { isLoopbackRequest, validateMutationRequest } from '../../http/request-guard.ts';
+import { readEnabledProviders } from '../../lemonriver/agent/providers/store.ts';
 import { moveBoardRecord } from '../../lemonriver/board/store.ts';
 import { collectOutline } from '../../lemonriver/outline/turn-end.ts';
 import { invalidateSlidesModule } from '../open-slide-plugin.ts';
@@ -225,7 +226,8 @@ export function registerAgentRoutes(server: ViteDevServer, ctx: ApiContext): voi
         res.setHeader('cache-control', 'no-store');
         if (!enabled) return json(res, 200, { enabled: false, packageManager: '', providers: [] });
         const pm = await detectPackageManager(ctx.userCwd);
-        return json(res, 200, await agentStatus(ctx.userCwd, providers, pm));
+        const chosen = await readEnabledProviders(ctx.userCwd);
+        return json(res, 200, await agentStatus(ctx.userCwd, createProviders(), pm, chosen));
       }
 
       if (!enabled) return json(res, 404, { error: 'agent panel disabled' });
