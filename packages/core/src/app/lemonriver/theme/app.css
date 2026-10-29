@@ -1,0 +1,288 @@
+/* App-wide restyle from lemonriver-design v1: fonts, chrome, badges, motion. Unlayered,
+   so it beats the official Tailwind utilities; [data-osd-canvas] is always left out. */
+
+html[data-lr-app] {
+  font-family: var(--lr-font-sans);
+}
+
+html[data-lr-app] :is(.font-sans, .font-heading, .eyebrow):not([data-osd-canvas] *) {
+  font-family: var(--lr-font-sans);
+}
+
+html[data-lr-app] .font-heading:not([data-osd-canvas] *) {
+  font-family: var(--lr-font-display);
+}
+
+html[data-lr-app] ::selection {
+  background: var(--brand-soft);
+}
+
+/* The agent's context chips above the composer. */
+html[data-lr-app] [data-agent-dock] [class*="max-w-[180px]"][class*="rounded-[5px]"] {
+  border-radius: 999px;
+  padding-inline: 8px;
+}
+
+html[data-lr-app] [data-agent-dock] [class*="max-w-[180px]"][class*="bg-brand"] {
+  background-color: var(--lr-accent-soft);
+  border-color: var(--lr-accent);
+  color: var(--lr-text);
+}
+
+/* Comment counts on the thumbnails and on the comment tool. */
+html[data-lr-app] [data-page-comments],
+html[data-lr-app] [data-inspector-mode="comment"] > span.bg-brand {
+  background-color: var(--lr-badge-bg);
+  color: var(--lr-badge-text);
+}
+
+/* Sidebar rows: the official selected row, and ours marked aria-current. */
+html[data-lr-app]
+  aside
+  :is(.group.relative.flex.bg-background.shadow-edge, [data-lr-nav][aria-current]) {
+  background-color: var(--lr-accent-soft);
+  color: var(--lr-text);
+  font-weight: 600;
+  box-shadow: none;
+  --tw-ring-shadow: 0 0 #0000;
+}
+
+html[data-lr-app]
+  aside
+  :is(.group.relative.flex.items-center, [data-lr-nav]):not(.shadow-edge, [aria-current]):hover {
+  background-color: var(--lr-surface-2);
+}
+
+html[data-lr-app][data-lr-brand] aside :is(.group.relative.flex.items-center, [data-lr-nav]) {
+  min-height: 36px;
+  border-radius: var(--lr-radius-md);
+  padding-inline: 10px;
+  font-size: 14px;
+}
+
+html[data-lr-app][data-lr-brand] aside > div:first-child > img:first-child {
+  width: 30px;
+  height: 30px;
+}
+
+html[data-lr-app][data-lr-brand] aside > div:first-child > h1 {
+  font-size: 16px;
+}
+
+html[data-lr-app].lime[data-lr-brand] aside.bg-sidebar {
+  background-color: color-mix(in srgb, var(--lr-surface) 82%, transparent);
+  border-inline-end: 1px solid var(--lr-border);
+}
+
+/* Lime shows its gradient behind the page instead of the official content panel. */
+html[data-lr-app].lime[data-lr-brand] body,
+html[data-lr-app].lime[data-lr-brand] .h-dvh.bg-sidebar > .flex-1 > .bg-background {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+html[data-lr-app].lime[data-lr-brand] .lr-on-lime {
+  color: var(--lr-text-2);
+}
+
+/* Theme changes cross-fade once, as a whole page. */
+html[data-lr-app]::view-transition-old(root),
+html[data-lr-app]::view-transition-new(root) {
+  animation-duration: var(--lr-dur-base);
+  animation-timing-function: var(--lr-ease-out);
+}
+
+/* The reduce-motion setting: the app's own chrome stops moving. Slides keep theirs. */
+html[data-lr-reduce-motion] *:not([data-osd-canvas], [data-osd-canvas] *),
+html[data-lr-reduce-motion] *:not([data-osd-canvas], [data-osd-canvas] *)::before,
+html[data-lr-reduce-motion] *:not([data-osd-canvas], [data-osd-canvas] *)::after {
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat every inline and utility animation in the chrome. */
+  animation-duration: 1ms !important;
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat every inline and utility animation in the chrome. */
+  animation-iteration-count: 1 !important;
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat every inline and utility transition in the chrome. */
+  transition-duration: 1ms !important;
+}
+
+html[data-lr-reduce-motion]::view-transition-old(root),
+html[data-lr-reduce-motion]::view-transition-new(root) {
+  animation: none;
+}
+
+/* Lemon. Only the mascot uses the spring curve. */
+@keyframes lr-mascot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes lr-mascot-bounce {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.08, 0.92);
+  }
+  65% {
+    transform: scale(0.96, 1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.lr-mascot {
+  transform-origin: 50% 90%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lr-mascot[data-float] {
+  animation: lr-mascot-float 2.4s ease-in-out infinite;
+}
+
+.lr-mascot[data-bounce] {
+  animation: lr-mascot-bounce 520ms var(--lr-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lr-mascot[data-float],
+  .lr-mascot[data-bounce] {
+    animation: none;
+  }
+}
+
+html[data-lr-reduce-motion] .lr-mascot {
+  animation: none;
+}
+
+@keyframes lr-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.lr-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--lr-surface-sunken) 0,
+    var(--lr-surface-2) 50%,
+    var(--lr-surface-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: lr-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lr-skeleton {
+    animation: none;
+  }
+}
+
+@keyframes lr-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lr-rise {
+  animation: lr-rise var(--lr-dur-base) var(--lr-ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lr-rise {
+    animation: none;
+  }
+}
+
+/* Toasts: dark bar, lemon on the left, undo as a bold underlined link. */
+html[data-lr-app] [data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
+  border: 0;
+  border-radius: var(--lr-radius-lg);
+  background: var(--lr-toast-bg);
+  color: var(--lr-toast-text);
+  box-shadow: var(--lr-shadow-2);
+  padding: 8px 14px 8px 8px;
+  gap: 10px;
+  font-family: var(--lr-font-sans);
+  font-size: 14px;
+}
+
+html[data-lr-app] [data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-icon] {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+}
+
+html[data-lr-app] [data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-title] {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+html[data-lr-app] [data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-description] {
+  color: color-mix(in srgb, var(--lr-toast-text) 78%, transparent);
+  font-size: 13px;
+}
+
+html[data-lr-app] [data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-button] {
+  height: auto;
+  padding: 0;
+  margin-left: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html[data-lr-app] [data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+  background: var(--lr-toast-bg);
+  color: var(--lr-toast-text);
+  border-color: color-mix(in srgb, var(--lr-toast-text) 25%, transparent);
+}
+
+/* Export progress uses its own card inside the toast. */
+html[data-lr-app] [data-sonner-toast] .shadow-floating.bg-popover {
+  border-radius: var(--lr-radius-lg);
+  border-color: transparent;
+  background: var(--lr-toast-bg);
+  color: var(--lr-toast-text);
+  box-shadow: var(--lr-shadow-2);
+}
+
+html[data-lr-app] [data-sonner-toast] .shadow-floating.bg-popover .text-muted-foreground {
+  color: color-mix(in srgb, var(--lr-toast-text) 70%, transparent);
+}
+
+html[data-lr-app] [data-sonner-toast] .shadow-floating.bg-popover [data-slot="progress"] {
+  background: color-mix(in srgb, var(--lr-toast-text) 18%, transparent);
+}
+
+/* The agent's question: the design package's confirmation card. */
+html[data-lr-app] [data-lr-confirm] {
+  border: 1.5px solid var(--lr-accent);
+  border-radius: var(--lr-radius-lg);
+  background: var(--lr-surface);
+  box-shadow: var(--lr-shadow-2);
+  padding: 12px 8px 10px;
+}
+
+html[data-lr-app] [data-lr-confirm] button[aria-pressed] {
+  border-radius: var(--lr-radius-sm);
+}
+
+html[data-lr-app] [data-lr-confirm] button[aria-pressed="true"] {
+  background: var(--lr-accent-soft);
+}

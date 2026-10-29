@@ -1,11 +1,13 @@
 import { Workflow } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { hasModifier, isShortcutControlTarget, isTypingTarget } from '@/lib/keys';
 import { cn } from '@/lib/utils';
+import { useSlot } from './chrome/use-slot';
 import { isFeatureEnabled } from './features';
+import { useNewDeckBrief } from './home/brief';
 import { useLrText } from './text';
 
 type Props = {
@@ -13,28 +15,11 @@ type Props = {
   overviewOpen: boolean;
 };
 
-function useRailActionsSlot(enabled: boolean): HTMLElement | null {
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const find = () => document.querySelector<HTMLElement>('[data-lr-rail-actions]');
-    setSlot(find());
-    const observer = new MutationObserver(() => {
-      const next = find();
-      setSlot((prev) => (prev === next ? prev : next));
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [enabled]);
-
-  return slot;
-}
-
 export function SlideExtensions({ slideId, overviewOpen }: Props) {
   const enabled = isFeatureEnabled('board');
   const navigate = useNavigate();
-  const slot = useRailActionsSlot(enabled);
+  const slot = useSlot('data-lr-rail-actions', enabled);
+  useNewDeckBrief(slideId);
   const lr = useLrText();
 
   useEffect(() => {

@@ -495,9 +495,9 @@ export const zhCN: Locale = {
   themeToggle: {
     toggleAria: '切换主题',
     title: '主题',
-    light: '浅色',
-    dark: '深色',
-    system: '系统',
+    light: '清爽白',
+    dark: '夜间果园',
+    system: '跟随系统',
   },
 
   languageToggle: {

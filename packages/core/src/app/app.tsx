@@ -1,8 +1,8 @@
 import config from 'virtual:open-slide/config';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
-import { lemonRiverRoutes } from './lemonriver/routes';
+import { AppChrome } from './lemonriver/chrome/app-chrome';
+import { lemonRiverRoutes, lemonRiverShellRoutes } from './lemonriver/routes';
 import { useLocale } from './lib/use-locale';
 import { AssetsPage } from './routes/assets';
 import { Home } from './routes/home';
@@ -21,6 +21,7 @@ export function App() {
         <Routes>
           {config.build.showSlideBrowser && (
             <Route element={<HomeShell />}>
+              {lemonRiverShellRoutes()}
               <Route path="/" element={<Home />} />
               <Route path="/themes" element={<ThemesGalleryPage />} />
               <Route path="/themes/:themeId" element={<ThemeDetailPage />} />
@@ -34,7 +35,7 @@ export function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
-      <Toaster />
+      <AppChrome />
     </BrowserRouter>
   );
 }

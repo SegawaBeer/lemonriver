@@ -1,6 +1,5 @@
 import { ArrowDownToLine, Loader2, Upload } from 'lucide-react';
 import { useCallback, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +10,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type AssetEntry, GLOBAL_ASSET_SCOPE, uploadWithAutoRename, useAssets } from '@/lib/assets';
 import { dragHasFiles } from '@/lib/dom';
-import { format, useLocale } from '@/lib/use-locale';
+import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import { EmptyLemon } from '../../lemonriver/agent/lemon';
+import { toastUploadFailed } from '../../lemonriver/feedback/upload';
 
 export type PickerScope = 'slide' | 'global';
 
@@ -44,7 +45,7 @@ export function AssetPickerDialog({
       try {
         const { ok, status, entry } = await uploadWithAutoRename(effectiveSlideId, file);
         if (!ok || !entry) {
-          toast.error(format(t.asset.toastUploadFailed, { status }));
+          toastUploadFailed(t, status);
           return;
         }
         await refresh().catch(() => {});
@@ -132,9 +133,10 @@ export function AssetPickerDialog({
               {t.inspector.pickerLoading}
             </p>
           ) : images.length === 0 ? (
-            <p className="px-1 py-6 text-center text-xs text-muted-foreground">
+            <div className="flex flex-col items-center gap-2 px-1 py-6 text-center text-xs text-muted-foreground">
+              <EmptyLemon />
               {t.inspector.pickerEmpty}
-            </p>
+            </div>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
               {images.map((asset) => (

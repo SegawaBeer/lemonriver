@@ -8,7 +8,6 @@ import {
   Crop,
   ImageIcon,
   Italic,
-  MousePointer2,
   Move,
   MoveHorizontal,
   Paintbrush,
@@ -48,6 +47,7 @@ import { useAgentSocketConnected } from '@/lib/use-agent-socket';
 import { format, useLocale } from '@/lib/use-locale';
 import { round2 } from '@/lib/utils';
 import type { Locale } from '../../../locale/types';
+import { EmptyLemon } from '../../lemonriver/agent/lemon';
 import { ArrangePanel } from './arrange-panel';
 import { AssetPickerDialog } from './asset-picker-dialog';
 import { type SelectedTarget, useInspector } from './inspector-provider';
@@ -428,7 +428,7 @@ export function InspectorPanel({
           </>
         ) : (
           <div className="flex flex-col items-center gap-3 px-7 py-16 text-center">
-            <MousePointer2 aria-hidden className="size-8 text-muted-foreground/50" />
+            <EmptyLemon />
             <div className="flex flex-col gap-1.5">
               <h2 className="text-[13px] font-medium">{t.inspector.emptySelectionTitle}</h2>
               <p className="text-[12px] leading-relaxed text-muted-foreground">

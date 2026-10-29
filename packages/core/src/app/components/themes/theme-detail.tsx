@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
+import { EmptyLemon } from '../../lemonriver/agent/lemon';
 import { SlidePageProvider } from '../../lib/page-context';
 import type { SlideModule } from '../../lib/sdk';
 import { loadSlide, slidesByTheme } from '../../lib/slides';
@@ -187,9 +188,10 @@ export function ThemeDetail({ themeId, onBack }: { themeId: string; onBack: () =
             ) : null}
           </div>
           {usedBySlideIds.length === 0 ? (
-            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+            <div className="flex flex-col items-start gap-2 text-[12.5px] leading-relaxed text-muted-foreground">
+              <EmptyLemon />
               {t.themes.usedByEmpty}
-            </p>
+            </div>
           ) : (
             <ul className="flex flex-col gap-5">
               {usedBySlideIds.map((id) => (

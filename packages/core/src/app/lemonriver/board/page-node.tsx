@@ -53,9 +53,9 @@ const hiddenHandle = { opacity: 0, width: 1, height: 1, minWidth: 1, minHeight: 
 
 const STATUS_STYLE: Record<CardStatus, { dot: string; ring: string }> = {
   todo: { dot: 'bg-muted-foreground/50', ring: 'ring-muted-foreground/35' },
-  doing: { dot: 'bg-blue-500', ring: 'ring-blue-500/70' },
-  review: { dot: 'bg-amber-500', ring: 'ring-amber-500/75' },
-  done: { dot: 'bg-emerald-500', ring: 'ring-emerald-500/70' },
+  doing: { dot: 'bg-[var(--lr-accent)]', ring: 'ring-[var(--lr-accent)]' },
+  review: { dot: 'bg-[var(--lr-warning)]', ring: 'ring-[var(--lr-warning)]/75' },
+  done: { dot: 'bg-[var(--lr-success)]', ring: 'ring-[var(--lr-success)]/70' },
 };
 
 export function useStatusLabels(): Record<CardStatus, string> {

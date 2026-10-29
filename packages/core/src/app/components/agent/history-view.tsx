@@ -1,9 +1,10 @@
-import { Check, MessageSquare, Trash2 } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { useSlideTitles } from '@/lib/use-slide-titles';
 import { cn } from '@/lib/utils';
 import type { AgentSessionSummary } from '../../../agent/types';
+import { EmptyLemon } from '../../lemonriver/agent/lemon';
 import { ProviderLogo } from './provider-logo';
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -60,7 +61,7 @@ export function HistoryView({
   if (sessions.length === 0) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <MessageSquare className="size-5 text-muted-foreground/60" strokeWidth={1.5} aria-hidden />
+        <EmptyLemon />
         <p className="text-[12.5px] font-medium">{t.agent.noSessions}</p>
         <p className="text-[11.5px] leading-relaxed text-muted-foreground">
           {t.agent.historyEmptyHint}

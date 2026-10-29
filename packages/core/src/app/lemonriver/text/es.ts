@@ -34,4 +34,75 @@ export const es: LrText = {
     hideLinks: 'Ocultar enlaces',
     removeLink: 'Quitar este enlace',
   },
+  theme: {
+    lime: 'Lima',
+  },
+  shell: {
+    newDeck: 'Nueva presentación',
+    newDeckCard: 'Presentación en blanco',
+    settings: 'Ajustes',
+    trash: 'Papelera',
+    offline:
+      'El servidor local se detuvo. Vuelve a ejecutar el comando de inicio y esta página se reconectará sola.',
+  },
+  home: {
+    greetingMorning: 'Buenos días',
+    greetingAfternoon: 'Buenas tardes',
+    greetingEvening: 'Buenas noches',
+    subtitle: '¿De qué quieres hablar? Basta una frase para empezar.',
+    briefLabel: 'Describe una nueva presentación',
+    briefPlaceholder: 'p. ej. Explica a los nuevos el proceso de gastos, 8 páginas',
+    briefStart: 'Empezar',
+    briefNeedsAgent:
+      'Aún no hay un agente conectado. Empieza igualmente: el editor te ayudará a conectar uno y después escribirá a partir de esta frase.',
+    pages: { one: '{n} página', other: '{n} páginas' },
+    editing: 'En edición',
+    moveToTrash: 'Mover a la papelera',
+    toastTrashed: '“{name}” se movió a la papelera',
+    toastTrashFailed: 'No se pudo mover a la papelera',
+    toastRestored: '“{name}” restaurada',
+    toastRestoreFailed: 'No se pudo restaurar',
+    undo: 'Deshacer',
+    renameHint: 'El nuevo nombre aparece en la tarjeta y en los archivos exportados.',
+    nameRequired: 'El nombre no puede estar vacío.',
+    noMatchesHint: 'Prueba otra palabra o borra la búsqueda para ver todas.',
+  },
+  trash: {
+    title: 'Papelera',
+    subtitle:
+      'Las presentaciones eliminadas se guardan 30 días y puedes restaurarlas cuando quieras.',
+    emptyTitle: 'La papelera está vacía',
+    emptyHint:
+      'Las presentaciones eliminadas se guardan 30 días y puedes restaurarlas cuando quieras.',
+    deletedWhen: 'Eliminada {when}',
+    daysLeft: { one: 'Queda {n} día', other: 'Quedan {n} días' },
+    restore: 'Restaurar',
+    deleteForever: 'Eliminar definitivamente',
+    confirmTitle: '¿Eliminar definitivamente?',
+    confirmHint: 'Escribe {name} para eliminarla definitivamente. No se puede deshacer.',
+    confirmLabel: 'Nombre de la presentación',
+    toastPurged: '“{name}” eliminada definitivamente',
+    toastPurgeFailed: 'No se pudo eliminar',
+    loadFailed: 'No se pudo leer la papelera',
+  },
+  settings: {
+    title: 'Ajustes',
+    subtitle: 'Los cambios se guardan solos.',
+    appearance: 'Apariencia',
+    appearanceHint:
+      'El tema oscuro va bien de noche y para revisar antes de proyectar. Lima colorea inicio, temas, recursos, ajustes y papelera; el editor y la presentación siguen en claro.',
+    reduceMotion: 'Reducir movimiento',
+    reduceMotionHint:
+      'Lemon deja de flotar y rebotar y la interfaz omite sus animaciones. También se activa si tu sistema pide menos movimiento.',
+  },
+  feedback: {
+    notFoundHint:
+      'Puede que el enlace esté desactualizado o que la presentación se haya eliminado.',
+    backHome: 'Volver a las presentaciones',
+    exportFailedHint:
+      'No se guardó nada. Inténtalo de nuevo; si sigue fallando, la consola del navegador indica qué página falló.',
+    uploadTooLarge: 'El archivo supera {limit} MB',
+    uploadTooLargeHint: 'Comprime la imagen o elige un archivo más pequeño y súbelo de nuevo.',
+    confirmWho: 'Lemon necesita tu decisión',
+  },
 };

@@ -1,4 +1,4 @@
-import { Check, ChevronRight, CircleAlert, Copy, Pencil } from 'lucide-react';
+import { Check, ChevronRight, Copy, Pencil } from 'lucide-react';
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAutoGrow } from '@/lib/use-auto-grow';
@@ -6,6 +6,7 @@ import { format, plural, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import { stripDeckSlug } from '../../../agent/prompt';
 import type { AgentItem, AgentQuestion, AgentSession, RespondPayload } from '../../../agent/types';
+import { ConfirmWho, ErrorLemon, ResultLemon, WorkingLemon } from '../../lemonriver/agent/lemon';
 import { AgentMarkdown } from './agent-markdown';
 
 export function Transcript({
@@ -72,6 +73,7 @@ function WorkingIndicator() {
   const t = useLocale();
   return (
     <div className="text-[11.5px]">
+      <WorkingLemon />
       <span className="agent-shimmer">{t.agent.working}…</span>
     </div>
   );
@@ -407,7 +409,7 @@ function ErrorItem({ text }: { text: string }) {
   return (
     <div className="rounded-[6px] border border-destructive/30 bg-destructive/5 px-3 py-2">
       <span className="eyebrow flex items-center gap-1 text-destructive/80">
-        <CircleAlert className="size-3" aria-hidden />
+        <ErrorLemon />
         {t.agent.errorEyebrow}
       </span>
       <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/85">
@@ -426,7 +428,12 @@ function ResultItem({ item }: { item: Extract<AgentItem, { kind: 'result' }> }) 
     );
   }
   if (item.costUsd !== null && item.costUsd > 0) parts.push(`$${item.costUsd.toFixed(2)}`);
-  return <p className="folio text-muted-foreground/70">{parts.join(' · ')}</p>;
+  return (
+    <p className="folio text-muted-foreground/70">
+      <ResultLemon aborted={item.aborted} />
+      {parts.join(' · ')}
+    </p>
+  );
 }
 
 function PermissionItem({
@@ -540,7 +547,11 @@ function QuestionItem({
   }
 
   return (
-    <div className="rounded-[8px] border border-hairline bg-background px-1.5 pt-2.5 pb-2">
+    <div
+      data-lr-confirm
+      className="rounded-[8px] border border-hairline bg-background px-1.5 pt-2.5 pb-2"
+    >
+      <ConfirmWho />
       <div className="flex flex-col gap-3">
         {item.questions.map((q) => (
           <fieldset key={q.question} className="min-w-0">

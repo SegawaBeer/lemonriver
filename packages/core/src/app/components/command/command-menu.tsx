@@ -1,5 +1,4 @@
 import { Check, Languages, Loader2, Monitor, Moon, RotateCw, Search, Sun } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { IconTooltip } from '@/components/icon-tooltip';
 import { buttonVariants } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { IS_APPLE } from '@/lib/keys';
 import { LOCALE_OPTIONS, setLocale } from '@/lib/locale-store';
 import { format, useLocale } from '@/lib/use-locale';
 import { useRestartServer } from '@/lib/use-restart-server';
+import { lemonRiverAppearanceCommands, useTheme } from '../../lemonriver/theme/use-theme';
 import {
   Command,
   CommandDialog,
@@ -193,6 +193,7 @@ function useSharedCommandGroups(): CommandGroupSpec[] {
         active: theme === 'system',
         run: () => setTheme('system'),
       },
+      ...lemonRiverAppearanceCommands(t, theme, setTheme),
       ...LOCALE_OPTIONS.map((option) => ({
         id: `locale-${option.id}`,
         label: format(t.commandMenu.languageItem, { name: option.label }),

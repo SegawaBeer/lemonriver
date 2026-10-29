@@ -1,0 +1,463 @@
+/* Controls from lemonriver-design v1, mapped onto the official shadcn parts by their
+   data-slot. Unlayered on purpose: these rules must beat the per-instance Tailwind
+   utilities, which all live in a layer. Nothing here reaches the slide canvas. */
+
+html[data-lr-app] [data-slot="button"]:not(.rounded-full) {
+  border-radius: var(--lr-radius-sm);
+}
+
+html[data-lr-app] [data-slot="button"] {
+  transition-property: background-color, color, border-color, box-shadow, scale, filter;
+  transition-duration: var(--lr-dur-fast);
+  transition-timing-function: var(--lr-ease-out);
+}
+
+html[data-lr-app] [data-slot="button"]:active:not([aria-haspopup]):not(:disabled) {
+  translate: none;
+  scale: 0.97;
+}
+
+html[data-lr-app] [data-slot="button"].rounded-r-none,
+html[data-lr-app] [data-slot="dropdown-menu-trigger"].rounded-r-none {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+html[data-lr-app] [data-slot="button"].rounded-l-none,
+html[data-lr-app] [data-slot="dropdown-menu-trigger"].rounded-l-none {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="button"][data-variant="default"],
+    [data-slot="button"][data-variant="brand"],
+    [data-slot="dropdown-menu-trigger"].bg-brand
+  ) {
+  background-color: var(--lr-primary);
+  color: var(--lr-on-primary);
+  box-shadow: none;
+  filter: none;
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="button"][data-variant="default"],
+    [data-slot="button"][data-variant="brand"],
+    [data-slot="dropdown-menu-trigger"].bg-brand
+  ):is(:hover, [aria-expanded="true"]) {
+  background-color: var(--lr-primary-hover);
+}
+
+html[data-lr-app] [data-slot="dropdown-menu-trigger"].bg-brand {
+  border-inline-start: 1px solid color-mix(in srgb, var(--lr-on-primary) 18%, transparent);
+}
+
+html[data-lr-app] [data-slot="button"][data-variant="outline"],
+html[data-lr-app]
+  :is([data-inspector-ui], [data-design-ui])
+  [data-slot="button"][data-variant="brand"] {
+  background-color: var(--lr-secondary);
+  color: var(--lr-on-secondary);
+  border: 1px solid var(--lr-border);
+  box-shadow: none;
+  filter: none;
+}
+
+/* Save is a secondary action; Present is the one primary button in the editor. */
+html[data-lr-app]
+  :is([data-inspector-ui], [data-design-ui])
+  [data-slot="button"][data-variant="brand"] {
+  border-color: var(--lr-secondary-border);
+}
+
+html[data-lr-app] [data-slot="button"][data-variant="outline"]:hover,
+html[data-lr-app]
+  :is([data-inspector-ui], [data-design-ui])
+  [data-slot="button"][data-variant="brand"]:hover {
+  background-color: var(--lr-surface-2);
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="button"][data-variant="outline"] {
+  border: 1.5px solid var(--lr-secondary-border);
+}
+
+html[data-lr-app] [data-slot="button"][data-variant="destructive"] {
+  background-color: var(--lr-danger);
+  color: var(--lr-on-danger);
+  box-shadow: none;
+  filter: none;
+}
+
+html[data-lr-app] [data-slot="button"][data-variant="destructive"]:hover {
+  background-color: color-mix(in srgb, var(--lr-danger) 88%, var(--lr-text));
+}
+
+html[data-lr-app] [data-slot="button"][data-variant="ghost"]:hover {
+  background-color: var(--lr-surface-2);
+}
+
+/* Buttons that stay pressed: the agent dock, the design panel, the format tabs,
+   the presenter's black and white screens. */
+html[data-lr-app]
+:is(
+  [data-slot="button"][aria-pressed="true"],
+  [data-slot="button"][data-pressed],
+  [data-slot="button"][data-design-ui][data-variant="default"]
+) {
+  background-color: var(--lr-accent-soft);
+  color: var(--lr-text);
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--lr-accent);
+}
+
+html[data-lr-app]
+  [data-slot="button"]:disabled:is(
+    [data-variant="default"],
+    [data-variant="brand"],
+    [data-variant="destructive"],
+    [data-variant="outline"]
+  ) {
+  background-color: var(--lr-surface-sunken);
+  color: var(--lr-text-3);
+  border-color: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* The pages outside the editor use the design package's sizes. */
+html[data-lr-app][data-lr-brand]
+[data-slot="button"]:is([data-size="default"], [data-size="lg"]):not(.rounded-full) {
+  border-radius: var(--lr-radius-md);
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="button"]:is([data-size="default"], [data-size="lg"]) {
+  height: 44px;
+  padding-inline: 20px;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="button"][data-size="lg"] {
+  height: 52px;
+  padding-inline: 28px;
+  font-size: 18px;
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="button"][data-size="sm"] {
+  height: 34px;
+  padding-inline: 14px;
+  gap: 6px;
+  border-radius: var(--lr-radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+html[data-lr-app] :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
+  border-color: var(--lr-border);
+  background-color: var(--lr-surface);
+  border-radius: var(--lr-radius-sm);
+  transition: border-color var(--lr-dur-fast) var(--lr-ease-out);
+}
+
+html[data-lr-app]
+  :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):focus-visible {
+  border-color: var(--lr-focus);
+  box-shadow: none;
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"]
+  )[aria-invalid="true"] {
+  border-color: var(--lr-danger);
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="dropdown-menu-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="select-content"],
+    [data-slot="popover-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-sub-content"]
+  ) {
+  border-radius: var(--lr-radius-md);
+  border-color: var(--lr-border);
+  background-color: var(--popover);
+  box-shadow: var(--lr-shadow-2);
+}
+
+html[data-lr-app] :is([data-slot="dropdown-menu-item"], [data-slot="context-menu-item"]) svg {
+  color: var(--lr-text-2);
+  opacity: 1;
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="context-menu-item"],
+    [data-slot="dropdown-menu-checkbox-item"],
+    [data-slot="dropdown-menu-radio-item"],
+    [data-slot="dropdown-menu-sub-trigger"],
+    [data-slot="context-menu-sub-trigger"],
+    [data-slot="select-item"],
+    [data-slot="command-item"]
+  ) {
+  border-radius: var(--lr-radius-sm);
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="context-menu-item"],
+    [data-slot="dropdown-menu-checkbox-item"],
+    [data-slot="dropdown-menu-radio-item"],
+    [data-slot="dropdown-menu-sub-trigger"],
+    [data-slot="context-menu-sub-trigger"]
+  ):focus,
+html[data-lr-app] [data-slot="select-item"][data-highlighted] {
+  background-color: var(--lr-surface-2);
+  color: var(--lr-text);
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="context-menu-item"]
+  )[data-variant="destructive"] {
+  color: var(--lr-danger);
+}
+
+html[data-lr-app]
+  :is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="context-menu-item"]
+  )[data-variant="destructive"]:is(:focus, :hover) {
+  background-color: color-mix(in srgb, var(--lr-danger) 10%, var(--lr-surface));
+  color: var(--lr-danger);
+}
+
+html[data-lr-app]
+  :is([data-slot="dropdown-menu-item"], [data-slot="context-menu-item"])[data-variant="destructive"]
+  svg {
+  color: var(--lr-danger);
+}
+
+/* The design package keeps a destructive item in a group of its own. */
+html[data-lr-app]
+  :is([data-slot="dropdown-menu-item"], [data-slot="context-menu-item"]):not(
+    [data-variant="destructive"]
+  )
+  + :is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="context-menu-item"]
+  )[data-variant="destructive"] {
+  margin-top: 9px;
+  overflow: visible;
+}
+
+html[data-lr-app]
+  :is([data-slot="dropdown-menu-item"], [data-slot="context-menu-item"]):not(
+    [data-variant="destructive"]
+  )
+  + :is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="context-menu-item"]
+  )[data-variant="destructive"]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -5px;
+  height: 1px;
+  background: var(--lr-border);
+  pointer-events: none;
+}
+
+html[data-lr-app] :is([data-slot="dropdown-menu-separator"], [data-slot="context-menu-separator"]) {
+  background-color: var(--lr-border);
+}
+
+html[data-lr-app][data-lr-brand]
+  :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-sub-trigger"]) {
+  min-height: 36px;
+  padding-inline: 10px;
+  gap: 10px;
+  font-size: 14px;
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="dropdown-menu-item"] svg:not([class*="size-"]) {
+  width: 16px;
+  height: 16px;
+}
+
+html[data-lr-app] [data-slot="dialog-overlay"] {
+  background-color: var(--lr-overlay);
+}
+
+html[data-lr-app] [data-slot="dialog-content"] {
+  border-radius: var(--lr-radius-xl);
+  border-color: transparent;
+  background-color: var(--lr-surface);
+  box-shadow: var(--lr-shadow-2);
+  padding: 24px;
+  transition-duration: var(--lr-dur-slow);
+  transition-timing-function: var(--lr-ease-out);
+}
+
+html[data-lr-app] [data-slot="dialog-content"].p-0 {
+  padding: 0;
+}
+
+html[data-lr-app] [data-slot="dialog-close"] {
+  border-radius: var(--lr-radius-sm);
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="dialog-content"]:not([class*="max-w-"]) {
+  max-width: min(520px, calc(100% - 2rem));
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="dialog-title"] {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  padding-right: 32px;
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="dialog-description"] {
+  font-size: 14px;
+  color: var(--lr-text-2);
+}
+
+html[data-lr-app][data-lr-brand] [data-slot="dialog-footer"] {
+  margin-top: 8px;
+  gap: 8px;
+}
+
+html[data-lr-app] [data-slot="tabs-list"] {
+  border-radius: var(--lr-radius-sm);
+}
+
+html[data-lr-app] [data-slot="tabs-trigger"] {
+  border-radius: 6px;
+}
+
+html[data-lr-app] [data-slot="tabs-trigger"]::after {
+  background-color: var(--lr-focus);
+}
+
+html[data-lr-app] [data-slot="tooltip-content"] {
+  border-radius: var(--lr-radius-sm);
+  background-color: var(--lr-toast-bg);
+  color: var(--lr-toast-text);
+}
+
+html[data-lr-app] [data-slot="progress-indicator"],
+html[data-lr-app] [data-slot="slider-range"] {
+  background-color: var(--lr-accent);
+}
+
+html[data-lr-app] [data-slot="slider-thumb"] {
+  border-color: var(--lr-focus);
+}
+
+html[data-lr-app] [data-slot="toggle"][data-pressed],
+html[data-lr-app] [data-slot="toggle-group-item"][data-pressed]:not([data-inspector-mode]) {
+  background-color: var(--lr-accent-soft);
+  color: var(--lr-text);
+  border-color: var(--lr-accent);
+}
+
+/* Switches: the agent panel's auto-approve row, and ours. */
+html[data-lr-app] [role="switch"] > span[aria-hidden]:only-of-type,
+html[data-lr-app] .lr-switch {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 22px;
+  border-radius: 999px;
+  background-color: var(--lr-border);
+  transition: background-color var(--lr-dur-base) var(--lr-ease-out);
+}
+
+html[data-lr-app] [role="switch"][aria-checked="true"] > span[aria-hidden]:only-of-type,
+html[data-lr-app] .lr-switch[aria-checked="true"] {
+  background-color: var(--lr-accent);
+}
+
+html[data-lr-app] [role="switch"] > span[aria-hidden]:only-of-type > span {
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: translate var(--lr-dur-base) var(--lr-ease-out);
+}
+
+html[data-lr-app] [role="switch"][aria-checked="true"] > span[aria-hidden]:only-of-type > span {
+  translate: 14px 0;
+  transform: none;
+}
+
+html[data-lr-app] .lr-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: translate var(--lr-dur-base) var(--lr-ease-out);
+}
+
+html[data-lr-app] .lr-switch {
+  width: 44px;
+  height: 26px;
+}
+
+html[data-lr-app] .lr-switch[aria-checked="true"]::after {
+  translate: 18px 0;
+}
+
+html[data-lr-app] :focus-visible {
+  outline-color: var(--lr-focus);
+}
+
+html[data-lr-app][data-lr-brand]
+  [data-slot="button"]:is([data-size="default"], [data-size="lg"])
+  svg {
+  width: 18px;
+  height: 18px;
+}
+
+html[data-lr-app] .lr-input {
+  height: 46px;
+  width: 100%;
+  border: 1.5px solid var(--lr-border);
+  border-radius: var(--lr-radius-md);
+  background: var(--lr-surface);
+  padding-inline: 16px;
+  font-size: 16px;
+  color: var(--lr-text);
+  outline: none;
+  transition: border-color var(--lr-dur-fast) var(--lr-ease-out);
+}
+
+html[data-lr-app] .lr-input:focus {
+  border-color: var(--lr-focus);
+}
+
+html[data-lr-app] .lr-input[aria-invalid="true"] {
+  border-color: var(--lr-danger);
+}
+
+html[data-lr-app] .lr-input::placeholder {
+  color: var(--lr-text-3);
+}

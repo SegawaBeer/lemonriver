@@ -75,6 +75,8 @@ import {
 import { dragHasFiles } from '@/lib/dom';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
+import { EmptyLemon } from '../lemonriver/agent/lemon';
+import { toastUploadFailed } from '../lemonriver/feedback/upload';
 
 type Props = { slideId: string | null };
 
@@ -239,18 +241,18 @@ export function AssetView({ slideId }: Props) {
       if (decision === 'cancel') return;
       if (decision === 'replace') {
         const res = await upload(file, { overwrite: true });
-        if (!res.ok) toast.error(format(t.asset.toastUploadFailed, { status: res.status }));
+        if (!res.ok) toastUploadFailed(t, res.status);
         else toast.success(format(t.asset.toastReplaced, { name: file.name }));
         return;
       }
       const next = renamedCopy(file, existingNames);
       const res = await upload(next, { overwrite: false });
-      if (!res.ok) toast.error(format(t.asset.toastUploadFailed, { status: res.status }));
+      if (!res.ok) toastUploadFailed(t, res.status);
       else toast.success(format(t.asset.toastUploadedAs, { name: next.name }));
       return;
     }
     const res = await upload(file);
-    if (!res.ok) toast.error(format(t.asset.toastUploadFailed, { status: res.status }));
+    if (!res.ok) toastUploadFailed(t, res.status);
     else toast.success(format(t.asset.toastUploaded, { name: file.name }));
   }
 
@@ -662,9 +664,7 @@ function EmptyState() {
   const t = useLocale();
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full border border-hairline bg-card text-muted-foreground">
-        <ImageIcon className="size-5" />
-      </div>
+      <EmptyLemon size={96} />
       <div>
         <p className="font-heading text-[14px] font-semibold tracking-tight">
           {t.asset.noAssetsYet}

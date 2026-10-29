@@ -47,6 +47,7 @@ import type {
   AgentTurnContext,
   RespondPayload,
 } from '../../../agent/types';
+import { PanelLemon } from '../../lemonriver/agent/lemon';
 import { Composer, ContextChip } from './composer';
 import { ConnectView } from './connect-view';
 import { HistoryView } from './history-view';
@@ -556,6 +557,7 @@ function NewDeckState({ providerName }: { providerName: string }) {
   const t = useLocale();
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-end overflow-y-auto px-4 py-5">
+      <PanelLemon />
       <h2 className="font-heading text-[15px] font-semibold tracking-tight">
         {t.agent.newDeckTitle}
       </h2>
@@ -584,6 +586,7 @@ function EmptyState({
   const t = useLocale();
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-end overflow-y-auto px-4 py-5">
+      <PanelLemon />
       <span className="eyebrow">{t.agent.title}</span>
       <h2 className="mt-1.5 font-heading text-[15px] font-semibold tracking-tight">
         {t.agent.emptyTitle}

@@ -34,4 +34,73 @@ export const ja: LrText = {
     hideLinks: '関連線を隠す',
     removeLink: 'この関連を削除',
   },
+  theme: {
+    lime: 'ライム',
+  },
+  shell: {
+    newDeck: '新しいデッキ',
+    newDeckCard: '白紙のデッキ',
+    settings: '設定',
+    trash: 'ゴミ箱',
+    offline:
+      'ローカルサーバーが止まりました。起動コマンドをもう一度実行すると、このページは自動で再接続します。',
+  },
+  home: {
+    greetingMorning: 'おはようございます',
+    greetingAfternoon: 'こんにちは',
+    greetingEvening: 'こんばんは',
+    subtitle: '何について話しますか？ ひと言で始められます。',
+    briefLabel: '新しいデッキの内容',
+    briefPlaceholder: '例：新入社員に経費精算の流れを説明、8 ページ',
+    briefStart: '始める',
+    briefNeedsAgent:
+      'エージェントがまだ接続されていません。このまま始めると、エディターで接続してからこの一文をもとに書き始めます。',
+    pages: { one: '{n} ページ', other: '{n} ページ' },
+    editing: '編集中',
+    moveToTrash: 'ゴミ箱に移動',
+    toastTrashed: '「{name}」をゴミ箱に移動しました',
+    toastTrashFailed: 'ゴミ箱に移動できませんでした',
+    toastRestored: '「{name}」を元に戻しました',
+    toastRestoreFailed: '元に戻せませんでした',
+    undo: '元に戻す',
+    renameHint: '新しい名前はカードと書き出したファイルに表示されます。',
+    nameRequired: '名前を入力してください。',
+    noMatchesHint: '別の言葉で試すか、検索をクリアしてすべて表示してください。',
+  },
+  trash: {
+    title: 'ゴミ箱',
+    subtitle: '削除したデッキは 30 日間ここに残り、いつでも元に戻せます。',
+    emptyTitle: 'ゴミ箱は空です',
+    emptyHint: '削除したデッキは 30 日間ここに残り、いつでも元に戻せます。',
+    deletedWhen: '{when}に削除',
+    daysLeft: { one: '残り {n} 日', other: '残り {n} 日' },
+    restore: '元に戻す',
+    deleteForever: '完全に削除',
+    confirmTitle: '完全に削除しますか？',
+    confirmHint: '完全に削除するには {name} と入力してください。元に戻せません。',
+    confirmLabel: 'デッキ名',
+    toastPurged: '「{name}」を完全に削除しました',
+    toastPurgeFailed: '削除できませんでした',
+    loadFailed: 'ゴミ箱を読み込めませんでした',
+  },
+  settings: {
+    title: '設定',
+    subtitle: '変更は自動で保存されます。',
+    appearance: '外観',
+    appearanceHint:
+      'ダークは夜や投影前の確認に向いています。ライムはホーム・テーマ・アセット・設定・ゴミ箱に使われ、エディターと発表はライトのままです。',
+    reduceMotion: '視差効果を減らす',
+    reduceMotionHint:
+      'Lemon が浮いたり跳ねたりせず、画面のアニメーションも止まります。システムで視差効果を減らしている場合もオンになります。',
+  },
+  feedback: {
+    notFoundHint: 'リンクが古いか、デッキが削除された可能性があります。',
+    backHome: 'デッキ一覧に戻る',
+    exportFailedHint:
+      'ファイルは作成されていません。もう一度試してください。続く場合は、ブラウザのコンソールで失敗したページを確認できます。',
+    uploadTooLarge: 'ファイルが {limit} MB を超えています',
+    uploadTooLargeHint:
+      '画像を圧縮するか小さいファイルを選んで、もう一度アップロードしてください。',
+    confirmWho: 'Lemon が確認したいこと',
+  },
 };

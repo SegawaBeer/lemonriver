@@ -17,4 +17,13 @@ describe('isFeatureEnabled', () => {
   it('returns false when the tier is locked', () => {
     expect(isFeatureEnabled('board', { dev: true }, () => false)).toBe(false);
   });
+
+  it('keeps the trash to dev, where the server that holds it runs', () => {
+    expect(isFeatureEnabled('trash', { dev: true })).toBe(true);
+    expect(isFeatureEnabled('trash', { dev: false })).toBe(false);
+  });
+
+  it('offers settings in a built site too', () => {
+    expect(isFeatureEnabled('settings', { dev: false })).toBe(true);
+  });
 });

@@ -1,11 +1,11 @@
 import { Plus, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import logo from '@/assets/open-slide.svg';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Folder, FolderIcon } from '@/lib/sdk';
 import { format, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import logo from '../../lemonriver/brand/app-icon.svg';
 import { COMMAND_MENU_SHORTCUT } from '../command/command-menu';
 import { FolderIconChip, FolderItem } from './folder-item';
 import { IconPicker, PRESET_COLORS } from './icon-picker';
@@ -142,7 +142,7 @@ export function Sidebar({
         </h1>
       </div>
 
-      <div className="px-2 pb-3">
+      <div className="px-2 pb-3" data-lr-sidebar-top>
         <button
           type="button"
           onClick={onOpenCommandMenu}
@@ -187,6 +187,7 @@ export function Sidebar({
             onDropSlide={() => {}}
           />
         )}
+        <div data-lr-sidebar-nav className="contents" />
       </div>
 
       <div className="mt-5 flex h-6 items-center justify-between pr-2.5 pl-4 pb-0.5">

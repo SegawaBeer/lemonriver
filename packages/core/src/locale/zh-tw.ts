@@ -495,9 +495,9 @@ export const zhTW: Locale = {
   themeToggle: {
     toggleAria: '切換主題',
     title: '主題',
-    light: '淺色',
-    dark: '深色',
-    system: '系統',
+    light: '清爽白',
+    dark: '夜間果園',
+    system: '跟隨系統',
   },
 
   languageToggle: {

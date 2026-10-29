@@ -26,6 +26,7 @@ import { IS_APPLE, isTypingTarget } from '@/lib/keys';
 import { format, plural, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import { applyCommentsPrompt } from '../../../agent/prompt';
+import { HintLemon } from '../../lemonriver/agent/lemon';
 import { type SelectedTarget, useInspector } from './inspector-provider';
 
 type ScreenRect = { left: number; top: number; width: number; height: number };
@@ -497,7 +498,7 @@ export function CommentLayer() {
           {error ? (
             error
           ) : count === 0 ? (
-            t.inspector.commentEmptyHint
+            <HintLemon>{t.inspector.commentEmptyHint}</HintLemon>
           ) : agent.connected ? (
             <>
               <CommentCountLabel count={count} />

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LanguageToggle } from '@/components/language-toggle';
-import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +18,8 @@ import { CommandMenuTrigger } from '../components/command/command-menu';
 import { HomeCommandMenu } from '../components/command/home-command-menu';
 import { SystemViewIcon } from '../components/sidebar/folder-item';
 import { ALL_SLIDES_ID, ASSETS_ID, Sidebar, THEMES_ID } from '../components/sidebar/sidebar';
+import { lemonRiverViewFor } from '../lemonriver/theme/pages';
+import { ThemeToggle } from '../lemonriver/theme/theme-menu';
 import type { FoldersManifest } from '../lib/sdk';
 import { slideIds } from '../lib/slides';
 import { themes as themeRegistry } from '../lib/themes';
@@ -63,7 +64,8 @@ export function HomeShell() {
   const [searchParams] = useSearchParams();
   const t = useLocale();
 
-  const selectedId = pathToSelectedId(location.pathname, searchParams);
+  const selectedId =
+    lemonRiverViewFor(location.pathname) ?? pathToSelectedId(location.pathname, searchParams);
 
   useEffect(() => {
     rememberHomeLocation(location.pathname, location.search);

@@ -91,6 +91,7 @@ import { SlideCanvas } from '../components/slide-canvas';
 import { isDeckWarmed, markDeckWarmed, SlidePreloadLayer } from '../components/slide-preload-layer';
 import { SlideTransitionLayer } from '../components/slide-transition-layer';
 import { type ThumbnailActions, ThumbnailRail } from '../components/thumbnail-rail';
+import { exportFailedHint } from '../lemonriver/feedback/export';
 import { SlideExtensions } from '../lemonriver/slide-extensions';
 import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf, isSafari, type PdfExportProgress } from '../lib/export-pdf';
@@ -577,7 +578,11 @@ export function Slide() {
     } catch (err) {
       console.error(`[open-slide] ${opts.kind} export failed`, err);
       // Reuses the progress toast's id, so it must outlive this handler.
-      toast.error(opts.failedMessage, { id: toastId, duration: 4000 });
+      toast.error(opts.failedMessage, {
+        id: toastId,
+        duration: 6000,
+        description: exportFailedHint(t),
+      });
     } finally {
       setExporting(false);
     }
