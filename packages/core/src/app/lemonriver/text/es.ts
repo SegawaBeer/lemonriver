@@ -253,4 +253,8 @@ export const es: LrText = {
     buildingHere: 'Maquetando la página {k} de {n}',
     backToEditor: 'Volver al editor',
   },
+  agentModel: {
+    followClient: 'ajustes del cliente',
+    followClientHint: 'Usa el modelo y el esfuerzo configurados en {provider}.',
+  },
 };

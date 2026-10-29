@@ -49,6 +49,7 @@ import type {
 } from '../../../agent/types';
 import { PanelLemon } from '../../lemonriver/agent/lemon';
 import { BuildTeam } from '../../lemonriver/outline/build-team';
+import { useLrText } from '../../lemonriver/text';
 import { Composer, ContextChip } from './composer';
 import { ConnectView } from './connect-view';
 import { HistoryView } from './history-view';
@@ -357,8 +358,8 @@ export function AgentPanel({
   );
 }
 
-function modelLabel(model: AgentModelOption, t: ReturnType<typeof useLocale>): string {
-  return model.id ? model.label : t.agent.modelDefault;
+function modelLabel(model: AgentModelOption): string {
+  return model.label;
 }
 
 function ModelMenu({
@@ -379,6 +380,7 @@ function ModelMenu({
   onManage: () => void;
 }) {
   const t = useLocale();
+  const lr = useLrText();
   const [open, setOpen] = useState(false);
   const providers = status?.enabled ? status.providers : [];
   const [tab, setTab] = useState<AgentProviderId | null>(providerId);
@@ -405,7 +407,7 @@ function ModelMenu({
         ) : (
           <span aria-hidden className="size-1.5 rounded-full bg-muted-foreground/50" />
         )}
-        <span className="truncate">{model ? modelLabel(model, t) : t.agent.title}</span>
+        <span className="truncate">{model ? modelLabel(model) : t.agent.title}</span>
         {effort && (
           <span className="shrink-0 font-normal text-muted-foreground">
             {t.agent.efforts[effort]}
@@ -465,10 +467,15 @@ function ModelMenu({
                   key={m.id}
                   type="button"
                   aria-pressed={checked}
+                  title={
+                    m.id === ''
+                      ? format(lr.agentModel.followClientHint, { provider: shown.name })
+                      : undefined
+                  }
                   onClick={() =>
                     setModelChoice(shown.id, {
                       model: m.id,
-                      effort: modelChoices[shown.id]?.effort ?? null,
+                      effort: m.id ? (modelChoices[shown.id]?.effort ?? null) : null,
                     })
                   }
                   className={cn(
@@ -476,7 +483,12 @@ function ModelMenu({
                     checked && 'font-medium',
                   )}
                 >
-                  <span className="truncate">{modelLabel(m, t)}</span>
+                  <span className="truncate">{modelLabel(m)}</span>
+                  {m.id === '' && (
+                    <span className="ml-auto shrink-0 text-[11px] font-normal text-muted-foreground">
+                      {lr.agentModel.followClient}
+                    </span>
+                  )}
                   {checked && <Check className="size-3.5 shrink-0" aria-hidden />}
                 </button>
               );

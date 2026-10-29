@@ -252,4 +252,8 @@ export const en: LrText = {
     buildingHere: 'Building page {k} of {n}',
     backToEditor: 'Back to the editor',
   },
+  agentModel: {
+    followClient: 'client settings',
+    followClientHint: 'Uses the model and effort set in {provider}.',
+  },
 };

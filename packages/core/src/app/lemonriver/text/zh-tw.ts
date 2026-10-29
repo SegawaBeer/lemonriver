@@ -244,4 +244,8 @@ export const zhTW: LrText = {
     buildingHere: '正在排版，第 {k} / {n} 頁',
     backToEditor: '回到編輯頁',
   },
+  agentModel: {
+    followClient: '客戶端設定',
+    followClientHint: '使用 {provider} 裡自己設的模型和思考強度。',
+  },
 };

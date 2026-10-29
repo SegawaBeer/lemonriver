@@ -253,4 +253,8 @@ export const ja: LrText = {
     buildingHere: 'レイアウト中、{k} / {n} ページ',
     backToEditor: 'エディタに戻る',
   },
+  agentModel: {
+    followClient: 'クライアント設定',
+    followClientHint: '{provider} で設定したモデルと思考の強さを使います。',
+  },
 };

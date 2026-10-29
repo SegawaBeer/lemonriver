@@ -19,6 +19,8 @@ export type AgentModelOption = {
   id: string;
   label: string;
   efforts: AgentEffort[];
+  // The effort that option's client is set to, for the follow-the-client row.
+  clientEffort?: AgentEffort | null;
 };
 
 export type AgentProviderStatus = {

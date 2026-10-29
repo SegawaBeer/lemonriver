@@ -1,3 +1,4 @@
+import { cacheClaudeModels, claudeModelOptions } from '../../lemonriver/agent/model-list.ts';
 import { findSpawnableCli, importWorkspacePackage } from '../detect.ts';
 import {
   type AgentProvider,
@@ -178,7 +179,7 @@ export function createClaudeProvider(): AgentProvider {
     askInstruction: 'Ask the user questions with the AskUserQuestion tool, never as plain text.',
     canRewind: true,
     async models() {
-      return CLAUDE_MODELS;
+      return claudeModelOptions(CLAUDE_MODELS, 'Opus', CLAUDE_EFFORTS);
     },
     async run(opts: ProviderRunOptions): Promise<void> {
       const sdk = await importWorkspacePackage<ClaudeSdkModule>(opts.cwd, CLAUDE_SDK_PACKAGE);
@@ -235,6 +236,9 @@ export function createClaudeProvider(): AgentProvider {
           },
         },
       });
+
+      // Rides on this turn's session; nothing extra is started for the menu.
+      cacheClaudeModels(stream);
 
       try {
         for await (const message of stream) mapper.handle(message);

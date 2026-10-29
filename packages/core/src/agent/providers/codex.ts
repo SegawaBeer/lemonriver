@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { codexModelOptions } from '../../lemonriver/agent/model-list.ts';
 import { findSpawnableCli, importWorkspacePackage } from '../detect.ts';
 import { extractQuestionBlock, TEXT_QUESTIONS_INSTRUCTION } from '../prompt.ts';
 import {
@@ -172,7 +173,7 @@ export function createCodexProvider(): AgentProvider {
     askInstruction: TEXT_QUESTIONS_INSTRUCTION,
     canRewind: false,
     cliCommand: 'codex',
-    models: readCodexModels,
+    models: () => codexModelOptions(CODEX_DEFAULT_MODEL, readCodexModels),
     async run(opts: ProviderRunOptions): Promise<void> {
       const sdk = await importWorkspacePackage<CodexSdkModule>(opts.cwd, CODEX_SDK_PACKAGE);
       if (!sdk || typeof sdk.Codex !== 'function') throw new ProviderUnavailableError(this);

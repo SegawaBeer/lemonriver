@@ -313,8 +313,9 @@ function turnSettings(id: string) {
   const choice = status ? resolveModelChoice(status.models, state.modelChoices[provider]) : null;
   return {
     autoApprove: state.autoApprove,
-    model: choice?.model.id || null,
-    effort: choice?.effort ?? null,
+    // Follow-the-client sends neither field, so the CLI keeps its own model.
+    ...(choice?.model.id ? { model: choice.model.id } : {}),
+    ...(choice?.effort ? { effort: choice.effort } : {}),
   };
 }
 
@@ -488,7 +489,7 @@ export function useAgentStatus() {
     provider,
     providerName: provider?.name ?? null,
     model: choice?.model ?? null,
-    effort: choice?.effort ?? null,
+    effort: choice?.effort ?? choice?.model.clientEffort ?? null,
     modelChoices: s.modelChoices,
   };
 }

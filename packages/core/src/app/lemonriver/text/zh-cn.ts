@@ -244,4 +244,8 @@ export const zhCN: LrText = {
     buildingHere: '正在排版，第 {k} / {n} 页',
     backToEditor: '回到编辑页',
   },
+  agentModel: {
+    followClient: '客户端设置',
+    followClientHint: '使用 {provider} 里自己设的模型和思考强度。',
+  },
 };

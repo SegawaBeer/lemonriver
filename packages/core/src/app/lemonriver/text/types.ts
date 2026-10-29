@@ -277,4 +277,9 @@ export type LrText = {
     buildingHere: string;
     backToEditor: string;
   };
+  agentModel: {
+    followClient: string;
+    /** template: "Uses the model and effort set in {provider}" */
+    followClientHint: string;
+  };
 };
