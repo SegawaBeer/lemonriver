@@ -15,6 +15,7 @@ import {
   listTrash,
   restoreFromTrash,
 } from '../trash/api';
+import { UpdatePrompt } from '../update/update-prompt';
 import { SidebarExtras } from './sidebar-extras';
 
 const UNDO_MS = 5000;
@@ -94,6 +95,7 @@ export function AppChrome() {
       <Toaster />
       {import.meta.env.DEV && <OfflineBanner />}
       <SidebarExtras />
+      <UpdatePrompt />
     </>
   );
 }

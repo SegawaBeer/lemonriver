@@ -108,4 +108,24 @@ export type LrText = {
     uploadTooLargeHint: string;
     confirmWho: string;
   };
+  update: {
+    /** template: "LemonRiver {version} is available" */
+    title: string;
+    /** template: "You're on {current}. Updating installs the new version and syncs skills; restart the local server to use it." */
+    hint: string;
+    now: string;
+    later: string;
+    updating: string;
+    /** template: "Updated to {version}" */
+    updated: string;
+    updatedHint: string;
+    updatedManual: string;
+    restart: string;
+    failed: string;
+    failedHint: string;
+    retry: string;
+    beta: string;
+    betaTitle: string;
+    betaHint: string;
+  };
 };

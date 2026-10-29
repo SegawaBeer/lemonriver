@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { format, useLocale } from '@/lib/use-locale';
 import { useRestartServer } from '@/lib/use-restart-server';
 import { ThemeToggle } from '../../lemonriver/theme/theme-menu';
+import { BetaBadge } from '../../lemonriver/update/beta-badge';
 
 type UpdateCheck = { current: string; latest: string | null; outdated: boolean };
 type UpdateStatus = 'idle' | 'running' | 'done' | 'error';
@@ -64,9 +65,13 @@ export function SidebarFooter() {
     >
       <span className="size-1.5 rounded-full bg-brand" aria-hidden />
       {label}
+      <BetaBadge />
     </button>
   ) : (
-    <span className="inline-flex cursor-default items-center gap-1.5">{label}</span>
+    <span className="inline-flex cursor-default items-center gap-1.5">
+      {label}
+      <BetaBadge />
+    </span>
   );
 
   return (
