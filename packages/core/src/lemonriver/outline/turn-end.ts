@@ -1,6 +1,7 @@
 import type { SessionStore } from '../../agent/store.ts';
 import { pageKeys, patchCard, sanitizeCards } from '../../app/lemonriver/board/model/cards.ts';
 import {
+  afterTurn,
   type OutlinePage,
   parseOutlineBlock,
   sanitizeOutline,
@@ -54,11 +55,28 @@ export async function collectOutline(
   }
 
   if (outline.state !== 'building') return;
+  // A build only learns from the rounds it dispatched itself.
+  if (!outline.dispatched) return;
+
+  const start = session.items.findIndex((item) => item.id === userItemId);
+  const after = start === -1 ? [] : session.items.slice(start + 1);
+  const last = session.items.at(-1);
+  const waitingForAnswer = last?.kind === 'question' && last.status === 'pending';
+  const lastResult = [...after].reverse().find((item) => item.kind === 'result');
+  const ok =
+    !after.some((item) => item.kind === 'error') &&
+    !(lastResult?.kind === 'result' && lastResult.aborted);
+
+  const next = afterTurn(outline, { ok, waitingForAnswer }, now);
+  if (next === outline) return;
+  if (next.state !== 'built') {
+    await updateBoardFile(file, { outline: next });
+    return;
+  }
 
   const entry = resolveSlideEntry(ctx.slidesRoot, slideId);
   const source = entry ? await readSlideSource(entry) : null;
   const entries = source ? defaultExportEntriesInSource(source) : null;
-  const next = { ...outline, state: 'built' as const, updatedAt: now };
 
   if (!entries || entries.length !== outline.items.length) {
     await updateBoardFile(file, { outline: next });

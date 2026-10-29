@@ -369,6 +369,7 @@ export function ThumbnailRail({
         onCurrentPositionChange={setCurrentPosition}
         renderThumb={renderThumb}
       />
+      <div data-lr-rail-pending="" />
     </aside>
   );
 

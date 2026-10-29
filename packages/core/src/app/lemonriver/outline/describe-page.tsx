@@ -140,6 +140,11 @@ export function DescribePage() {
         files: names,
         items: [],
         updatedAt: Date.now(),
+        built: 0,
+        paused: false,
+        stage: 'pages',
+        dispatched: null,
+        lastTurn: null,
       };
       const started = await fetch('/__lr/outline/start', {
         method: 'POST',

@@ -55,6 +55,9 @@ const userItem = { kind: 'user', id: 'u1', ts: '', text: 'plan this' } as const;
 const assistantItem = (text: string) =>
   ({ kind: 'assistant', id: 'a1', ts: '', text, streaming: false }) as const;
 
+const resultItem = (aborted: boolean) =>
+  ({ kind: 'result', id: 'r1', ts: '', durationMs: 1, costUsd: null, aborted }) as const;
+
 const BLOCK =
   'Here is the plan.\n<lemonriver-outline>[{"title":"Cover","kind":"cover"},{"title":"End","kind":"end"}]</lemonriver-outline>';
 
@@ -121,6 +124,9 @@ describe('collectOutline', () => {
             { id: 'p2', title: 'Two', kind: 'end' },
           ],
           updatedAt: 0,
+          built: 2,
+          stage: 'review',
+          dispatched: { kind: 'review', n: 0, at: 1 },
         }),
       });
       await collectOutline(ctx, fakeStore([], []), 's1', 'u1');
@@ -146,6 +152,9 @@ describe('collectOutline', () => {
           { id: 'p3', title: 'Three', kind: 'end' },
         ],
         updatedAt: 0,
+        built: 3,
+        stage: 'review',
+        dispatched: { kind: 'review', n: 0, at: 1 },
       });
       await updateBoardFile(file, { cards: { stale: { title: 'old' } }, outline });
       await collectOutline(ctx, fakeStore([], []), 's1', 'u1');
@@ -153,6 +162,116 @@ describe('collectOutline', () => {
       const stored = await readBoardFile(file);
       expect(sanitizeOutline(stored.outline)?.state).toBe('built');
       expect(stored.cards).toEqual({ stale: { title: 'old' } });
+    }));
+
+  it('moves the build on one page per finished turn', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        outline: board({
+          state: 'building',
+          brief: 'b',
+          pages: 8,
+          files: [],
+          items: [
+            { id: 'p1', title: 'One', kind: 'cover' },
+            { id: 'p2', title: 'Two', kind: 'end' },
+          ],
+          updatedAt: 0,
+          dispatched: { kind: 'page', n: 1, at: 10 },
+        }),
+      });
+      await collectOutline(ctx, fakeStore([userItem, resultItem(false)], []), 's1', 'u1');
+      const first = sanitizeOutline((await readBoardFile(file)).outline);
+      expect(first?.built).toBe(1);
+      expect(first?.stage).toBe('pages');
+      expect(first?.dispatched).toBeNull();
+      expect(first?.lastTurn).toMatchObject({ kind: 'page', n: 1, ok: true });
+
+      await updateBoardFile(file, {
+        outline: { ...first, dispatched: { kind: 'page', n: 2, at: 20 } },
+      });
+      await collectOutline(ctx, fakeStore([userItem, resultItem(false)], []), 's1', 'u1');
+      const second = sanitizeOutline((await readBoardFile(file)).outline);
+      expect(second?.built).toBe(2);
+      expect(second?.stage).toBe('review');
+      expect(second?.state).toBe('building');
+    }));
+
+  it('records a failed turn and keeps the page for later', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        outline: board({
+          state: 'building',
+          brief: 'b',
+          pages: 8,
+          files: [],
+          items: [{ id: 'p1', title: 'One', kind: 'cover' }],
+          updatedAt: 0,
+          dispatched: { kind: 'page', n: 1, at: 10 },
+        }),
+      });
+      await collectOutline(
+        ctx,
+        fakeStore([userItem, { kind: 'error', id: 'e1', ts: '', text: 'boom' }], []),
+        's1',
+        'u1',
+      );
+      const stored = sanitizeOutline((await readBoardFile(file)).outline);
+      expect(stored?.built).toBe(0);
+      expect(stored?.lastTurn).toMatchObject({ kind: 'page', n: 1, ok: false });
+      expect(stored?.dispatched).toBeNull();
+    }));
+
+  it('holds the step while the turn waits for an answer', () =>
+    withWorkspace(async (ctx, file) => {
+      const outline = board({
+        state: 'building',
+        brief: 'b',
+        pages: 8,
+        files: [],
+        items: [{ id: 'p1', title: 'One', kind: 'cover' }],
+        updatedAt: 0,
+        built: 1,
+        stage: 'review',
+        dispatched: { kind: 'review', n: 0, at: 10 },
+      });
+      await updateBoardFile(file, { outline });
+      await collectOutline(
+        ctx,
+        fakeStore(
+          [
+            userItem,
+            {
+              kind: 'question',
+              id: 'q1',
+              ts: '',
+              questions: [],
+              answers: null,
+              status: 'pending',
+            },
+          ],
+          [],
+        ),
+        's1',
+        'u1',
+      );
+      expect(sanitizeOutline((await readBoardFile(file)).outline)).toEqual(outline);
+    }));
+
+  it('ignores a turn it did not dispatch', () =>
+    withWorkspace(async (ctx, file) => {
+      const outline = board({
+        state: 'building',
+        brief: 'b',
+        pages: 8,
+        files: [],
+        items: [{ id: 'p1', title: 'One', kind: 'cover' }],
+        updatedAt: 0,
+        built: 1,
+      });
+      await updateBoardFile(file, { outline });
+      await collectOutline(ctx, fakeStore([userItem, resultItem(false)], []), 's1', 'u1');
+      expect(sanitizeOutline((await readBoardFile(file)).outline)).toEqual(outline);
     }));
 
   it('does nothing for an outline that is not drafting or building', () =>

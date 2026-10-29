@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { format } from '../../../locale/format';
 import { en } from './en';
 import { es } from './es';
 import { ja } from './ja';
@@ -52,6 +53,18 @@ describe('LemonRiver text', () => {
             ?.sort() ?? [];
         expect(got, `${name}.${key}`).toEqual(want);
       }
+    }
+  });
+
+  it('spells the build progress and pending lines out', () => {
+    const cases = [
+      [en, 'Page 3 / 8', 'Costs', 'Page 4 · Costs'],
+      [zhCN, '第 3 / 8 页', '成本', '第 4 页 · 成本'],
+    ] as const;
+    for (const [text, progress, title, pending] of cases) {
+      expect(format(text.build.progress, { k: 3, n: 8 })).toBe(progress);
+      expect(format(text.build.pendingPage, { k: 4, title })).toBe(pending);
+      expect(format(text.build.done, { n: 8 })).not.toContain('{');
     }
   });
 });

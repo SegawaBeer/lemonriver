@@ -48,6 +48,7 @@ import type {
   RespondPayload,
 } from '../../../agent/types';
 import { PanelLemon } from '../../lemonriver/agent/lemon';
+import { BuildTeam } from '../../lemonriver/outline/build-team';
 import { Composer, ContextChip } from './composer';
 import { ConnectView } from './connect-view';
 import { HistoryView } from './history-view';
@@ -289,6 +290,7 @@ export function AgentPanel({
         </div>
       </header>
 
+      {context.slideId && <BuildTeam slideId={context.slideId} />}
       {loading ? (
         <p className="px-4 py-5 text-[12px] text-muted-foreground">{t.agent.statusLoading}…</p>
       ) : showConnect ? (

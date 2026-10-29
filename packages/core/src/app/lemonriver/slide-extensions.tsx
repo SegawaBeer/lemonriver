@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useSlot } from './chrome/use-slot';
 import { isFeatureEnabled } from './features';
 import { useNewDeckBrief } from './home/brief';
+import { PendingPages } from './outline/pending-pages';
 import { useLrText } from './text';
 
 type Props = {
@@ -44,30 +45,36 @@ export function SlideExtensions({ slideId, overviewOpen }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [enabled, navigate, overviewOpen, slideId]);
 
-  if (!enabled || !slot) return null;
+  if (!enabled) return null;
 
-  return createPortal(
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            onClick={() => navigate(`/s/${encodeURIComponent(slideId)}/board`)}
-            aria-label={lr.board.openBoard}
-            className={cn(
-              'flex size-5 items-center justify-center rounded-[3px] text-muted-foreground/70 outline-none',
-              'motion-safe:transition-colors hover:bg-muted hover:text-foreground',
-              'focus-visible:ring-1 focus-visible:ring-brand',
-            )}
-          >
-            <Workflow className="size-3.5" strokeWidth={1.75} />
-          </button>
-        }
-      />
-      <TooltipContent side="bottom" sideOffset={6}>
-        {lr.board.openBoard}
-      </TooltipContent>
-    </Tooltip>,
-    slot,
+  return (
+    <>
+      {slot &&
+        createPortal(
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={() => navigate(`/s/${encodeURIComponent(slideId)}/board`)}
+                  aria-label={lr.board.openBoard}
+                  className={cn(
+                    'flex size-5 items-center justify-center rounded-[3px] text-muted-foreground/70 outline-none',
+                    'motion-safe:transition-colors hover:bg-muted hover:text-foreground',
+                    'focus-visible:ring-1 focus-visible:ring-brand',
+                  )}
+                >
+                  <Workflow className="size-3.5" strokeWidth={1.75} />
+                </button>
+              }
+            />
+            <TooltipContent side="bottom" sideOffset={6}>
+              {lr.board.openBoard}
+            </TooltipContent>
+          </Tooltip>,
+          slot,
+        )}
+      <PendingPages slideId={slideId} />
+    </>
   );
 }

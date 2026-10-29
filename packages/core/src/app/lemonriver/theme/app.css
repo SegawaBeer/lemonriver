@@ -160,6 +160,10 @@ html[data-lr-reduce-motion] .lr-mascot {
   animation: none;
 }
 
+html[data-lr-app].dark [data-lr-helper="research"] {
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.55));
+}
+
 @keyframes lr-shimmer {
   to {
     background-position: -200% 0;

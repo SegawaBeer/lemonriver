@@ -180,4 +180,46 @@ export type LrText = {
     kindEnd: string;
     back: string;
   };
+  build: {
+    lead: string;
+    research: string;
+    outline: string;
+    design: string;
+    review: string;
+    /** template: "Read {n} files" */
+    readFiles: string;
+    noFiles: string;
+    /** template: "Page {k} / {n}" */
+    progress: string;
+    /** template: "Laying out page {k}" */
+    statusWorking: string;
+    statusReview: string;
+    statusPaused: string;
+    /** template: "{n} pages are ready" */
+    statusDone: string;
+    statusWaiting: string;
+    pause: string;
+    resume: string;
+    /** template: "Page {k} is laid out" */
+    eventPage: string;
+    eventSaved: string;
+    eventReview: string;
+    eventReviewed: string;
+    /** template: "Stopped at page {k}" */
+    interruptedTitle: string;
+    /** template: "The first {n} pages are saved." */
+    interruptedHint: string;
+    interruptedNoAgent: string;
+    continue: string;
+    pending: string;
+    /** template: "Page {k} · {title}" */
+    pendingPage: string;
+    /** template: "{n} pages are ready" */
+    done: string;
+    undo: string;
+    undoFailed: string;
+    /** template: "Building page {k} of {n}" */
+    buildingHere: string;
+    backToEditor: string;
+  };
 };

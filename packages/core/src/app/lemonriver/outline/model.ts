@@ -6,6 +6,12 @@ export type OutlineState = (typeof OUTLINE_STATES)[number];
 
 export type OutlinePage = { id: string; title: string; kind: PageKind };
 
+export type BuildStage = 'pages' | 'review';
+
+export type BuildStep = { kind: 'page' | 'review'; n: number; at: number };
+
+export type BuildTurn = { kind: 'page' | 'review'; n: number; ok: boolean; at: number };
+
 export type Outline = {
   state: OutlineState;
   brief: string;
@@ -13,6 +19,11 @@ export type Outline = {
   files: string[];
   items: OutlinePage[];
   updatedAt: number;
+  built: number;
+  paused: boolean;
+  stage: BuildStage;
+  dispatched: BuildStep | null;
+  lastTurn: BuildTurn | null;
 };
 
 export const OUTLINE_PAGE_SIZES = [5, 8, 12] as const;
@@ -58,6 +69,23 @@ export function sanitizeItems(raw: unknown): OutlinePage[] {
   });
 }
 
+function cleanStep(raw: unknown, maxPage: number): BuildStep | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const kind = r.kind === 'page' || r.kind === 'review' ? r.kind : null;
+  if (!kind) return null;
+  const n = typeof r.n === 'number' && Number.isFinite(r.n) ? Math.trunc(r.n) : -1;
+  const at = typeof r.at === 'number' && Number.isFinite(r.at) ? r.at : -1;
+  if (n < 0 || at < 0) return null;
+  return { kind, n: Math.min(n, maxPage), at };
+}
+
+function cleanTurn(raw: unknown, maxPage: number): BuildTurn | null {
+  const step = cleanStep(raw, maxPage);
+  if (!step || !raw || typeof raw !== 'object') return null;
+  return { ...step, ok: (raw as Record<string, unknown>).ok === true };
+}
+
 export function sanitizeOutline(raw: unknown): Outline | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const r = raw as Record<string, unknown>;
@@ -69,13 +97,21 @@ export function sanitizeOutline(raw: unknown): Outline | null {
     : [];
   const updatedAt =
     typeof r.updatedAt === 'number' && Number.isFinite(r.updatedAt) ? r.updatedAt : 0;
+  const items = sanitizeItems(r.items);
+  const builtRaw =
+    typeof r.built === 'number' && Number.isFinite(r.built) ? Math.trunc(r.built) : 0;
   return {
     state: r.state,
     brief,
     pages,
     files,
-    items: sanitizeItems(r.items),
+    items,
     updatedAt,
+    built: Math.min(Math.max(builtRaw, 0), items.length),
+    paused: r.paused === true,
+    stage: r.stage === 'review' ? 'review' : 'pages',
+    dispatched: cleanStep(r.dispatched, items.length),
+    lastTurn: cleanTurn(r.lastTurn, items.length),
   };
 }
 
@@ -178,22 +214,128 @@ export function outlinePrompt(outline: Outline, slideId: string, lang: string): 
   return lines.join('\n');
 }
 
-export function buildPrompt(outline: Outline, slideId: string): string {
+export function pagePrompt(outline: Outline, slideId: string, k: number): string {
   const file = `slides/${slideId}/index.tsx`;
+  const page = outline.items[k - 1];
+  if (k >= 2 && page) {
+    const title = page.title || '(untitled)';
+    return `Page ${k} of ${outline.items.length}: [${page.kind}] ${title}. Write only this page; leave the others as they are.`;
+  }
   const list = outline.items
     .map((item, i) => `${i + 1}. [${item.kind}] ${item.title || '(untitled)'}`)
     .join('\n');
-  const json = JSON.stringify(
-    outline.items.map((item) => ({ title: item.title, kind: item.kind })),
-  );
   return [
-    `Build the deck in ${file} from the outline below, one page at a time.`,
-    'Keep the page count, order and titles exactly as the outline says.',
+    `Build ${file} from this outline, one page per turn. This turn: write page 1 only, replacing the placeholder page, and set meta.title to the deck title. Pages:`,
+    list,
     'Page kinds and how to write them:',
     ...PAGE_KINDS.map((kind) => `- ${KIND_GUIDE[kind]}`),
-    'Numbers from the reference files stay exactly as they are written there.',
-    'The outline:',
-    list,
-    `<lemonriver-outline>${json}</lemonriver-outline>`,
+    'Numbers from the reference files stay exactly as written there.',
   ].join('\n');
+}
+
+export function reviewPrompt(outline: Outline, slideId: string): string {
+  return [
+    `All ${outline.items.length} pages are written.`,
+    `Check each page of slides/${slideId}/index.tsx against the outline and the reference files in slides/${slideId}/assets/:`,
+    'fix typos and any number that differs from the files. If two files give different numbers for the same thing,',
+    'ask the user which to use before changing it. Do not add or remove pages.',
+  ].join(' ');
+}
+
+export const DISPATCH_STALE_MS = 30_000;
+export const RESUME_WINDOW_MS = 120_000;
+
+export type BuildNext = { kind: 'page'; n: number } | { kind: 'review' } | null;
+
+export function nextStep(outline: Outline): BuildNext {
+  if (outline.state !== 'building') return null;
+  if (outline.stage === 'review') return { kind: 'review' };
+  if (outline.built >= outline.items.length) return null;
+  return { kind: 'page', n: outline.built + 1 };
+}
+
+export function afterTurn(
+  outline: Outline,
+  turn: { ok: boolean; waitingForAnswer: boolean },
+  now: number,
+): Outline {
+  const dispatched = outline.dispatched;
+  if (outline.state !== 'building' || !dispatched) return outline;
+  if (turn.waitingForAnswer) return outline;
+  const lastTurn: BuildTurn = {
+    kind: dispatched.kind,
+    n: dispatched.n,
+    ok: turn.ok,
+    at: now,
+  };
+  if (!turn.ok) {
+    return { ...outline, dispatched: null, lastTurn, updatedAt: now };
+  }
+  if (dispatched.kind === 'review') {
+    return { ...outline, state: 'built', dispatched: null, lastTurn, updatedAt: now };
+  }
+  return {
+    ...outline,
+    built: dispatched.n,
+    stage: dispatched.n >= outline.items.length ? 'review' : outline.stage,
+    dispatched: null,
+    lastTurn,
+    updatedAt: now,
+  };
+}
+
+export type DriverAction = 'send' | 'wait' | 'paused' | 'interrupted' | 'idle';
+
+export function driverAction(
+  outline: Outline,
+  now: { running: boolean; now: number },
+): DriverAction {
+  if (outline.state !== 'building') return 'idle';
+  if (now.running) return 'wait';
+  if (outline.paused) return 'paused';
+  if (outline.dispatched) {
+    return now.now - outline.dispatched.at < DISPATCH_STALE_MS ? 'wait' : 'interrupted';
+  }
+  if (outline.lastTurn && !outline.lastTurn.ok) return 'interrupted';
+  if (!outline.lastTurn) return 'send';
+  return now.now - outline.lastTurn.at < RESUME_WINDOW_MS ? 'send' : 'interrupted';
+}
+
+export type TeamLeadState = 'idle' | 'working' | 'done' | 'needs-you' | 'thinking';
+export type TeamHelperState = 'idle' | 'working' | 'done' | 'needs-you' | 'none';
+export type TeamState = {
+  lead: TeamLeadState;
+  research: TeamHelperState;
+  outline: TeamHelperState;
+  design: TeamHelperState;
+  review: TeamHelperState;
+};
+
+export function teamState(
+  outline: Outline,
+  seen: { running: boolean; waitingForAnswer: boolean; action: DriverAction },
+): TeamState {
+  const inReview = outline.stage === 'review';
+  const done = outline.state === 'built';
+  return {
+    lead: done
+      ? 'done'
+      : seen.action === 'interrupted'
+        ? 'needs-you'
+        : outline.paused
+          ? 'idle'
+          : seen.running
+            ? 'working'
+            : 'thinking',
+    research: outline.files.length > 0 ? 'done' : 'none',
+    outline: 'done',
+    design: done || inReview ? 'done' : seen.running ? 'working' : 'idle',
+    review: done
+      ? 'done'
+      : inReview && seen.waitingForAnswer
+        ? 'needs-you'
+        : inReview && seen.running
+          ? 'working'
+          : 'idle',
+  };
 }

@@ -1,21 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildPrompt,
+  afterTurn,
+  driverAction,
   insertPage,
   MAX_BRIEF,
   MAX_ITEMS,
   MAX_TITLE,
   movePage,
+  nextStep,
   type Outline,
   type OutlinePage,
   outlinePrompt,
+  pagePrompt,
   parseOutlineBlock,
   removePage,
   renamePage,
+  reviewPrompt,
   sanitizeItems,
   sanitizeOutline,
   setKind,
   stripOutlineBlock,
+  teamState,
 } from './model';
 
 const items: OutlinePage[] = [
@@ -32,11 +37,59 @@ const outline: Outline = {
   files: ['costs.pdf'],
   items,
   updatedAt: 1,
+  built: 0,
+  paused: false,
+  stage: 'pages',
+  dispatched: null,
+  lastTurn: null,
 };
 
 describe('sanitizeOutline', () => {
   it('keeps a well-formed outline', () => {
     expect(sanitizeOutline(outline)).toEqual(outline);
+  });
+
+  it('fills the build fields on a record written before they existed', () => {
+    const old = {
+      state: 'building',
+      brief: 'b',
+      pages: 8,
+      files: [],
+      items,
+      updatedAt: 3,
+    };
+    const cleaned = sanitizeOutline(old);
+    expect(cleaned).toMatchObject({
+      built: 0,
+      paused: false,
+      stage: 'pages',
+      dispatched: null,
+      lastTurn: null,
+    });
+  });
+
+  it('clamps the build fields it cannot trust', () => {
+    const cleaned = sanitizeOutline({
+      ...outline,
+      state: 'building',
+      built: 99,
+      paused: 'yes',
+      stage: 'later',
+      dispatched: { kind: 'page', n: 99, at: 5 },
+      lastTurn: { kind: 'nope', n: 1, ok: true, at: 5 },
+    });
+    expect(cleaned?.built).toBe(items.length);
+    expect(cleaned?.paused).toBe(false);
+    expect(cleaned?.stage).toBe('pages');
+    expect(cleaned?.dispatched).toEqual({ kind: 'page', n: items.length, at: 5 });
+    expect(cleaned?.lastTurn).toBeNull();
+    expect(
+      sanitizeOutline({ ...outline, dispatched: { kind: 'page', n: 1, at: 'soon' } })?.dispatched,
+    ).toBeNull();
+    expect(
+      sanitizeOutline({ ...outline, lastTurn: { kind: 'review', n: 0, ok: true, at: 9 } })
+        ?.lastTurn,
+    ).toEqual({ kind: 'review', n: 0, ok: true, at: 9 });
   });
 
   it('drops what it cannot trust', () => {
@@ -185,10 +238,203 @@ describe('prompts', () => {
     );
   });
 
-  it('hands the outline JSON back for the build', () => {
-    const text = buildPrompt(outline, 'deck-1');
+  it('opens the build with page one, the whole list and the kinds', () => {
+    const text = pagePrompt(outline, 'deck-1', 1);
     expect(text).toContain('slides/deck-1/index.tsx');
+    expect(text).toContain('write page 1 only');
+    expect(text).toContain('meta.title');
     expect(text).toContain('1. [cover] Cover');
-    expect(text).toContain('"title":"Numbers","kind":"kpi"');
+    expect(text).toContain('4. [end] End');
+    expect(text).toContain('key figure — one large number');
+    expect(text).toContain('Numbers from the reference files stay exactly as written there.');
+  });
+
+  it('keeps later pages to one line', () => {
+    const text = pagePrompt(outline, 'deck-1', 3);
+    expect(text).toBe(
+      'Page 3 of 4: [kpi] Numbers. Write only this page; leave the others as they are.',
+    );
+    expect(text).not.toContain('1. [cover]');
+  });
+
+  it('asks for a review pass without changing the pages', () => {
+    const text = reviewPrompt(outline, 'deck-1');
+    expect(text).toContain('All 4 pages are written.');
+    expect(text).toContain('slides/deck-1/index.tsx');
+    expect(text).toContain('slides/deck-1/assets/');
+    expect(text).toContain('ask the user which to use');
+    expect(text).toContain('Do not add or remove pages.');
+  });
+});
+
+const building = (patch: Partial<Outline> = {}): Outline => ({
+  ...outline,
+  state: 'building',
+  ...patch,
+});
+
+describe('nextStep', () => {
+  it('walks the pages, then the review', () => {
+    expect(nextStep(building())).toEqual({ kind: 'page', n: 1 });
+    expect(nextStep(building({ built: 3 }))).toEqual({ kind: 'page', n: 4 });
+    expect(nextStep(building({ stage: 'review' }))).toEqual({ kind: 'review' });
+    expect(nextStep(building({ built: 4 }))).toBeNull();
+  });
+
+  it('does nothing outside building', () => {
+    expect(nextStep(outline)).toBeNull();
+    expect(nextStep({ ...outline, state: 'built' })).toBeNull();
+  });
+});
+
+describe('afterTurn', () => {
+  it('keeps the step while the turn waits for an answer', () => {
+    const waiting = building({ dispatched: { kind: 'page', n: 1, at: 10 } });
+    expect(afterTurn(waiting, { ok: true, waitingForAnswer: true }, 20)).toBe(waiting);
+  });
+
+  it('records a failed turn without moving the build on', () => {
+    const next = afterTurn(
+      building({ built: 1, dispatched: { kind: 'page', n: 2, at: 10 } }),
+      { ok: false, waitingForAnswer: false },
+      30,
+    );
+    expect(next.built).toBe(1);
+    expect(next.dispatched).toBeNull();
+    expect(next.lastTurn).toEqual({ kind: 'page', n: 2, ok: false, at: 30 });
+  });
+
+  it('counts a finished page and switches to the review after the last one', () => {
+    const mid = afterTurn(
+      building({ dispatched: { kind: 'page', n: 2, at: 10 } }),
+      { ok: true, waitingForAnswer: false },
+      30,
+    );
+    expect(mid.built).toBe(2);
+    expect(mid.stage).toBe('pages');
+    expect(mid.dispatched).toBeNull();
+    expect(mid.lastTurn).toEqual({ kind: 'page', n: 2, ok: true, at: 30 });
+
+    const last = afterTurn(
+      building({ built: 3, dispatched: { kind: 'page', n: 4, at: 10 } }),
+      { ok: true, waitingForAnswer: false },
+      30,
+    );
+    expect(last.built).toBe(4);
+    expect(last.stage).toBe('review');
+  });
+
+  it('closes the build when the review passes', () => {
+    const next = afterTurn(
+      building({ built: 4, stage: 'review', dispatched: { kind: 'review', n: 0, at: 10 } }),
+      { ok: true, waitingForAnswer: false },
+      30,
+    );
+    expect(next.state).toBe('built');
+    expect(next.lastTurn).toEqual({ kind: 'review', n: 0, ok: true, at: 30 });
+  });
+
+  it('leaves an outline with nothing dispatched alone', () => {
+    const idle = building();
+    expect(afterTurn(idle, { ok: true, waitingForAnswer: false }, 30)).toBe(idle);
+    const ready = outline;
+    expect(afterTurn(ready, { ok: true, waitingForAnswer: false }, 30)).toBe(ready);
+  });
+});
+
+describe('driverAction', () => {
+  const now = 1_000_000;
+
+  it('sends only while building and idle', () => {
+    expect(driverAction(outline, { running: false, now })).toBe('idle');
+    expect(driverAction(building(), { running: true, now })).toBe('wait');
+    expect(driverAction(building({ paused: true }), { running: false, now })).toBe('paused');
+    expect(driverAction(building({ paused: true }), { running: true, now })).toBe('wait');
+  });
+
+  it('waits on a fresh dispatch and gives up after half a minute', () => {
+    const step = { kind: 'page' as const, n: 1, at: now - 10_000 };
+    expect(driverAction(building({ dispatched: step }), { running: false, now })).toBe('wait');
+    const old = { kind: 'page' as const, n: 1, at: now - 31_000 };
+    expect(driverAction(building({ dispatched: old }), { running: false, now })).toBe(
+      'interrupted',
+    );
+  });
+
+  it('picks up where a turn ran cleanly', () => {
+    expect(driverAction(building(), { running: false, now })).toBe('send');
+    const fresh = { kind: 'page' as const, n: 1, ok: true, at: now - 60_000 };
+    expect(driverAction(building({ lastTurn: fresh }), { running: false, now })).toBe('send');
+    const stale = { kind: 'page' as const, n: 1, ok: true, at: now - 121_000 };
+    expect(driverAction(building({ lastTurn: stale }), { running: false, now })).toBe(
+      'interrupted',
+    );
+    const failed = { kind: 'page' as const, n: 1, ok: false, at: now - 1_000 };
+    expect(driverAction(building({ lastTurn: failed }), { running: false, now })).toBe(
+      'interrupted',
+    );
+  });
+});
+
+describe('teamState', () => {
+  it('shows the page writer at work and the readers finished', () => {
+    expect(
+      teamState(building(), { running: true, waitingForAnswer: false, action: 'wait' }),
+    ).toEqual({
+      lead: 'working',
+      research: 'done',
+      outline: 'done',
+      design: 'working',
+      review: 'idle',
+    });
+  });
+
+  it('greys out the reader when there are no files', () => {
+    expect(
+      teamState(building({ files: [] }), {
+        running: false,
+        waitingForAnswer: false,
+        action: 'send',
+      }).research,
+    ).toBe('none');
+  });
+
+  it('asks the user when the review stops on a question', () => {
+    const state = teamState(building({ built: 4, stage: 'review' }), {
+      running: false,
+      waitingForAnswer: true,
+      action: 'wait',
+    });
+    expect(state.review).toBe('needs-you');
+    expect(state.design).toBe('done');
+    expect(state.lead).toBe('thinking');
+  });
+
+  it('marks everyone done once the deck is built', () => {
+    const state = teamState(
+      { ...building(), state: 'built', built: 4, stage: 'review' },
+      {
+        running: false,
+        waitingForAnswer: false,
+        action: 'idle',
+      },
+    );
+    expect(state).toMatchObject({ lead: 'done', design: 'done', review: 'done' });
+  });
+
+  it('calls Lemon to the user when the build stopped', () => {
+    const state = teamState(building(), {
+      running: false,
+      waitingForAnswer: false,
+      action: 'interrupted',
+    });
+    expect(state.lead).toBe('needs-you');
+    expect(
+      teamState(building({ paused: true }), {
+        running: false,
+        waitingForAnswer: false,
+        action: 'paused',
+      }).lead,
+    ).toBe('idle');
   });
 });

@@ -77,6 +77,7 @@ function kindLabel(t: LrText['outline'], kind: PageKind): string {
 export function OutlineView() {
   const { slideId = '' } = useParams();
   const lr = useLrText().outline;
+  const buildLr = useLrText().build;
   const locale = useLocale();
   const navigate = useNavigate();
   const { sessions } = useAgentSessions();
@@ -102,7 +103,7 @@ export function OutlineView() {
   }, [load]);
 
   useEffect(() => {
-    if (outline?.state !== 'drafting') return;
+    if (outline?.state !== 'drafting' && outline?.state !== 'building') return;
     const timer = window.setInterval(() => void load(), POLL_MS);
     return () => window.clearInterval(timer);
   }, [outline?.state, load]);
@@ -165,9 +166,6 @@ export function OutlineView() {
         body: JSON.stringify({ slideId }),
       });
       if (!res.ok) throw new Error('build failed');
-      const { prompt } = (await res.json()) as { prompt: string };
-      const sessionId = await sessionForDeck();
-      await sendMessage(sessionId, prompt, { slideId });
       setDockOpen(true);
       window.location.assign(`${basePath()}/s/${encodeURIComponent(slideId)}`);
     } catch {
@@ -272,65 +270,88 @@ export function OutlineView() {
           </div>
         )}
 
-        {outline && outline.state !== 'drafting' && outline.state !== 'failed' && (
-          <>
-            <ul className="mt-8 flex flex-col gap-2">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={onDragEnd}
-              >
-                <SortableContext
-                  items={items.map((page) => page.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {items.map((page, index) => (
-                    <OutlineRow
-                      key={page.id}
-                      page={page}
-                      index={index}
-                      first={index === 0}
-                      last={index === items.length - 1}
-                      canDelete={items.length > 2}
-                      onTitle={(title) => edit(renamePage(items, index, title))}
-                      onKind={(kind) => edit(setKind(items, index, kind))}
-                      onUp={() => edit(movePage(items, index, index - 1))}
-                      onDown={() => edit(movePage(items, index, index + 1))}
-                      onRemove={() => edit(removePage(items, index))}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </ul>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => edit(insertPage(items, items.length))}
-              >
-                {lr.addPage}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={editBrief}>
-                {lr.editBrief}
-              </Button>
-              <span className="ml-auto text-[12.5px] text-muted-foreground tabular-nums">
-                {format(lr.total, { n: items.length })}
-              </span>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <Button
-                type="button"
-                disabled={outline.state !== 'ready' || running || building}
-                onClick={() => void build()}
-              >
-                {lr.build}
-              </Button>
-            </div>
-          </>
+        {outline?.state === 'building' && (
+          <div
+            data-lr-outline-state="building"
+            className="mt-10 flex flex-col items-center gap-3 rounded-[16px] border border-border bg-card px-6 py-12 text-center"
+          >
+            <Mascot state="working" size={56} float />
+            <p className="text-[14px] text-muted-foreground">
+              {format(buildLr.buildingHere, { k: outline.built, n: outline.items.length })}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/s/${encodeURIComponent(slideId)}`)}
+            >
+              {buildLr.backToEditor}
+            </Button>
+          </div>
         )}
+
+        {outline &&
+          outline.state !== 'drafting' &&
+          outline.state !== 'failed' &&
+          outline.state !== 'building' && (
+            <>
+              <ul className="mt-8 flex flex-col gap-2">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={onDragEnd}
+                >
+                  <SortableContext
+                    items={items.map((page) => page.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {items.map((page, index) => (
+                      <OutlineRow
+                        key={page.id}
+                        page={page}
+                        index={index}
+                        first={index === 0}
+                        last={index === items.length - 1}
+                        canDelete={items.length > 2}
+                        onTitle={(title) => edit(renamePage(items, index, title))}
+                        onKind={(kind) => edit(setKind(items, index, kind))}
+                        onUp={() => edit(movePage(items, index, index - 1))}
+                        onDown={() => edit(movePage(items, index, index + 1))}
+                        onRemove={() => edit(removePage(items, index))}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              </ul>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => edit(insertPage(items, items.length))}
+                >
+                  {lr.addPage}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={editBrief}>
+                  {lr.editBrief}
+                </Button>
+                <span className="ml-auto text-[12.5px] text-muted-foreground tabular-nums">
+                  {format(lr.total, { n: items.length })}
+                </span>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <Button
+                  type="button"
+                  disabled={outline.state !== 'ready' || running || building}
+                  onClick={() => void build()}
+                >
+                  {lr.build}
+                </Button>
+              </div>
+            </>
+          )}
       </div>
     </div>
   );
