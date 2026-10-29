@@ -296,6 +296,8 @@ test.describe('LemonRiver agent preferences', () => {
     await page.goto(`/s/${slideId}`);
     await expect(page.getByText('Review needs your call')).toBeVisible();
     await expect(page.getByText('Which share is right?')).toBeVisible();
+    await expect(page.getByText('Waiting for your answer', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Pause' })).toHaveCount(0);
     const option = page.locator('[data-lr-confirm] button[aria-pressed]').first();
     await expect(option).toHaveCSS('border-radius', '12px');
   });

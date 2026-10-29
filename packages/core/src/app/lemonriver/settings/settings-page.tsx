@@ -301,8 +301,8 @@ function PrefPill({
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        'h-8 rounded-full border text-[12.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40',
-        compact ? 'px-2.5 text-[11.5px]' : 'px-3',
+        'min-h-8 rounded-full border px-3 py-1 text-center text-[12.5px] leading-snug font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/40',
+        compact ? 'px-2.5 text-[11.5px]' : '',
         pressed
           ? 'border-[var(--lr-accent)] bg-[var(--lr-accent-soft)] text-foreground'
           : 'border-border bg-card text-muted-foreground hover:border-[var(--lr-text-3)]',

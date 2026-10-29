@@ -204,8 +204,8 @@ export function BuildTeam({ slideId }: { slideId: string }) {
           float={state === 'building' && !running && action !== 'interrupted'}
         />
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="truncate text-[13px] font-semibold">{status}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 text-[13px] leading-snug font-semibold">{status}</p>
             <span className="shrink-0 text-[11.5px] text-muted-foreground tabular-nums">
               {format(lr.progress, { k: built, n: total })}
             </span>
@@ -218,6 +218,7 @@ export function BuildTeam({ slideId }: { slideId: string }) {
           </div>
         </div>
         {state === 'building' &&
+          !waitingForAnswer &&
           action !== 'interrupted' &&
           (outline.paused ? (
             <Button type="button" variant="outline" size="xs" onClick={() => void resume()}>

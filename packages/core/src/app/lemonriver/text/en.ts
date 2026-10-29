@@ -120,7 +120,7 @@ export const en: LrText = {
     toneConcise: 'Short and punchy',
     researchUploads: 'Only my files',
     researchWeb: 'May look things up',
-    outlineReview: 'Show me the outline first',
+    outlineReview: 'Outline first',
     outlineDirect: 'Start building',
     designVisual: 'Fewer words',
     designBalanced: 'Balanced',
