@@ -26,7 +26,8 @@
     "cli": "pnpm --filter @lemonriver/cli",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build --filter=@lemonriver/core --filter=@lemonriver/cli && changeset publish"
+    "release": "turbo run build --filter=@lemonriver/core --filter=@lemonriver/cli && changeset publish",
+    "installer:mac": "bash installer/macos/build.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
