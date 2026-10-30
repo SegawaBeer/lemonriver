@@ -22,14 +22,18 @@ import {
   Hash,
   Image as ImageIcon,
   ListChecks,
+  Maximize2,
   MoreHorizontal,
+  PenLine,
   Quote,
   Scissors,
+  Sparkles,
+  StickyNote,
   Type,
 } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +48,7 @@ import { cn } from '@/lib/utils';
 import type { DesignSystem } from '../../../lib/design';
 import { CANVAS_WIDTH, type Page } from '../../../lib/sdk';
 import { useLrText } from '../../text';
+import { PAGE_ACTIONS, type PageAction } from '../model/agent-tasks';
 import {
   type EffectiveBlock,
   effectiveBlocks,
@@ -78,6 +83,13 @@ const blockInfo = (block: EffectiveBlock) => ({
   loc: block.loc,
 });
 
+const ASK_ICON: Record<PageAction, typeof Type> = {
+  rewrite: PenLine,
+  chart: BarChart3,
+  memo: StickyNote,
+  expand: Maximize2,
+};
+
 const DRAG_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
@@ -103,6 +115,9 @@ export type BlockPanelProps = {
   changes: Placement[];
   onChanges: (next: Placement[]) => void;
   cardTitle: (index: number) => string;
+  cardMemo: (index: number) => string;
+  /** The four one-page actions, for the page in the panel. */
+  agent: { hint: string | null; onTask: (action: PageAction) => void };
   /** The agent is applying the list: nothing here may be touched. */
   readOnly?: boolean;
   onSplit: (page: string, blocks: SplitBlock[]) => void;
@@ -121,10 +136,18 @@ export function BlockPanel({
   changes,
   onChanges,
   cardTitle,
+  cardMemo,
+  agent,
   readOnly = false,
   onSplit,
 }: BlockPanelProps) {
   const lr = useLrText();
+  const askLabels: Record<PageAction, string> = {
+    rewrite: lr.board.askRewrite,
+    chart: lr.board.askChart,
+    memo: lr.board.askMemo,
+    expand: lr.board.askExpand,
+  };
   const page = selected !== null ? pages[selected] : undefined;
   const pageKey = selected !== null ? (pageKeys[selected] ?? null) : null;
   const [readFor, setReadFor] = useState<{ page: Page; read: PageRead } | null>(null);
@@ -412,6 +435,40 @@ export function BlockPanel({
           </p>
         )}
       </div>
+
+      {page && (
+        <div className="shrink-0 border-b border-hairline px-4 py-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              type="button"
+              data-lr-ask-agent
+              disabled={readOnly}
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-full')}
+            >
+              <Sparkles />
+              {lr.board.askAgent}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[210px]">
+              {PAGE_ACTIONS.map((action) => {
+                const needsMemo = action === 'memo' && !cardMemo(selected ?? 0).trim();
+                const hint = agent.hint ?? (needsMemo ? lr.board.askNeedsMemo : null);
+                const Icon = ASK_ICON[action];
+                return (
+                  <DropdownMenuItem
+                    key={action}
+                    disabled={readOnly || hint !== null}
+                    title={hint ?? undefined}
+                    onClick={() => agent.onTask(action)}
+                  >
+                    <Icon />
+                    {askLabels[action]}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {canSplit && (
         <div className="shrink-0 border-b border-hairline px-4 py-2">

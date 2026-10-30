@@ -147,6 +147,24 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
     if (modulePages.length > 0) void refreshEntries();
   }, [modulePages, refreshEntries]);
 
+  /** Cards and links as the server has them; a task may have written titles. */
+  const refreshCards = useCallback(async () => {
+    try {
+      const res = await fetch(`/__board/cards?slideId=${encodeURIComponent(slideId)}`);
+      if (!res.ok) return;
+      const body = (await res.json()) as { cards?: unknown; links?: unknown };
+      const current = boardRef.current;
+      commit(
+        {
+          ...current,
+          cards: sanitizeCards(body.cards),
+          links: sanitizeLinks(body.links),
+        },
+        false,
+      );
+    } catch {}
+  }, [slideId, commit]);
+
   /**
    * Moves the board's data along with a page operation, before the deck itself
    * changes. Call the returned function once the deck write settles; a refused
@@ -270,5 +288,6 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
     beginOp,
     entryAt,
     addLinks,
+    refreshCards,
   };
 }

@@ -1,5 +1,5 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
-import { Copy, MoveRight, Trash2 } from 'lucide-react';
+import { BarChart3, Copy, Maximize2, MoveRight, PenLine, StickyNote, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ContextMenu,
@@ -25,6 +25,7 @@ import { type PageRead, pageReadOf, rememberPageRead, sameRead } from './blocks/
 import { readBlocks } from './blocks/classify';
 import { snapshotPage } from './blocks/snapshot';
 import type { CardMetrics, CardSize } from './layout';
+import { PAGE_ACTIONS, type PageAction } from './model/agent-tasks';
 import {
   type BoardCard,
   CARD_STATUSES,
@@ -58,9 +59,19 @@ export type PageNodeData = {
   onDelete: (index: number) => void;
   onMoveToEnd: (index: number) => void;
   onPatchCard: (index: number, patch: CardPatch) => void;
+  /** Why the one-page agent actions are off, or null when they can run. */
+  agentHint: string | null;
+  onPageTask: (index: number, action: PageAction) => void;
 };
 
 const hiddenHandle = { opacity: 0, width: 1, height: 1, minWidth: 1, minHeight: 1 } as const;
+
+const ASK_ICON: Record<PageAction, typeof PenLine> = {
+  rewrite: PenLine,
+  chart: BarChart3,
+  memo: StickyNote,
+  expand: Maximize2,
+};
 
 const STATUS_STYLE: Record<CardStatus, { dot: string; ring: string }> = {
   todo: { dot: 'bg-muted-foreground/50', ring: 'ring-muted-foreground/35' },
@@ -101,6 +112,12 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
   const t = useLocale();
   const lr = useLrText();
   const labels = useStatusLabels();
+  const askLabels: Record<PageAction, string> = {
+    rewrite: lr.board.askRewrite,
+    chart: lr.board.askChart,
+    memo: lr.board.askMemo,
+    expand: lr.board.askExpand,
+  };
   const status = card?.status;
   const [renaming, setRenaming] = useState(false);
   const [readFor, setReadFor] = useState<{ page: Page; read: PageRead } | null>(null);
@@ -276,6 +293,31 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
                   </ContextMenuRadioItem>
                 ))}
               </ContextMenuRadioGroup>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+          <ContextMenuSeparator />
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>{lr.board.askAgent}</ContextMenuSubTrigger>
+            <ContextMenuSubContent className="min-w-[210px]">
+              {PAGE_ACTIONS.map((action) => {
+                const needsMemo = action === 'memo' && !card?.memo?.trim();
+                const hint =
+                  actions.agentHint ??
+                  (changeCount > 0 ? lr.board.askHasChanges : null) ??
+                  (needsMemo ? lr.board.askNeedsMemo : null);
+                const Icon = ASK_ICON[action];
+                return (
+                  <ContextMenuItem
+                    key={action}
+                    disabled={hint !== null}
+                    title={hint ?? undefined}
+                    onClick={() => actions.onPageTask(index, action)}
+                  >
+                    <Icon />
+                    {askLabels[action]}
+                  </ContextMenuItem>
+                );
+              })}
             </ContextMenuSubContent>
           </ContextMenuSub>
           <ContextMenuSeparator />

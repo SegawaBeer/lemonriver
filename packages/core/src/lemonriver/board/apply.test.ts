@@ -2,9 +2,17 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { SessionStore } from '../../agent/store.ts';
 import type { AgentItem, AgentSession } from '../../agent/types.ts';
 import type { ApiContext } from '../../vite/routes/context.ts';
-import { cancelApply, collectApply, linkApply, startApply, undoApply } from './apply.ts';
+import {
+  cancelApply,
+  collectApply,
+  linkApply,
+  saveChapterPlan,
+  startApply,
+  undoApply,
+} from './apply.ts';
 import { boardStructurePath, readBoardFile, updateBoardFile } from './store.ts';
 
 const SLIDE = 'deck-apply';
@@ -51,7 +59,19 @@ const applying = (sessionId: string | null = 's1', userItemId: string | null = '
 
 function fakeStore(items: AgentSession['items'], slideId = SLIDE) {
   const session = { id: 's1', slideId, items } as unknown as AgentSession;
-  return { get: () => session };
+  const updates: { itemId: string; text: string }[] = [];
+  const updateItem = ((
+    _sessionId: string,
+    itemId: string,
+    kind: string,
+    changes: { text?: string },
+  ) => {
+    if (kind === 'assistant' && typeof changes.text === 'string') {
+      updates.push({ itemId, text: changes.text });
+    }
+    return null;
+  }) as unknown as SessionStore['updateItem'];
+  return { get: () => session, updateItem, updates };
 }
 
 const userItem = { kind: 'user', id: 'u1', ts: '', text: 'apply' } as const;
@@ -248,6 +268,22 @@ describe('undoApply', () => {
       expect((await readBoardFile(file)).lastApply).toBeUndefined();
     }));
 
+  it('puts the chapters back as they were', () =>
+    withWorkspace(async (ctx, file) => {
+      await seed(file, {
+        applying: undefined,
+        applyBackup: SOURCE,
+        applyColumnsBackup: COLUMNS,
+        columns: [
+          { title: 'Opening', size: 2 },
+          { title: 'Middle', size: 1 },
+        ],
+        lastApply: { ok: true, at: 1, pages: [PAGE_A] },
+      });
+      expect(await undoApply(ctx, SLIDE)).toEqual({ ok: true });
+      expect((await readBoardFile(file)).columns).toEqual(COLUMNS);
+    }));
+
   it('refuses when there is nothing to undo', () =>
     withWorkspace(async (ctx) => {
       expect(await undoApply(ctx, SLIDE)).toMatchObject({ ok: false, status: 409 });
@@ -263,5 +299,308 @@ describe('cancelApply', () => {
       expect(stored.applying).toBeUndefined();
       expect(stored.changes).toHaveLength(1);
       expect(await fs.readFile(path.join(ctx.slidesRoot, SLIDE, 'index.tsx'), 'utf8')).toBe(SOURCE);
+    }));
+});
+
+async function writeDeck(ctx: ApiContext, entries: string[]): Promise<void> {
+  const source = [
+    'export const meta = { title: "Deck" };',
+    'export default [',
+    ...entries.map((entry) => `  ${entry},`),
+    '];',
+  ].join('\n');
+  await fs.writeFile(path.join(ctx.slidesRoot, SLIDE, 'index.tsx'), source, 'utf8');
+}
+
+const COLUMNS = [
+  { title: 'Opening', size: 1 },
+  { title: 'Middle', size: 1 },
+];
+const APPLY_COLUMNS = [
+  { title: 'Opening', keys: [PAGE_A] },
+  { title: 'Middle', keys: [PAGE_B] },
+];
+
+const planItem = (title: string) => ({ id: `p-${title}`, title, kind: 'page' });
+const planBlock = (titles: string[]) =>
+  `Planned.\n<lemonriver-chapter>${JSON.stringify(
+    titles.map((title) => ({ title, kind: 'page' })),
+  )}</lemonriver-chapter>`;
+
+describe('startApply with a task', () => {
+  it('remembers which chapter held each page, and the chapters themselves', () =>
+    withWorkspace(async (ctx, file) => {
+      await seed(file, { changes: [placement], columns: COLUMNS });
+      const result = await startApply(ctx, SLIDE);
+      if (!result.ok) throw new Error(result.error);
+      const stored = await readBoardFile(file);
+      expect(stored.applyColumns).toEqual(APPLY_COLUMNS);
+      expect(stored.applyColumnsBackup).toEqual(COLUMNS);
+      expect(stored.applying).toMatchObject({ task: { kind: 'changes' } });
+    }));
+
+  it('writes a message for one page and names only that page', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, { cards: { [PAGE_B]: { title: 'Two', memo: 'lead with it' } } });
+      const result = await startApply(
+        ctx,
+        SLIDE,
+        { kind: 'page', page: PAGE_B, action: 'memo' },
+        'en',
+      );
+      if (!result.ok) throw new Error(result.error);
+      expect(result.prompt).toContain('Work on page 2 "Two" of slides/deck-apply/index.tsx only.');
+      expect(result.prompt).toContain('Change this page as the note says: "lead with it"');
+      expect((await readBoardFile(file)).applyBackup).toBe(SOURCE);
+    }));
+
+  it('refuses a note action on a page with no note', () =>
+    withWorkspace(async (ctx, file) => {
+      const result = await startApply(ctx, SLIDE, { kind: 'page', page: PAGE_A, action: 'memo' });
+      expect(result).toMatchObject({ ok: false, status: 422 });
+      expect((await readBoardFile(file)).applying).toBeUndefined();
+    }));
+
+  it('plans a chapter without backing anything up', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, { columns: COLUMNS });
+      const result = await startApply(ctx, SLIDE, {
+        kind: 'chapter-plan',
+        chapter: 1,
+        title: 'Middle',
+        brief: 'the shift',
+        count: 2,
+      });
+      if (!result.ok) throw new Error(result.error);
+      expect(result.prompt).toContain(
+        'This turn is planning only: do not write, edit or create any file.',
+      );
+      expect(result.prompt).toContain('It has these pages now: page 2.');
+      const stored = await readBoardFile(file);
+      expect(stored.applyBackup).toBeUndefined();
+      expect(stored.applying).toMatchObject({ task: { kind: 'chapter-plan', chapter: 1 } });
+    }));
+
+  it('refuses to write a chapter with no planned titles', () =>
+    withWorkspace(async (ctx) => {
+      const result = await startApply(ctx, SLIDE, {
+        kind: 'chapter-write',
+        chapter: 1,
+        title: 'Middle',
+      });
+      expect(result).toMatchObject({ ok: false, status: 409 });
+    }));
+});
+
+describe('collectApply with a page task', () => {
+  it('leaves the change list alone and lights the page and its new neighbour', () =>
+    withWorkspace(async (ctx, file) => {
+      await seed(file, {
+        applying: {
+          startedAt: 1,
+          sessionId: 's1',
+          userItemId: 'u1',
+          task: { kind: 'page', page: PAGE_B, action: 'expand' },
+        },
+        applyBackup: SOURCE,
+        applyColumns: APPLY_COLUMNS,
+      });
+      await writeDeck(ctx, [PAGE_A, PAGE_B, '<section><h1>Deeper</h1></section>']);
+
+      await collectApply(
+        ctx,
+        fakeStore([userItem, assistantItem('Done.'), resultItem(false)]),
+        's1',
+        'u1',
+      );
+
+      const stored = await readBoardFile(file);
+      expect(stored.changes).toHaveLength(1);
+      expect(stored.columns).toEqual([
+        { title: 'Opening', size: 1 },
+        { title: 'Middle', size: 2 },
+      ]);
+      expect((stored.lastApply as { pages: string[] }).pages.sort()).toEqual(
+        [PAGE_B, '<section><h1>Deeper</h1></section>'].sort(),
+      );
+    }));
+});
+
+describe('collectApply with a chapter plan', () => {
+  const planTask = {
+    kind: 'chapter-plan' as const,
+    chapter: 1,
+    title: 'Middle',
+    brief: 'the shift',
+    count: 2,
+  };
+
+  it('keeps the titles and takes the block out of the reply, with no backup', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        applying: { startedAt: 1, sessionId: 's1', userItemId: 'u1', task: planTask },
+      });
+      const store = fakeStore([
+        userItem,
+        assistantItem(planBlock(['The shift', 'Why now'])),
+        resultItem(false),
+      ]);
+
+      await collectApply(ctx, store, 's1', 'u1');
+
+      const stored = await readBoardFile(file);
+      expect(stored.applying).toBeUndefined();
+      expect(stored.applyBackup).toBeUndefined();
+      expect(stored.lastApply).toBeUndefined();
+      expect(stored.chapterPlan).toMatchObject({ chapter: 1, state: 'ready', brief: 'the shift' });
+      expect(
+        (stored.chapterPlan as { items: { title: string }[] }).items.map((i) => i.title),
+      ).toEqual(['The shift', 'Why now']);
+      expect(store.updates).toEqual([{ itemId: 'a1', text: 'Planned.' }]);
+    }));
+
+  it('says the agent gave no titles when there is no block', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        applying: { startedAt: 1, sessionId: 's1', userItemId: 'u1', task: planTask },
+      });
+      await collectApply(
+        ctx,
+        fakeStore([userItem, assistantItem('I thought about it.'), resultItem(false)]),
+        's1',
+        'u1',
+      );
+      const stored = await readBoardFile(file);
+      expect(stored.applying).toBeUndefined();
+      expect(stored.chapterPlan).toMatchObject({ chapter: 1, state: 'failed', items: [] });
+    }));
+
+  it('keeps the error when the turn failed', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        applying: { startedAt: 1, sessionId: 's1', userItemId: 'u1', task: planTask },
+      });
+      await collectApply(
+        ctx,
+        fakeStore([userItem, errorItem('no such file'), resultItem(false)]),
+        's1',
+        'u1',
+      );
+      expect((await readBoardFile(file)).chapterPlan).toMatchObject({
+        state: 'failed',
+        error: 'no such file',
+      });
+    }));
+});
+
+describe('collectApply with a chapter write', () => {
+  const writeTask = { kind: 'chapter-write' as const, chapter: 1, title: 'Middle' };
+  const plan = {
+    chapter: 1,
+    title: 'Middle',
+    brief: 'the shift',
+    items: [planItem('The shift'), planItem('Why now')],
+    state: 'ready' as const,
+  };
+
+  it('puts every new page in the chapter and titles its card', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        applying: { startedAt: 1, sessionId: 's1', userItemId: 'u1', task: writeTask },
+        applyBackup: SOURCE,
+        applyColumns: APPLY_COLUMNS,
+        chapterPlan: plan,
+      });
+      const first = '<section><h1>The shift</h1></section>';
+      const second = '<section><h1>Why now</h1></section>';
+      await writeDeck(ctx, [PAGE_A, PAGE_B, first, second]);
+
+      await collectApply(
+        ctx,
+        fakeStore([userItem, assistantItem('Done.'), resultItem(false)]),
+        's1',
+        'u1',
+      );
+
+      const stored = await readBoardFile(file);
+      expect(stored.columns).toEqual([
+        { title: 'Opening', size: 1 },
+        { title: 'Middle', size: 3 },
+      ]);
+      expect(stored.cards).toMatchObject({
+        [first]: { title: 'The shift' },
+        [second]: { title: 'Why now' },
+      });
+      expect(stored.chapterPlan).toBeUndefined();
+      expect((stored.lastApply as { pages: string[] }).pages.sort()).toEqual(
+        [first, second].sort(),
+      );
+    }));
+
+  it('fills a chapter that had no pages at all', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        applying: {
+          startedAt: 1,
+          sessionId: 's1',
+          userItemId: 'u1',
+          task: { ...writeTask, chapter: 1 },
+        },
+        applyBackup: SOURCE,
+        applyColumns: [
+          { title: 'Opening', keys: [PAGE_A] },
+          { title: 'Middle', keys: [] },
+        ],
+        chapterPlan: { ...plan, items: [planItem('Only')] },
+      });
+      const only = '<section><h1>Only</h1></section>';
+      await writeDeck(ctx, [PAGE_A, only]);
+
+      await collectApply(
+        ctx,
+        fakeStore([userItem, assistantItem('Done.'), resultItem(false)]),
+        's1',
+        'u1',
+      );
+
+      expect((await readBoardFile(file)).columns).toEqual([
+        { title: 'Opening', size: 1 },
+        { title: 'Middle', size: 1 },
+      ]);
+    }));
+
+  it('keeps the plan when the turn failed', () =>
+    withWorkspace(async (ctx, file) => {
+      await updateBoardFile(file, {
+        applying: { startedAt: 1, sessionId: 's1', userItemId: 'u1', task: writeTask },
+        applyBackup: SOURCE,
+        applyColumns: APPLY_COLUMNS,
+        chapterPlan: plan,
+      });
+      await collectApply(
+        ctx,
+        fakeStore([userItem, errorItem('the file did not compile'), resultItem(false)]),
+        's1',
+        'u1',
+      );
+      const stored = await readBoardFile(file);
+      expect(stored.chapterPlan).toMatchObject({ state: 'ready' });
+      expect(stored.lastApply).toMatchObject({ ok: false });
+    }));
+});
+
+describe('saveChapterPlan', () => {
+  it('stores edits and drops the plan when handed null', () =>
+    withWorkspace(async (ctx, file) => {
+      await saveChapterPlan(ctx, SLIDE, {
+        chapter: 0,
+        title: 'Opening',
+        brief: 'start',
+        items: [{ id: 'a', title: 'Hi', kind: 'page' }],
+        state: 'ready',
+      });
+      expect((await readBoardFile(file)).chapterPlan).toMatchObject({ chapter: 0 });
+      await saveChapterPlan(ctx, SLIDE, null);
+      expect((await readBoardFile(file)).chapterPlan).toBeUndefined();
     }));
 });

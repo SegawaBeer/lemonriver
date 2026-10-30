@@ -1,5 +1,6 @@
 import type { Plural } from '../../../locale/types';
 import type { BlockKind, WholeReason } from '../board/blocks/classify.ts';
+import type { PageAction } from '../board/model/agent-tasks.ts';
 
 export type LrText = {
   board: {
@@ -113,6 +114,47 @@ export type LrText = {
     applyFailed: string;
     applyStalled: string;
     applyCancel: string;
+    /** The group of one-page actions, opened from a card or the block panel. */
+    askAgent: string;
+    askRewrite: string;
+    askChart: string;
+    askMemo: string;
+    askExpand: string;
+    /** Why the one-page actions cannot run right now. */
+    askNeedsAgent: string;
+    askBuilding: string;
+    askBusy: string;
+    askHasChanges: string;
+    askNeedsMemo: string;
+    /** template: "Agent is rewriting page {n}…" — one per action. */
+    askingPage: Record<PageAction, string>;
+    /** template: "Agent is planning chapter {n}…" */
+    planningChapter: string;
+    /** template: "Agent is writing chapter {n}…" */
+    writingChapter: string;
+    /** template: "Page {n} is done" */
+    askDone: string;
+    /** template: "Page {n} became two pages" */
+    askExpanded: string;
+    /** template: "Chapter {n} has {k} new pages" */
+    chapterWritten: string;
+    undoTask: string;
+    fillChapter: string;
+    chapterBrief: string;
+    chapterCount: string;
+    planChapter: string;
+    planning: string;
+    /** template: "See the titles ({n})" */
+    viewPlan: string;
+    /** template: "Write these {n} pages" */
+    writeChapter: string;
+    dropPlan: string;
+    planFailed: string;
+    retryPlan: string;
+    addPlanItem: string;
+    planRemove: string;
+    planMoveUp: string;
+    planMoveDown: string;
   };
   theme: {
     lime: string;

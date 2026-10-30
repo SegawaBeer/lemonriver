@@ -32,10 +32,12 @@ import {
   Maximize2,
   Minus,
   Plus,
+  Sparkles,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { format } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
 import type { DesignSystem } from '../../lib/design';
 import type { Page } from '../../lib/sdk';
@@ -53,6 +55,7 @@ import {
   orderAfterMoveMany,
   slotAtPoint,
 } from './layout';
+import type { PageAction } from './model/agent-tasks';
 import type { BoardCard, CardPatch } from './model/cards';
 import { type BoardColumn, columnsAfterMoveMany } from './model/structure';
 import { PageNode, type PageNodeData } from './page-node';
@@ -98,6 +101,13 @@ type Props = {
   onLink: (a: number, b: number) => void;
   onUnlink: (a: number, b: number) => void;
   onToggleLinks: () => void;
+  /** Why the one-page agent actions are off, or null when they can run. */
+  agentHint: string | null;
+  onPageTask: (index: number, action: PageAction) => void;
+  /** 'planning' while the agent is out, the number of titles when ready. */
+  planFor: (column: number) => 'planning' | number | null;
+  onFillChapter: (column: number) => void;
+  onViewPlan: (column: number) => void;
 };
 
 type ColumnLabelData = {
@@ -107,11 +117,15 @@ type ColumnLabelData = {
   width: number;
   collapsed: boolean;
   canDelete: boolean;
+  /** 'planning' while the agent is out, the number of titles when ready, else null. */
+  plan: 'planning' | number | null;
   onRename: (index: number, title: string) => void;
   onAddPage: (index: number) => void;
   onAddChapter: (after: number) => void;
   onDelete: (index: number) => void;
   onToggleCollapse: (index: number) => void;
+  onFillChapter: (index: number) => void;
+  onViewPlan: (index: number) => void;
 };
 
 function ColumnLabel({ data }: NodeProps) {
@@ -122,11 +136,14 @@ function ColumnLabel({ data }: NodeProps) {
     width,
     collapsed,
     canDelete,
+    plan,
     onRename,
     onAddPage,
     onAddChapter,
     onDelete,
     onToggleCollapse,
+    onFillChapter,
+    onViewPlan,
   } = data as unknown as ColumnLabelData;
   const lr = useLrText();
   const [editing, setEditing] = useState(false);
@@ -184,6 +201,30 @@ function ColumnLabel({ data }: NodeProps) {
       )}
       <span className="folio">{pad2(count)}</span>
       <div className="ml-auto flex items-center">
+        {plan === 'planning' ? (
+          <span className="mr-1 text-[11px] text-muted-foreground" data-lr-planning>
+            {lr.board.planning}
+          </span>
+        ) : typeof plan === 'number' ? (
+          <button
+            type="button"
+            onClick={() => onViewPlan(index)}
+            data-lr-view-plan
+            className="nodrag mr-1 rounded-[4px] px-1.5 py-0.5 text-[11px] text-[var(--lr-accent)] motion-safe:transition-colors hover:bg-muted"
+          >
+            {format(lr.board.viewPlan, { n: plan })}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => onFillChapter(index)}
+          aria-label={lr.board.fillChapter}
+          title={lr.board.fillChapter}
+          data-lr-fill-chapter
+          className="nodrag flex size-6 items-center justify-center rounded-[4px] text-muted-foreground/60 motion-safe:transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Sparkles className="size-3.5" strokeWidth={1.9} />
+        </button>
         <button
           type="button"
           onClick={() => onAddPage(index)}
@@ -316,11 +357,20 @@ type BuildArgs = {
   flashed: number[];
   selected: Set<number>;
   size: CardSize;
-  actions: Pick<PageNodeData, 'onDuplicate' | 'onDelete' | 'onMoveToEnd' | 'onPatchCard'>;
+  actions: Pick<
+    PageNodeData,
+    'onDuplicate' | 'onDelete' | 'onMoveToEnd' | 'onPatchCard' | 'agentHint' | 'onPageTask'
+  >;
   columnActions: Pick<
     ColumnLabelData,
-    'onRename' | 'onAddPage' | 'onAddChapter' | 'onDelete' | 'onToggleCollapse'
-  > & { columns: number };
+    | 'onRename'
+    | 'onAddPage'
+    | 'onAddChapter'
+    | 'onDelete'
+    | 'onToggleCollapse'
+    | 'onFillChapter'
+    | 'onViewPlan'
+  > & { columns: number; planFor: (column: number) => 'planning' | number | null };
 };
 
 /**
@@ -358,11 +408,14 @@ function buildNodes({
       width: column.boxW,
       collapsed: column.collapsed,
       canDelete: columnActions.columns > 1,
+      plan: columnActions.planFor(i),
       onRename: columnActions.onRename,
       onAddPage: columnActions.onAddPage,
       onAddChapter: columnActions.onAddChapter,
       onDelete: columnActions.onDelete,
       onToggleCollapse: columnActions.onToggleCollapse,
+      onFillChapter: columnActions.onFillChapter,
+      onViewPlan: columnActions.onViewPlan,
     },
     draggable: true,
     selectable: false,
@@ -458,6 +511,11 @@ function BoardFlow({
   onLink,
   onUnlink,
   onToggleLinks,
+  agentHint,
+  onPageTask,
+  planFor,
+  onFillChapter,
+  onViewPlan,
 }: Props) {
   const lr = useLrText();
   const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
@@ -471,8 +529,8 @@ function BoardFlow({
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   const actions = useMemo(
-    () => ({ onDuplicate, onDelete, onMoveToEnd, onPatchCard }),
-    [onDuplicate, onDelete, onMoveToEnd, onPatchCard],
+    () => ({ onDuplicate, onDelete, onMoveToEnd, onPatchCard, agentHint, onPageTask }),
+    [onDuplicate, onDelete, onMoveToEnd, onPatchCard, agentHint, onPageTask],
   );
 
   const columnActions = useMemo(
@@ -482,9 +540,22 @@ function BoardFlow({
       onAddChapter,
       onDelete: onDeleteChapter,
       onToggleCollapse,
+      onFillChapter,
+      onViewPlan,
+      planFor,
       columns: columns.length,
     }),
-    [onRenameColumn, onAddPage, onAddChapter, onDeleteChapter, onToggleCollapse, columns.length],
+    [
+      onRenameColumn,
+      onAddPage,
+      onAddChapter,
+      onDeleteChapter,
+      onToggleCollapse,
+      onFillChapter,
+      onViewPlan,
+      planFor,
+      columns.length,
+    ],
   );
 
   const buildArgs = useMemo(

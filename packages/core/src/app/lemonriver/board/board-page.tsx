@@ -1,5 +1,7 @@
 import {
+  ChevronDown,
   ChevronLeft,
+  ChevronUp,
   Columns3,
   Combine,
   Copy,
@@ -7,6 +9,7 @@ import {
   Grid2X2,
   Image as ImageIcon,
   List,
+  Plus,
   Redo2,
   Rows3,
   Trash2,
@@ -49,7 +52,13 @@ import { pageReadOf } from './blocks/cache';
 import { ChangeList } from './blocks/change-list';
 import type { Block } from './blocks/classify';
 import { type CardSize, orderAfterMoveMany } from './layout';
-import type { BoardLastApply } from './model/apply';
+import type { PageAction } from './model/agent-tasks';
+import {
+  type BoardApplying,
+  type BoardLastApply,
+  type ChapterPlan,
+  sanitizeChapterPlan,
+} from './model/apply';
 import {
   type BoardCard,
   CARD_STATUSES,
@@ -233,7 +242,7 @@ export function Board() {
     (n: number) => format(lr.board.columnFallback, { n }),
     [lr.board.columnFallback],
   );
-  const { columns, applyColumns } = useBoardColumns(slideId, pages, columnTitle);
+  const { columns, applyColumns, adoptColumns } = useBoardColumns(slideId, pages, columnTitle);
   const {
     ready,
     keys,
@@ -247,6 +256,7 @@ export function Board() {
     beginOp,
     entryAt,
     addLinks,
+    refreshCards,
   } = useBoardCards(slideId, modulePages, pages.length);
   const comments = useBoardComments(slideId, pages.length);
   const history = useHistory(slideId);
@@ -408,6 +418,11 @@ export function Board() {
   const [undoOpen, setUndoOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [chapterAt, setChapterAt] = useState<number | null>(null);
+  const [chapterBrief, setChapterBrief] = useState('');
+  const [chapterCount, setChapterCount] = useState(3);
+  const [planItems, setPlanItems] = useState<ChapterPlan['items']>([]);
+  const [syncedPlan, setSyncedPlan] = useState<string | null>(null);
 
   const refreshLists = useCallback(async () => {
     try {
@@ -430,8 +445,11 @@ export function Board() {
 
   /** A hand-over that has just ended: say how it went, and light up what changed. */
   const onSettled = useCallback(
-    (last: BoardLastApply | null) => {
+    (last: BoardLastApply | null, was: BoardApplying | null) => {
       void refreshLists();
+      // The task may have named the pages it added; those titles are the
+      // server's, not anything this board knows.
+      void refreshCards();
       if (!last) return;
       if (!last.ok) {
         toast.error(format(lr.board.applyFailed, { reason: last.error ?? '' }), {
@@ -441,6 +459,28 @@ export function Board() {
         return;
       }
       setFlashed(last.pages);
+      const undo = { label: lr.board.undoTask, onClick: askUndo };
+      const task = was?.task;
+      if (task?.kind === 'page') {
+        const n = keys.indexOf(task.page) + 1;
+        toast.success(
+          task.action === 'expand'
+            ? format(lr.board.askExpanded, { n })
+            : format(lr.board.askDone, { n }),
+          { duration: 10_000, action: undo },
+        );
+        return;
+      }
+      if (task?.kind === 'chapter-write') {
+        toast.success(
+          format(lr.board.chapterWritten, { n: task.chapter + 1, k: last.pages.length }),
+          {
+            duration: 10_000,
+            action: undo,
+          },
+        );
+        return;
+      }
       toast.success(lr.board.applyDone, {
         duration: 10_000,
         action: { label: lr.board.applyUndo, onClick: askUndo },
@@ -448,16 +488,164 @@ export function Board() {
     },
     [
       askUndo,
+      keys,
       lr.board.applyDone,
       lr.board.applyFailed,
       lr.board.applyUndo,
+      lr.board.askDone,
+      lr.board.askExpanded,
+      lr.board.chapterWritten,
+      lr.board.undoTask,
       lr.outline.openAgent,
+      refreshCards,
       refreshLists,
     ],
   );
 
   const boardApply = useBoardApply(slideId, onSettled);
   const applying = boardApply.applying !== null;
+
+  // A task that adds or removes pages rewrites the chapters on the server; the
+  // board takes them as they are instead of sharing the new pages out itself.
+  useEffect(() => {
+    if (boardApply.columns) adoptColumns(boardApply.columns);
+  }, [adoptColumns, boardApply.columns]);
+
+  /** Why "ask the agent" is off for every page, before a page's own reasons. */
+  const agentHint = applying
+    ? lr.board.askBusy
+    : !boardApply.connected
+      ? lr.board.askNeedsAgent
+      : building
+        ? lr.board.askBuilding
+        : null;
+
+  const startPageTask = useCallback(
+    (index: number, action: PageAction) => {
+      const key = keys[index];
+      if (!key || agentHint || changeCounts[index] > 0) return;
+      if (action === 'memo' && !cards[index]?.memo?.trim()) return;
+      void boardApply.start({ kind: 'page', page: key, action });
+    },
+    [agentHint, boardApply, cards, changeCounts, keys],
+  );
+
+  const applyingLabel = useMemo(() => {
+    const task = boardApply.applying?.task;
+    if (!task) return lr.board.applying;
+    if (task.kind === 'page') {
+      return format(lr.board.askingPage[task.action], { n: keys.indexOf(task.page) + 1 });
+    }
+    if (task.kind === 'chapter-plan') {
+      return format(lr.board.planningChapter, { n: task.chapter + 1 });
+    }
+    if (task.kind === 'chapter-write') {
+      return format(lr.board.writingChapter, { n: task.chapter + 1 });
+    }
+    return lr.board.applying;
+  }, [boardApply.applying, keys, lr.board]);
+
+  const planFor = useCallback(
+    (column: number): 'planning' | number | null => {
+      const task = boardApply.applying?.task;
+      if (task?.kind === 'chapter-plan' && task.chapter === column) return 'planning';
+      const plan = boardApply.chapterPlan;
+      if (plan && plan.chapter === column && plan.state === 'ready') return plan.items.length;
+      return null;
+    },
+    [boardApply.applying, boardApply.chapterPlan],
+  );
+
+  const openChapter = useCallback((column: number) => {
+    setChapterAt(column);
+    setChapterBrief('');
+    setChapterCount(3);
+    setPlanItems([]);
+    setSyncedPlan(null);
+  }, []);
+
+  const planAt =
+    boardApply.chapterPlan && chapterAt !== null && boardApply.chapterPlan.chapter === chapterAt
+      ? boardApply.chapterPlan
+      : null;
+  const planningHere =
+    boardApply.applying?.task.kind === 'chapter-plan' &&
+    chapterAt !== null &&
+    boardApply.applying.task.chapter === chapterAt;
+  const writingHere =
+    boardApply.applying?.task.kind === 'chapter-write' &&
+    chapterAt !== null &&
+    boardApply.applying.task.chapter === chapterAt;
+
+  // The titles arrive once; a later read of the same record must not wipe what
+  // the user has typed into them since.
+  const planKey = planAt
+    ? `${planAt.chapter}|${planAt.state}|${planAt.items.map((item) => item.title).join('\u0001')}`
+    : null;
+  useEffect(() => {
+    if (planAt?.state !== 'ready' || planKey === null || syncedPlan === planKey) return;
+    setPlanItems(planAt.items);
+    setChapterBrief(planAt.brief);
+    setSyncedPlan(planKey);
+  }, [planAt, planKey, syncedPlan]);
+
+  const startChapterPlan = useCallback(() => {
+    if (chapterAt === null || !chapterBrief.trim()) return;
+    const brief = planAt?.brief || chapterBrief.trim();
+    void boardApply.start({
+      kind: 'chapter-plan',
+      chapter: chapterAt,
+      title: columns?.[chapterAt]?.title ?? '',
+      brief,
+      count: chapterCount,
+    });
+  }, [boardApply, chapterAt, chapterBrief, chapterCount, columns, planAt]);
+
+  const dropChapterPlan = useCallback(() => {
+    void boardApply.savePlan(null);
+    setChapterAt(null);
+  }, [boardApply]);
+
+  const writeChapter = useCallback(async () => {
+    if (chapterAt === null) return;
+    const title = columns?.[chapterAt]?.title ?? planAt?.title ?? '';
+    const saved = sanitizeChapterPlan({
+      chapter: chapterAt,
+      title,
+      brief: planAt?.brief ?? chapterBrief,
+      items: planItems,
+      state: 'ready',
+    });
+    if (!saved) return;
+    await boardApply.savePlan(saved);
+    setChapterAt(null);
+    void boardApply.start({ kind: 'chapter-write', chapter: chapterAt, title });
+  }, [boardApply, chapterAt, chapterBrief, columns, planAt, planItems]);
+
+  const movePlanItem = useCallback((from: number, to: number) => {
+    setPlanItems((items) => {
+      if (to < 0 || to >= items.length || from === to) return items;
+      const next = items.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const editPlanItem = useCallback((at: number, title: string) => {
+    setPlanItems((items) => items.map((item, i) => (i === at ? { ...item, title } : item)));
+  }, []);
+
+  const addPlanItem = useCallback(() => {
+    setPlanItems((items) =>
+      items.length >= 8
+        ? items
+        : [
+            ...items,
+            { id: `plan-${Date.now().toString(36)}-${items.length}`, title: '', kind: 'page' },
+          ],
+    );
+  }, []);
 
   useEffect(() => {
     if (flashed.length === 0) return;
@@ -478,12 +666,12 @@ export function Board() {
       } catch {}
     };
     void read();
-    const timer = listOpen ? window.setInterval(() => void read(), 3000) : null;
+    const timer = window.setInterval(() => void read(), 3000);
     return () => {
       cancelled = true;
-      if (timer !== null) window.clearInterval(timer);
+      window.clearInterval(timer);
     };
-  }, [listOpen, slideId]);
+  }, [slideId]);
 
   const undoLastApply = useCallback(async () => {
     const ok = await boardApply.undoLast();
@@ -987,7 +1175,7 @@ export function Board() {
                 data-lr-applying
               >
                 <span className="size-1.5 rounded-full bg-[var(--lr-accent)]" />
-                {lr.board.applying}
+                {applyingLabel}
               </span>
             )
           ) : (
@@ -1012,7 +1200,7 @@ export function Board() {
                       apply={{
                         onApply: () => {
                           setListOpen(false);
-                          void boardApply.start();
+                          void boardApply.start({ kind: 'changes' });
                         },
                         disabled: applyHint !== null,
                         hint: applyHint,
@@ -1194,6 +1382,11 @@ export function Board() {
                   onUnlink={(a, b) => setLink(a, b, false)}
                   onToggleLinks={toggleLinks}
                   flashed={flashedPages}
+                  agentHint={agentHint}
+                  onPageTask={startPageTask}
+                  planFor={planFor}
+                  onFillChapter={openChapter}
+                  onViewPlan={openChapter}
                 />
               </Suspense>
             </>
@@ -1209,6 +1402,18 @@ export function Board() {
             changes={changes}
             onChanges={applyChanges}
             cardTitle={(index) => cards[index]?.title ?? ''}
+            cardMemo={(index) => cards[index]?.memo ?? ''}
+            agent={{
+              hint:
+                agentHint ??
+                (selected.length > 0 && changeCounts[selected[selected.length - 1]] > 0
+                  ? lr.board.askHasChanges
+                  : null),
+              onTask: (action) => {
+                const at = selected[selected.length - 1];
+                if (at !== undefined) startPageTask(at, action);
+              },
+            }}
             readOnly={applying}
             onSplit={splitPage}
           />
@@ -1251,6 +1456,166 @@ export function Board() {
             <Button variant="destructive" size="sm" onClick={() => void undoLastApply()}>
               {lr.board.applyUndoConfirm.confirm}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={chapterAt !== null}
+        onOpenChange={(open) => {
+          if (!open) setChapterAt(null);
+        }}
+      >
+        <DialogContent data-lr-chapter-dialog>
+          <DialogHeader>
+            <DialogTitle>{lr.board.fillChapter}</DialogTitle>
+            <DialogDescription>
+              {chapterAt === null
+                ? ''
+                : columns?.[chapterAt]?.title ||
+                  format(lr.board.columnFallback, { n: chapterAt + 1 })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {planAt?.state === 'ready' ? (
+            <div className="flex flex-col gap-1.5" data-lr-plan-list>
+              {planItems.map((item, at) => (
+                <div key={item.id} className="flex items-center gap-1" data-lr-plan-item>
+                  <input
+                    value={item.title}
+                    aria-label={`${lr.board.writeChapter} ${at + 1}`}
+                    onChange={(event) => editPlanItem(at, event.currentTarget.value)}
+                    className="min-w-0 flex-1 rounded-[4px] border border-hairline bg-background px-2 py-1 text-[12.5px] outline-none focus:ring-1 focus:ring-brand/50"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={lr.board.planMoveUp}
+                    disabled={at === 0}
+                    onClick={() => movePlanItem(at, at - 1)}
+                  >
+                    <ChevronUp />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={lr.board.planMoveDown}
+                    disabled={at === planItems.length - 1}
+                    onClick={() => movePlanItem(at, at + 1)}
+                  >
+                    <ChevronDown />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={lr.board.planRemove}
+                    onClick={() => setPlanItems((items) => items.filter((_, i) => i !== at))}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="self-start"
+                data-lr-add-plan-item
+                disabled={planItems.length >= 8}
+                onClick={addPlanItem}
+              >
+                <Plus />
+                {lr.board.addPlanItem}
+              </Button>
+            </div>
+          ) : planAt?.state === 'failed' ? (
+            <p className="text-[12.5px] text-destructive" data-lr-plan-error>
+              {planAt.error || lr.board.planFailed}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-[12.5px]">
+                <span>{lr.board.chapterBrief}</span>
+                <textarea
+                  value={chapterBrief}
+                  maxLength={500}
+                  rows={4}
+                  data-lr-chapter-brief
+                  onChange={(event) => setChapterBrief(event.currentTarget.value)}
+                  className="resize-none rounded-[4px] border border-hairline bg-background px-2 py-1.5 text-[12.5px] outline-none focus:ring-1 focus:ring-brand/50"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-[12.5px]">
+                <span>{lr.board.chapterCount}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={8}
+                  value={chapterCount}
+                  data-lr-chapter-count
+                  onChange={(event) =>
+                    setChapterCount(
+                      Math.min(8, Math.max(1, Math.trunc(Number(event.currentTarget.value) || 1))),
+                    )
+                  }
+                  className="w-16 rounded-[4px] border border-hairline bg-background px-2 py-1 text-[12.5px] tabular-nums outline-none focus:ring-1 focus:ring-brand/50"
+                />
+              </label>
+            </div>
+          )}
+
+          {planningHere && (
+            <p className="text-[12px] text-muted-foreground" data-lr-planning-dialog>
+              {lr.board.planning}
+            </p>
+          )}
+
+          <DialogFooter>
+            {planAt?.state === 'ready' ? (
+              <>
+                <Button variant="outline" size="sm" onClick={dropChapterPlan}>
+                  {lr.board.dropPlan}
+                </Button>
+                <Button
+                  size="sm"
+                  data-lr-write-chapter
+                  disabled={writingHere || planItems.length === 0}
+                  onClick={() => void writeChapter()}
+                >
+                  {format(lr.board.writeChapter, { n: planItems.length })}
+                </Button>
+              </>
+            ) : planAt?.state === 'failed' ? (
+              <>
+                <Button variant="outline" size="sm" onClick={dropChapterPlan}>
+                  {lr.board.dropPlan}
+                </Button>
+                <Button
+                  size="sm"
+                  data-lr-retry-plan
+                  disabled={planningHere || agentHint !== null}
+                  onClick={startChapterPlan}
+                >
+                  {lr.board.retryPlan}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setChapterAt(null)}>
+                  {t.common.cancel}
+                </Button>
+                <Button
+                  size="sm"
+                  data-lr-plan-chapter
+                  disabled={!chapterBrief.trim() || planningHere || agentHint !== null}
+                  onClick={startChapterPlan}
+                >
+                  {lr.board.planChapter}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import type { ViteDevServer } from 'vite';
+import { sanitizeTask } from '../../app/lemonriver/board/model/agent-tasks.ts';
 import { sanitizeCards, sanitizeLinks } from '../../app/lemonriver/board/model/cards.ts';
 import { sanitizeChanges } from '../../app/lemonriver/board/model/changes.ts';
 import { sanitizeRestructures } from '../../app/lemonriver/board/model/restructure.ts';
@@ -21,7 +22,9 @@ import {
   cancelApply,
   linkApply,
   sanitizeApplying,
+  sanitizeChapterPlan,
   sanitizeLastApply,
+  saveChapterPlan,
   startApply,
   undoApply,
 } from './apply.ts';
@@ -39,7 +42,7 @@ import {
   writeBoardStructure,
 } from './store.ts';
 
-// GET /__board?slideId=…&pages=n   → { columns, applying, lastApply }
+// GET /__board?slideId=…&pages=n   → { columns, applying, lastApply, chapterPlan }
 // PUT /__board                     { slideId, columns: [{ title, size }] }
 // GET /__board/cards?slideId=…     → { cards, links }
 // PUT /__board/cards               { slideId, cards, links }
@@ -47,10 +50,11 @@ import {
 // PUT /__board/changes             { slideId, changes }
 // GET /__board/restructures?slideId=… → { restructures }
 // PUT /__board/restructures        { slideId, restructures }
-// POST /__board/apply              { slideId } → { prompt }
+// POST /__board/apply              { slideId, task?, lang? } → { prompt }
 // PATCH /__board/apply             { slideId, sessionId, userItemId } → { ok }
 // POST /__board/apply/undo         { slideId } → put the deck back as it was
 // POST /__board/apply/cancel       { slideId } → stop waiting for that apply
+// PUT /__board/plan                { slideId, chapterPlan } → save or drop the planned titles
 // POST /__board/blocks/source      { slideId, loc, text } → { code }
 // GET /__board/entries?slideId=…   → { entries: string[] | null }
 // POST /__board/pages/insert       { slideId, index } → insert a blank page
@@ -83,6 +87,7 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
           columns,
           applying: sanitizeApplying(raw.applying),
           lastApply: sanitizeLastApply(raw.lastApply),
+          chapterPlan: sanitizeChapterPlan(raw.chapterPlan),
         });
       }
 
@@ -193,14 +198,43 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
         if (!requestCheck.ok) {
           return json(res, requestCheck.status, { error: requestCheck.error });
         }
-        const body = (await readBody(req)) as { slideId?: unknown };
+        const body = (await readBody(req)) as {
+          slideId?: unknown;
+          task?: unknown;
+          lang?: unknown;
+        };
         const slideId = typeof body?.slideId === 'string' ? body.slideId : '';
         if (!resolveSlideEntryPath(ctx, slideId)) {
           return json(res, 400, { error: 'invalid slideId' });
         }
-        const started = await startApply(ctx, slideId);
+        const task =
+          body?.task === undefined ? { kind: 'changes' as const } : sanitizeTask(body.task);
+        if (!task) return json(res, 400, { error: 'invalid task' });
+        const lang = typeof body?.lang === 'string' && body.lang ? body.lang.slice(0, 20) : 'en';
+        const started = await startApply(ctx, slideId, task, lang);
         if (!started.ok) return json(res, started.status, { error: started.error });
         return json(res, 200, { prompt: started.prompt });
+      }
+
+      if (method === 'PUT' && url.pathname === '/plan') {
+        const requestCheck = validateMutationRequest(req, { requireJsonBody: true });
+        if (!requestCheck.ok) {
+          return json(res, requestCheck.status, { error: requestCheck.error });
+        }
+        const body = (await readBody(req)) as { slideId?: unknown; chapterPlan?: unknown };
+        const slideId = typeof body?.slideId === 'string' ? body.slideId : '';
+        if (!resolveSlideEntryPath(ctx, slideId)) {
+          return json(res, 400, { error: 'invalid slideId' });
+        }
+        const plan =
+          body?.chapterPlan === null || body?.chapterPlan === undefined
+            ? null
+            : sanitizeChapterPlan(body.chapterPlan);
+        if (body?.chapterPlan != null && !plan) {
+          return json(res, 400, { error: 'invalid chapterPlan' });
+        }
+        await saveChapterPlan(ctx, slideId, plan);
+        return json(res, 200, { ok: true });
       }
 
       if (method === 'PATCH' && url.pathname === '/apply') {

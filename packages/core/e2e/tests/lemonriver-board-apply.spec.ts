@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { pageKeys } from '../../src/app/lemonriver/board/model/cards.ts';
+import { columnsAfterApply } from '../../src/app/lemonriver/board/model/structure.ts';
 import {
   deleteSlide,
   devScratchDir,
@@ -92,7 +94,15 @@ function boardPath(slideId = SLIDE): string {
 }
 
 async function readRecord(): Promise<Record<string, unknown>> {
-  return JSON.parse(await fs.readFile(boardPath(), 'utf8')) as Record<string, unknown>;
+  // The server rewrites this file whole; a read can land mid-write.
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      return JSON.parse(await fs.readFile(boardPath(), 'utf8')) as Record<string, unknown>;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  throw new Error('the board record is not readable');
 }
 
 async function writeRecord(fields: Record<string, unknown>): Promise<void> {
@@ -106,7 +116,15 @@ async function resetApply(): Promise<void> {
   delete current.applying;
   delete current.applyBackup;
   delete current.lastApply;
+  delete current.applyColumns;
+  delete current.applyColumnsBackup;
+  delete current.chapterPlan;
   await fs.writeFile(boardPath(), JSON.stringify(current));
+}
+
+async function readEntries(request: Request): Promise<string[]> {
+  const res = await request.get(`/__board/entries?slideId=${SLIDE}`);
+  return ((await res.json()) as { entries?: string[] }).entries ?? [];
 }
 
 async function sha256(file: string): Promise<string> {
@@ -275,6 +293,58 @@ test.describe('story board apply', () => {
     await expect(page.getByText('Restored')).toBeVisible();
     expect(await sha256(slideSourcePath(SLIDE))).toBe(sourceBefore);
     expect((await readRecord()).applyBackup).toBeUndefined();
+  });
+
+  test('keeps the chapters in step when an apply adds a page', async ({ page, request }) => {
+    await agentReady(page);
+    await mockAgent(page);
+    await openBoard(page);
+    await splitWithFirstBlock(page, 0);
+
+    await changesButton(page).click();
+    await page.locator('[data-lr-change-apply]').click();
+    await expect(page.locator('[data-lr-applying]')).toBeVisible();
+
+    const before = await readEntries(request);
+    expect(before).toHaveLength(3);
+    await request.post('/__board/pages/insert', { data: { slideId: SLIDE, index: 1 } });
+    const after = await readEntries(request);
+    expect(after).toHaveLength(4);
+    await expect(cards(page)).toHaveCount(4);
+    // The board reshapes its own chapters to the new page count first; the
+    // record the server writes at the end of the turn comes after that.
+    await expect
+      .poll(async () => {
+        const columns = ((await readRecord()).columns ?? []) as { size: number }[];
+        return columns.reduce((sum, column) => sum + column.size, 0);
+      })
+      .toBe(4);
+
+    // The turn ends with a page added after the first one; the server works the
+    // chapters out from the pages that are still there.
+    const beforeKeys = pageKeys(before, before.length);
+    const afterKeys = pageKeys(after, after.length);
+    await writeRecord({
+      changes: [],
+      restructures: [],
+      applying: undefined,
+      applyBackup: undefined,
+      columns: columnsAfterApply(
+        [
+          { title: 'Opening', keys: beforeKeys.slice(0, 2) },
+          { title: 'Closing', keys: beforeKeys.slice(2) },
+        ],
+        afterKeys,
+      ),
+      lastApply: { ok: true, at: Date.now(), pages: [beforeKeys[0]] },
+    });
+
+    await expect(page.getByText('All applied')).toBeVisible({ timeout: 15_000 });
+    const labels = page.locator('.react-flow__node-columnLabel');
+    await expect(labels.nth(0)).toContainText('Opening');
+    await expect(labels.nth(0)).toContainText('03');
+    await expect(labels.nth(1)).toContainText('Closing');
+    await expect(labels.nth(1)).toContainText('01');
   });
 
   test('keeps the list when the turn fails, and says why', async ({ page }) => {
