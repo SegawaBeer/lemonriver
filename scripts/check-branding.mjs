@@ -21,6 +21,7 @@ const SKIP_PREFIXES = ['apps/web/', '.claude/'];
 const ALLOWED = [
   'CLAUDE.md',
   'README.md',
+  'README.zh-CN.md',
   'packages/core/src/branding.ts',
   'packages/core/src/branding.test.ts',
   'packages/core/src/config.ts',
