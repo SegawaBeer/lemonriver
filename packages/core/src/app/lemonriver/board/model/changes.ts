@@ -9,6 +9,8 @@ export type Placement = {
   block: BlockInfo;
   to: Spot | 'parked';
   code?: string;
+  /** Set when the block left the holding area and is now on a page. */
+  fromParking?: true;
 };
 
 const MAX_CHANGES = 200;
@@ -42,6 +44,20 @@ export function removeChange(changes: Placement[], origin: Spot & { block: strin
   );
 }
 
+/** A block taken out of the holding area and put back on a page. */
+export function unparkBlock(changes: Placement[], parked: Placement, to: Spot): Placement[] {
+  const kept = changes.filter((item) => item !== parked);
+  if (sameSpot(to, parked.origin)) return kept;
+  const placement: Placement = {
+    origin: parked.origin,
+    block: parked.block,
+    to,
+    fromParking: true,
+  };
+  if (parked.code !== undefined) placement.code = parked.code;
+  return [...kept, placement];
+}
+
 export type EffectiveBlock = Omit<Block, 'box'> & {
   box: Block['box'] | null;
   pending?: true;
@@ -66,14 +82,20 @@ export function effectiveBlocks(
     const to = item.to;
     if (to === 'parked' || to.page !== page) continue;
     const at = to.before === null ? -1 : blocks.findIndex((block) => block.id === to.before);
+    // A block that only changed place on its own page is still that page's own
+    // content, so it is drawn as the page has it now rather than as it was
+    // remembered when the move was made.
+    const own =
+      item.origin.page === page
+        ? original.find((block) => block.id === item.origin.block)
+        : undefined;
     const arriving: EffectiveBlock = {
       id: item.origin.block,
-      kind: item.block.kind,
-      text: item.block.text,
-      loc: item.block.loc,
-      box: null,
-      pending: true,
-      from: item.origin.page,
+      kind: own?.kind ?? item.block.kind,
+      text: own?.text ?? item.block.text,
+      loc: own?.loc ?? item.block.loc,
+      box: own?.box ?? null,
+      ...(own ? {} : { pending: true as const, from: item.origin.page }),
     };
     if (at < 0) blocks.push(arriving);
     else blocks.splice(at, 0, arriving);
@@ -203,6 +225,7 @@ function cleanPlacement(raw: unknown): Placement | null {
     to,
   };
   if (typeof item.code === 'string' && item.code) placement.code = item.code.slice(0, CODE_MAX);
+  if (item.fromParking === true) placement.fromParking = true;
   return placement;
 }
 

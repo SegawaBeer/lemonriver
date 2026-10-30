@@ -75,6 +75,8 @@ type Props = {
   collapsed: boolean[];
   /** One flag per page: cards the filter does not pick out are drawn faint. */
   dimmed: boolean[];
+  /** One count per page: block moves waiting to be applied. */
+  changeCounts: number[];
   /** Selected pages, by deck position. */
   selected: number[];
   onSelect: (indices: number[]) => void;
@@ -308,6 +310,7 @@ type BuildArgs = {
   cardsReady: boolean;
   design?: DesignSystem;
   dimmed: boolean[];
+  changeCounts: number[];
   selected: Set<number>;
   size: CardSize;
   actions: Pick<PageNodeData, 'onDuplicate' | 'onDelete' | 'onMoveToEnd' | 'onPatchCard'>;
@@ -331,6 +334,7 @@ function buildNodes({
   cardsReady,
   design,
   dimmed,
+  changeCounts,
   selected,
   size,
   actions,
@@ -402,6 +406,7 @@ function buildNodes({
         size,
         metrics,
         dimmed: dimmed[pageIndex] === true,
+        changeCount: changeCounts[pageIndex] ?? 0,
         ...actions,
       } satisfies PageNodeData as unknown as Record<string, unknown>,
     };
@@ -428,6 +433,7 @@ function BoardFlow({
   size,
   collapsed,
   dimmed,
+  changeCounts,
   selected,
   onSelect,
   onOpenPage,
@@ -484,11 +490,24 @@ function BoardFlow({
       cardsReady,
       design,
       dimmed,
+      changeCounts,
       size,
       actions,
       columnActions,
     }),
-    [slideId, pages, notes, cards, cardsReady, design, dimmed, size, actions, columnActions],
+    [
+      slideId,
+      pages,
+      notes,
+      cards,
+      cardsReady,
+      design,
+      dimmed,
+      changeCounts,
+      size,
+      actions,
+      columnActions,
+    ],
   );
 
   const baseNodes = useMemo<Node[]>(

@@ -10,6 +10,7 @@ import {
   removeChange,
   sanitizeChanges,
   staleChanges,
+  unparkBlock,
 } from './changes.ts';
 
 const block = (id: string, text = id): Block => ({
@@ -208,5 +209,36 @@ describe('sanitizeChanges', () => {
       to: 'parked',
     }));
     expect(sanitizeChanges(raw)).toHaveLength(200);
+  });
+});
+
+describe('unparkBlock', () => {
+  it('puts a parked block on a page, keeping its code and saying where it came from', () => {
+    const parked = placeBlock(
+      [],
+      at('p1', 'a2', 'a1'),
+      info('Alpha page one'),
+      'parked',
+      '<h1>x</h1>',
+    );
+    expect(parked).toHaveLength(1);
+
+    const moved = unparkBlock(parked, parked[0], { page: 'p2', before: null });
+    expect(moved).toHaveLength(1);
+    expect(moved[0].to).toEqual({ page: 'p2', before: null });
+    expect(moved[0].fromParking).toBe(true);
+    expect(moved[0].code).toBe('<h1>x</h1>');
+    expect(parkedBlocks(moved)).toHaveLength(0);
+  });
+
+  it('drops the entry when the block goes back where it came from', () => {
+    const parked = placeBlock([], at('p1', 'a2', 'a1'), info('Alpha page one'), 'parked', 'x');
+    expect(unparkBlock(parked, parked[0], { page: 'p1', before: 'a2' })).toEqual([]);
+  });
+
+  it('survives a round trip through the stored form', () => {
+    const parked = placeBlock([], at('p1', 'a2', 'a1'), info('Alpha page one'), 'parked', 'x');
+    const moved = unparkBlock(parked, parked[0], { page: 'p2', before: null });
+    expect(sanitizeChanges(JSON.parse(JSON.stringify(moved)))).toEqual(moved);
   });
 });

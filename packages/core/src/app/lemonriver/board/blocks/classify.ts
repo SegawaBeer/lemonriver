@@ -43,8 +43,10 @@ function ownKind(node: SnapNode): BlockKind | null {
   if (tag === 'blockquote' || tag === 'q') return 'quote';
   if (tag === 'li') return 'point';
   if (!node.text) return null;
-  if (tag === 'h1' || tag === 'h2' || tag === 'h3' || node.fontSize >= 56) return 'title';
+  if (tag === 'h1' || tag === 'h2' || tag === 'h3') return 'title';
+  // A big figure is a number even when it is as large as a heading.
   if (node.fontSize >= 48 && NUMBER_RE.test(squash(node.text))) return 'number';
+  if (node.fontSize >= 56) return 'title';
   return null;
 }
 

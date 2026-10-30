@@ -33,7 +33,7 @@ type BoardState = {
 
 const INITIAL: BoardState = { cards: {}, links: [], entries: undefined, loaded: false };
 
-const countAfter = (op: PageOp, count: number) => {
+export const countAfter = (op: PageOp, count: number) => {
   switch (op.kind) {
     case 'delete':
       return count - 1;
@@ -258,6 +258,8 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
 
   return {
     ready,
+    keys,
+    entries: board.entries,
     cards,
     pairs,
     links: board.links,

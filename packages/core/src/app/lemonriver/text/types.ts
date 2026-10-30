@@ -1,4 +1,5 @@
 import type { Plural } from '../../../locale/types';
+import type { BlockKind, WholeReason } from '../board/blocks/classify.ts';
 
 export type LrText = {
   board: {
@@ -60,6 +61,35 @@ export type LrText = {
     filterMemo: string;
     filterComments: string;
     filterClear: string;
+    /** The panel that lists the blocks inside the page last clicked. */
+    blockPanel: string;
+    blockPanelEmpty: string;
+    blockKinds: Record<BlockKind, string>;
+    blockDrag: string;
+    blockMenu: string;
+    /** template: "Page {n} · {title}" — one entry in a page picker. */
+    blockPageOption: string;
+    moveBlockTo: string;
+    parkBlock: string;
+    unparkBlockTo: string;
+    /** template: "Holding area ({n})" */
+    parking: string;
+    parkingEmpty: string;
+    blockPending: string;
+    /** template: "From page {n}" */
+    blockFrom: string;
+    pageChanges: Plural;
+    /** template: "Changes ({n})" */
+    changes: string;
+    changeRemove: string;
+    changeStale: string;
+    changeToPage: string;
+    changeToParking: string;
+    changeFromParking: string;
+    changeReorder: string;
+    wholeBadge: string;
+    whole: Record<WholeReason, string>;
+    parkNeedsSource: string;
   };
   theme: {
     lime: string;

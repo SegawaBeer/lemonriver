@@ -78,6 +78,19 @@ describe('readBlocks kinds', () => {
     expect(blocks.map((b) => b.kind)).toEqual(['number', 'text']);
   });
 
+  it('reads a heading-sized figure as number and heading-sized words as title', () => {
+    const blocks = blocksOf(
+      node('div', { text: '$40.0M', fontSize: 96 }),
+      node('div', { text: 'Revenue', fontSize: 96 }),
+    );
+    expect(blocks.map((b) => b.kind)).toEqual(['number', 'title']);
+  });
+
+  it('reads an h2 that happens to hold a figure as a title', () => {
+    const [block] = blocksOf(node('h2', { text: '$40.0M', fontSize: 96 }));
+    expect(block.kind).toBe('title');
+  });
+
   it('reads each element that carries its own text as its own block', () => {
     const blocks = blocksOf(
       node('div', {}, [node('span', { text: 'First' }), node('span', { text: 'second' })]),

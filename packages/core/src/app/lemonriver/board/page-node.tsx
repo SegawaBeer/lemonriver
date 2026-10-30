@@ -1,6 +1,6 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { Copy, MoveRight, Trash2 } from 'lucide-react';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -13,7 +13,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { format, useLocale } from '@/lib/use-locale';
+import { format, plural, useLocale } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
 import { SlideCanvas } from '../../components/slide-canvas';
 import type { DesignSystem } from '../../lib/design';
@@ -21,6 +21,9 @@ import { useNotes } from '../../lib/inspector/use-notes';
 import { SlidePageProvider } from '../../lib/page-context';
 import { CANVAS_WIDTH, type Page } from '../../lib/sdk';
 import { useLrText } from '../text';
+import { type PageRead, pageReadOf, rememberPageRead, sameRead } from './blocks/cache';
+import { readBlocks } from './blocks/classify';
+import { snapshotPage } from './blocks/snapshot';
 import type { CardMetrics, CardSize } from './layout';
 import {
   type BoardCard,
@@ -47,6 +50,8 @@ export type PageNodeData = {
   metrics: CardMetrics;
   /** True when a filter is on and this card is not one of the ones picked out. */
   dimmed: boolean;
+  /** How many block moves this page is a source or a target of. */
+  changeCount?: number;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
   onMoveToEnd: (index: number) => void;
@@ -87,6 +92,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
     size,
     metrics,
     dimmed,
+    changeCount = 0,
     ...actions
   } = data as unknown as PageNodeData;
   const t = useLocale();
@@ -94,6 +100,18 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
   const labels = useStatusLabels();
   const status = card?.status;
   const [renaming, setRenaming] = useState(false);
+  const [readFor, setReadFor] = useState<{ page: Page; read: PageRead } | null>(null);
+  const onRead = useCallback(
+    (next: PageRead) =>
+      setReadFor((previous) =>
+        previous && previous.page === PageComp && sameRead(previous.read, next)
+          ? previous
+          : { page: PageComp, read: next },
+      ),
+    [PageComp],
+  );
+  const read = readFor && readFor.page === PageComp ? readFor.read : pageReadOf(PageComp);
+  const whole = read && 'whole' in read ? read.whole : null;
   // A menu hands focus back to the card as it closes, which would pull the caret
   // straight out of the name field "Rename" just opened.
   const renameFromMenu = useRef(false);
@@ -105,9 +123,29 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
       : 'ring-1 ring-hairline hover:ring-muted-foreground/30';
 
   const statusLabel = status && (
-    <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+    <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
       <span className={cn('size-2 rounded-full', STATUS_STYLE[status].dot)} />
       {labels[status]}
+    </span>
+  );
+
+  /** What the board knows about this page's blocks, beside its status. */
+  const meta = (whole || changeCount > 0 || statusLabel) && (
+    <span className="ml-auto flex shrink-0 items-center gap-1.5">
+      {whole && (
+        <span
+          title={lr.board.whole[whole]}
+          className="rounded-[3px] bg-muted px-1 py-0.5 text-[10.5px] text-muted-foreground"
+        >
+          {lr.board.wholeBadge}
+        </span>
+      )}
+      {changeCount > 0 && (
+        <span className="rounded-[3px] bg-[var(--lr-accent)]/12 px-1 py-0.5 text-[10.5px] text-[var(--lr-accent)]">
+          {format(plural(changeCount, lr.board.pageChanges), { n: changeCount })}
+        </span>
+      )}
+      {statusLabel}
     </span>
   );
 
@@ -136,7 +174,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
           {pad2(index + 1)}
         </span>
         {title}
-        {statusLabel}
+        {meta}
       </div>
     ) : (
       <div
@@ -158,6 +196,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
             total={total}
             design={design}
             scale={metrics.cardW / CANVAS_WIDTH}
+            onRead={onRead}
           />
         </div>
         <div className="flex h-6 items-center gap-2 px-0.5">
@@ -165,7 +204,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
             {pad2(index + 1)}
           </span>
           {title}
-          {statusLabel}
+          {meta}
         </div>
         {size === 'large' && (
           <NoteStrip slideId={slideId} index={index} initial={note} height={metrics.noteH} />
@@ -282,27 +321,79 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
 
 /**
  * The live page, kept apart so editing a card's title, status or memo does not
- * re-render a page that can carry thousands of elements.
+ * re-render a page that can carry thousands of elements. It is also where a
+ * page is read for its blocks: the DOM is already here, and the reading waits
+ * for the browser to be idle so a board of thirty cards still opens quickly.
  */
-const PagePreview = memo(function PagePreview({
+export const PagePreview = memo(function PagePreview({
   page: PageComp,
   index,
   total,
   design,
   scale,
+  onRead,
 }: {
   page: Page;
   index: number;
   total: number;
   design?: DesignSystem;
   scale: number;
+  onRead?: (read: PageRead) => void;
 }) {
+  const host = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: number | null = null;
+
+    const read = () => {
+      const canvas = host.current?.querySelector<HTMLElement>('[data-osd-canvas]');
+      if (!canvas) return;
+      const next = readBlocks(snapshotPage(canvas, scale));
+      rememberPageRead(PageComp, next);
+      onRead?.(next);
+    };
+
+    const idle =
+      typeof window.requestIdleCallback === 'function'
+        ? window.requestIdleCallback(read, { timeout: 2000 })
+        : window.setTimeout(read, 200);
+
+    // Editing a page in another tab, or a hot update to its source, redraws the
+    // same component in place, so the read is refreshed when the canvas changes.
+    const canvas = host.current?.querySelector<HTMLElement>('[data-osd-canvas]');
+    const observer = canvas
+      ? new MutationObserver(() => {
+          if (timer !== null) window.clearTimeout(timer);
+          timer = window.setTimeout(() => {
+            timer = null;
+            if (!cancelled) read();
+          }, 300);
+        })
+      : null;
+    observer?.observe(canvas as HTMLElement, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+      if (timer !== null) window.clearTimeout(timer);
+      if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+    };
+  }, [PageComp, scale, onRead]);
+
   return (
-    <SlideCanvas scale={scale} center={false} flat freezeMotion design={design}>
-      <SlidePageProvider index={index} total={total}>
-        <PageComp />
-      </SlidePageProvider>
-    </SlideCanvas>
+    <div ref={host} className="h-full w-full">
+      <SlideCanvas scale={scale} center={false} flat freezeMotion design={design}>
+        <SlidePageProvider index={index} total={total}>
+          <PageComp />
+        </SlidePageProvider>
+      </SlideCanvas>
+    </div>
   );
 });
 

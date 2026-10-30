@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import type { ViteDevServer } from 'vite';
 import { sanitizeCards, sanitizeLinks } from '../../app/lemonriver/board/model/cards.ts';
+import { sanitizeChanges } from '../../app/lemonriver/board/model/changes.ts';
 import {
   type BoardStructure,
   reconcileColumns,
@@ -14,6 +15,7 @@ import {
   readSlideSource,
   resolveSlideEntryPath,
 } from '../../vite/routes/context.ts';
+import { blockSourceInSource } from './block-source.ts';
 import { defaultExportEntriesInSource } from './page-entries.ts';
 import {
   insertBlankPageInDefaultExportInSource,
@@ -32,12 +34,16 @@ import {
 // PUT /__board                     { slideId, columns: [{ title, size }] }
 // GET /__board/cards?slideId=…     → { cards, links }
 // PUT /__board/cards               { slideId, cards, links }
+// GET /__board/changes?slideId=…   → { changes }
+// PUT /__board/changes             { slideId, changes }
+// POST /__board/blocks/source      { slideId, loc, text } → { code }
 // GET /__board/entries?slideId=…   → { entries: string[] | null }
 // POST /__board/pages/insert       { slideId, index } → insert a blank page
 // POST /__board/pages/restore      { slideId, index, entry } → put a removed page back
 
 type PutBody = { slideId?: string; columns?: unknown };
 type CardsBody = { slideId?: string; cards?: unknown; links?: unknown };
+type ChangesBody = { slideId?: string; changes?: unknown };
 
 export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): void {
   server.middlewares.use('/__board', async (req, res, next) => {
@@ -107,6 +113,50 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
           links: sanitizeLinks(body.links),
         });
         return json(res, 200, { ok: true });
+      }
+
+      if (method === 'GET' && url.pathname === '/changes') {
+        const slideId = url.searchParams.get('slideId') ?? '';
+        if (!resolveSlideEntryPath(ctx, slideId)) {
+          return json(res, 400, { error: 'invalid slideId' });
+        }
+        const stored = await readBoardFile(boardStructurePath(ctx.userCwd, slideId));
+        return json(res, 200, { changes: sanitizeChanges(stored.changes) });
+      }
+
+      if (method === 'PUT' && url.pathname === '/changes') {
+        const requestCheck = validateMutationRequest(req, { requireJsonBody: true });
+        if (!requestCheck.ok) {
+          return json(res, requestCheck.status, { error: requestCheck.error });
+        }
+        const body = (await readBody(req)) as ChangesBody;
+        const slideId = body.slideId ?? '';
+        if (!resolveSlideEntryPath(ctx, slideId)) {
+          return json(res, 400, { error: 'invalid slideId' });
+        }
+        await updateBoardFile(boardStructurePath(ctx.userCwd, slideId), {
+          changes: sanitizeChanges(body.changes),
+        });
+        return json(res, 200, { ok: true });
+      }
+
+      if (method === 'POST' && url.pathname === '/blocks/source') {
+        const requestCheck = validateMutationRequest(req, { requireJsonBody: true });
+        if (!requestCheck.ok) {
+          return json(res, requestCheck.status, { error: requestCheck.error });
+        }
+        const body = (await readBody(req)) as { slideId?: unknown; loc?: unknown; text?: unknown };
+        const slideId = typeof body?.slideId === 'string' ? body.slideId : '';
+        const loc = typeof body?.loc === 'string' ? body.loc : '';
+        const text = typeof body?.text === 'string' ? body.text : '';
+        const entry = resolveSlideEntryPath(ctx, slideId);
+        if (!entry || !loc) return json(res, 400, { error: 'invalid slideId or loc' });
+
+        const source = await readSlideSource(entry);
+        if (source === null) return json(res, 404, { error: 'slide not found' });
+        const code = blockSourceInSource(source, loc, text);
+        if (code === null) return json(res, 404, { error: 'block source not found' });
+        return json(res, 200, { code });
       }
 
       if (method === 'POST' && url.pathname === '/pages/insert') {
