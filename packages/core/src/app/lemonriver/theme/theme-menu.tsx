@@ -1,4 +1,4 @@
-import { Citrus, Monitor, Moon, Sun } from 'lucide-react';
+import { Monitor, Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { IconTooltip, MenuTooltipTrigger } from '@/components/icon-tooltip';
 import { buttonVariants } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import { useLrText } from '../text';
+import { LemonThemeIcon } from './lemon-icon';
 import { useTheme } from './use-theme';
 
 /** The sidebar's theme button, with the lime theme added. */
@@ -28,7 +29,7 @@ export function ThemeToggle() {
     { id: 'system', label: t.themeToggle.system, icon: <Monitor /> },
     { id: 'light', label: t.themeToggle.light, icon: <Sun /> },
     { id: 'dark', label: t.themeToggle.dark, icon: <Moon /> },
-    { id: 'lime', label: lr.theme.lime, icon: <Citrus /> },
+    { id: 'lime', label: lr.theme.lime, icon: <LemonThemeIcon /> },
   ];
 
   return (

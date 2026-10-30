@@ -29,10 +29,15 @@ function OpenAILogo(props: SVGProps<SVGSVGElement>) {
 
 export function ProviderLogo({
   provider,
+  className,
   ...props
 }: { provider: AgentProviderId } & SVGProps<SVGSVGElement>) {
   if (provider !== 'claude' && provider !== 'codex') {
-    return <ExtraProviderLogo provider={provider} {...props} />;
+    return <ExtraProviderLogo provider={provider} className={className} />;
   }
-  return provider === 'claude' ? <ClaudeLogo {...props} /> : <OpenAILogo {...props} />;
+  return provider === 'claude' ? (
+    <ClaudeLogo className={className} {...props} />
+  ) : (
+    <OpenAILogo className={className} {...props} />
+  );
 }

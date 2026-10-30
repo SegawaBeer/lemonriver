@@ -1,4 +1,3 @@
-import { Citrus } from 'lucide-react';
 import { useTheme as useNextTheme } from 'next-themes';
 import { useCallback } from 'react';
 import { flushSync } from 'react-dom';
@@ -6,6 +5,7 @@ import type { CommandSpec } from '@/components/command/command-menu';
 import { format } from '@/lib/use-locale';
 import type { Locale } from '../../../locale/types';
 import { lrTextFor } from '../text';
+import { LemonThemeIcon } from './lemon-icon';
 import { motionReduced } from './motion';
 
 type ViewTransitionDocument = Document & {
@@ -40,7 +40,7 @@ export function lemonRiverAppearanceCommands(
     {
       id: 'theme-lime',
       label: format(t.commandMenu.themeItem, { name: lrTextFor(t.id).theme.lime }),
-      icon: <Citrus />,
+      icon: <LemonThemeIcon />,
       keywords: ['theme', 'lime', 'appearance'],
       active: theme === 'lime',
       run: () => setTheme('lime'),
