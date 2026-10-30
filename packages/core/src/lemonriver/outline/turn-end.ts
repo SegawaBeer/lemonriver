@@ -12,6 +12,7 @@ import {
 import { resolveSlideEntry } from '../../editing/slide-ops.ts';
 import type { ApiContext } from '../../vite/routes/context.ts';
 import { readSlideSource } from '../../vite/routes/context.ts';
+import { collectApply } from '../board/apply.ts';
 import { defaultExportEntriesInSource } from '../board/page-entries.ts';
 import { boardStructurePath, readBoardFile, updateBoardFile } from '../board/store.ts';
 
@@ -21,6 +22,9 @@ type OutlineStore = Pick<SessionStore, 'get' | 'updateItem'>;
  * Turns the agent's last reply into the board's outline, and once the deck is
  * being built, its page titles back into the board's cards. Both live in the
  * same file, so the outline stays the single source the board shows.
+ *
+ * A change list handed to the agent is settled first, and before the outline is
+ * even read: that check must run on a deck with no outline too.
  */
 export async function collectOutline(
   ctx: ApiContext,
@@ -28,6 +32,8 @@ export async function collectOutline(
   sessionId: string,
   userItemId: string,
 ): Promise<void> {
+  await collectApply(ctx, store, sessionId, userItemId);
+
   const session = store.get(sessionId);
   const slideId = session?.slideId;
   if (!session || !slideId) return;

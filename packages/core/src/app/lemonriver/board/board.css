@@ -124,3 +124,24 @@
 .osd-board .osd-board-link-handle.connectingfrom {
   opacity: 1;
 }
+
+/* A page the last apply touched keeps a brand outline for a moment. Reduced
+   motion keeps the outline and drops the fade. */
+.osd-board-card.osd-board-applied {
+  box-shadow: 0 0 0 2px var(--lr-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .osd-board-card.osd-board-applied {
+    animation: osd-board-applied 1.6s ease-out forwards;
+  }
+}
+
+@keyframes osd-board-applied {
+  from {
+    box-shadow: 0 0 0 2px var(--lr-accent);
+  }
+  to {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}

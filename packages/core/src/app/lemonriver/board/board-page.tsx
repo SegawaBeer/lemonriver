@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   Columns3,
+  Combine,
   Copy,
   Filter,
   Grid2X2,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
@@ -34,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { setDockOpen } from '@/lib/agent/use-agent';
 import { isTypingTarget } from '@/lib/keys';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { format, useLocale } from '@/lib/use-locale';
@@ -46,6 +49,7 @@ import { pageReadOf } from './blocks/cache';
 import { ChangeList } from './blocks/change-list';
 import type { Block } from './blocks/classify';
 import { type CardSize, orderAfterMoveMany } from './layout';
+import type { BoardLastApply } from './model/apply';
 import {
   type BoardCard,
   CARD_STATUSES,
@@ -57,7 +61,7 @@ import {
   type PageOp,
   pageKeys,
 } from './model/cards';
-import { carryChanges, type Placement } from './model/changes';
+import { carryChanges, type Placement, sanitizeChanges, staleChanges } from './model/changes';
 import {
   type BoardFilter,
   EMPTY_FILTER,
@@ -66,6 +70,15 @@ import {
   toggleStatus,
 } from './model/filter';
 import type { HistoryStep } from './model/history';
+import {
+  addMerge,
+  addSplit,
+  carryRestructures,
+  type Restructure,
+  restructureReplaced,
+  type SplitBlock,
+  sanitizeRestructures,
+} from './model/restructure';
 import {
   addColumnAfter,
   type BoardColumn,
@@ -80,10 +93,12 @@ import {
   renameColumnAt,
 } from './model/structure';
 import { useStatusLabels } from './page-node';
+import { useBoardApply } from './use-board-apply';
 import { countAfter, useBoardCards } from './use-board-cards';
 import { useBoardChanges } from './use-board-changes';
 import { useBoardColumns } from './use-board-columns';
 import { useBoardComments } from './use-board-comments';
+import { useBoardRestructures } from './use-board-restructures';
 import { useHistory } from './use-history';
 import { usePageOrder } from './use-page-order';
 
@@ -235,7 +250,12 @@ export function Board() {
   } = useBoardCards(slideId, modulePages, pages.length);
   const comments = useBoardComments(slideId, pages.length);
   const history = useHistory(slideId);
-  const { changes, setChanges } = useBoardChanges(slideId);
+  const { changes, setChanges, replace: replaceChanges } = useBoardChanges(slideId);
+  const {
+    restructures,
+    setRestructures,
+    replace: replaceRestructures,
+  } = useBoardRestructures(slideId);
   const [showLinks, toggleLinks] = useLinksVisible();
   const [showBlocks, toggleBlocks] = useBlocksVisible();
   const [size, chooseSize] = useCardSize();
@@ -250,22 +270,32 @@ export function Board() {
   const changesRef = useRef(changes);
   changesRef.current = changes;
 
-  /** A page operation carries the block moves along with it, in the same step. */
+  const restructuresRef = useRef(restructures);
+  restructuresRef.current = restructures;
+
+  /** A page operation carries the block moves and the splits along with it. */
   const beginPageOp = useCallback(
     (op: PageOp, count: number) => {
       const snapshot = changesRef.current;
+      const savedRestructures = restructuresRef.current;
       const before = pageKeys(entries, count);
       if (before.every(isSettledKey)) {
         const after = pageKeys(entriesAfter(op, entries, count), countAfter(op, count));
         setChanges(carryChanges(snapshot, before, after, originAfter(op, count)));
+        setRestructures(
+          carryRestructures(savedRestructures, before, after, originAfter(op, count)),
+        );
       }
       const settle = beginOp(op, count);
       return (ok: boolean) => {
-        if (!ok) setChanges(snapshot);
+        if (!ok) {
+          setChanges(snapshot);
+          setRestructures(savedRestructures);
+        }
         settle(ok);
       };
     },
-    [entries, setChanges, beginOp],
+    [entries, setChanges, setRestructures, beginOp],
   );
 
   const applyChanges = useCallback(
@@ -284,6 +314,47 @@ export function Board() {
     },
     [applyChanges],
   );
+
+  const applyRestructures = useCallback(
+    (next: Restructure[]) => {
+      const previous = restructuresRef.current;
+      setRestructures(next);
+      history.record({ undo: () => setRestructures(previous), redo: () => setRestructures(next) });
+    },
+    [setRestructures, history],
+  );
+
+  const removeRestructures = useCallback(
+    (indices: number[]) => {
+      const drop = new Set(indices);
+      applyRestructures(restructuresRef.current.filter((_, index) => !drop.has(index)));
+    },
+    [applyRestructures],
+  );
+
+  /** Splitting the same page again replaces what the board already recorded. */
+  const splitPage = useCallback(
+    (page: string, blocks: SplitBlock[]) => {
+      const entry: Restructure = { kind: 'split', page, blocks: blocks.map((block) => block.id) };
+      if (restructureReplaced(restructuresRef.current, entry)) {
+        toast.info(lr.board.restructureReplaced);
+      }
+      applyRestructures(addSplit(restructuresRef.current, page, blocks));
+    },
+    [applyRestructures, lr.board.restructureReplaced],
+  );
+
+  const mergeSelected = useCallback(() => {
+    if (selected.length !== 2) return;
+    const [a, b] = [...selected].sort((one, other) => one - other);
+    const first = keys[a];
+    const second = keys[b];
+    if (!first || !second) return;
+    if (restructureReplaced(restructuresRef.current, { kind: 'merge', pages: [first, second] })) {
+      toast.info(lr.board.restructureReplaced);
+    }
+    applyRestructures(addMerge(restructuresRef.current, first, second));
+  }, [applyRestructures, keys, lr.board.restructureReplaced, selected]);
 
   useEffect(() => {
     setSelected((current) => current.filter((index) => index < pages.length));
@@ -310,8 +381,15 @@ export function Board() {
       const to = at.get(item.to.page);
       if (to !== undefined && to !== from) counts[to] += 1;
     }
+    for (const entry of restructures) {
+      const touched = entry.kind === 'split' ? [entry.page] : entry.pages;
+      for (const key of touched) {
+        const index = at.get(key);
+        if (index !== undefined) counts[index] += 1;
+      }
+    }
     return counts;
-  }, [changes, keys, pages.length]);
+  }, [changes, restructures, keys, pages.length]);
 
   const blocksOfPage = useCallback(
     (key: string): Block[] | null => {
@@ -322,6 +400,121 @@ export function Board() {
       return read && 'blocks' in read ? read.blocks : null;
     },
     [keys, pages],
+  );
+
+  // ----- handing the list to the agent -----
+
+  const [flashed, setFlashed] = useState<string[]>([]);
+  const [undoOpen, setUndoOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  const [building, setBuilding] = useState(false);
+
+  const refreshLists = useCallback(async () => {
+    try {
+      const [found, splits] = await Promise.all([
+        fetch(`/__board/changes?slideId=${encodeURIComponent(slideId)}`),
+        fetch(`/__board/restructures?slideId=${encodeURIComponent(slideId)}`),
+      ]);
+      if (found.ok) {
+        const body = (await found.json()) as { changes?: unknown };
+        replaceChanges(sanitizeChanges(body.changes));
+      }
+      if (splits.ok) {
+        const body = (await splits.json()) as { restructures?: unknown };
+        replaceRestructures(sanitizeRestructures(body.restructures));
+      }
+    } catch {}
+  }, [replaceChanges, replaceRestructures, slideId]);
+
+  const askUndo = useCallback(() => setUndoOpen(true), []);
+
+  /** A hand-over that has just ended: say how it went, and light up what changed. */
+  const onSettled = useCallback(
+    (last: BoardLastApply | null) => {
+      void refreshLists();
+      if (!last) return;
+      if (!last.ok) {
+        toast.error(format(lr.board.applyFailed, { reason: last.error ?? '' }), {
+          duration: 10_000,
+          action: { label: lr.outline.openAgent, onClick: () => setDockOpen(true) },
+        });
+        return;
+      }
+      setFlashed(last.pages);
+      toast.success(lr.board.applyDone, {
+        duration: 10_000,
+        action: { label: lr.board.applyUndo, onClick: askUndo },
+      });
+    },
+    [
+      askUndo,
+      lr.board.applyDone,
+      lr.board.applyFailed,
+      lr.board.applyUndo,
+      lr.outline.openAgent,
+      refreshLists,
+    ],
+  );
+
+  const boardApply = useBoardApply(slideId, onSettled);
+  const applying = boardApply.applying !== null;
+
+  useEffect(() => {
+    if (flashed.length === 0) return;
+    const timer = window.setTimeout(() => setFlashed([]), 1600);
+    return () => window.clearTimeout(timer);
+  }, [flashed]);
+
+  // The outline lays the deck out page by page; a change list applied on top
+  // of that would fight it.
+  useEffect(() => {
+    let cancelled = false;
+    const read = async () => {
+      try {
+        const res = await fetch(`/__lr/outline?slideId=${encodeURIComponent(slideId)}`);
+        if (!res.ok) return;
+        const body = (await res.json()) as { outline?: { state?: string } | null };
+        if (!cancelled) setBuilding(body.outline?.state === 'building');
+      } catch {}
+    };
+    void read();
+    const timer = listOpen ? window.setInterval(() => void read(), 3000) : null;
+    return () => {
+      cancelled = true;
+      if (timer !== null) window.clearInterval(timer);
+    };
+  }, [listOpen, slideId]);
+
+  const undoLastApply = useCallback(async () => {
+    const ok = await boardApply.undoLast();
+    setUndoOpen(false);
+    if (ok) {
+      toast.success(lr.board.applyUndone);
+      void refreshLists();
+    } else {
+      toast.error(lr.board.undoFailed);
+    }
+  }, [boardApply, lr.board.applyUndone, lr.board.undoFailed, refreshLists]);
+
+  const staleCount = useMemo(
+    () => staleChanges(changes, blocksOfPage).size,
+    [changes, blocksOfPage],
+  );
+
+  const applyHint = applying
+    ? null
+    : !boardApply.connected
+      ? lr.board.applyNeedsAgent
+      : building
+        ? lr.board.applyBuilding
+        : staleCount > 0
+          ? lr.board.applyStale
+          : null;
+
+  const totalChanges = changes.length + restructures.length;
+  const flashedPages = useMemo(
+    () => flashed.map((key) => keys.indexOf(key)).filter((index) => index >= 0),
+    [flashed, keys],
   );
 
   // ----- deck operations, each with the step that takes it back -----
@@ -449,6 +642,7 @@ export function Board() {
       // Block moves that involve a removed page go with it, and come back with
       // it: the page lands on the same entry, so the whole list is restored.
       const changesBefore = changesRef.current;
+      const restructuresBefore = restructuresRef.current;
       const before = (done: number) => columnsAfterRemove(columns, sorted.slice(0, done));
       const steps: HistoryStep[] = saved.map(({ index, entry, card, linked }, at) => ({
         undo: entry
@@ -456,6 +650,7 @@ export function Board() {
               await performRestore([{ index, entry, card }], count - 1 - at, before(at));
               addLinks(linked);
               setChanges(changesBefore);
+              setRestructures(restructuresBefore);
             }
           : null,
         redo: async () => {
@@ -466,7 +661,18 @@ export function Board() {
       history.record(groupSteps(steps));
       setSelected([]);
     },
-    [columns, performDelete, performRestore, entryAt, cards, links, addLinks, history, setChanges],
+    [
+      columns,
+      performDelete,
+      performRestore,
+      entryAt,
+      cards,
+      links,
+      addLinks,
+      history,
+      setChanges,
+      setRestructures,
+    ],
   );
 
   const insertPage = useCallback(
@@ -760,23 +966,68 @@ export function Board() {
           >
             <Rows3 />
           </Button>
-          {changes.length > 0 && (
-            <Popover>
-              <PopoverTrigger
-                type="button"
-                className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'tabular-nums')}
+          {applying ? (
+            boardApply.stalled ? (
+              <span className="flex items-center gap-1">
+                <span className="text-[12px] text-destructive" data-lr-apply-stalled>
+                  {lr.board.applyStalled}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void boardApply.cancel()}
+                  data-lr-apply-cancel
+                >
+                  {lr.board.applyCancel}
+                </Button>
+              </span>
+            ) : (
+              <span
+                className="flex items-center gap-1.5 text-[12px] text-muted-foreground"
+                data-lr-applying
               >
-                {format(lr.board.changes, { n: changes.length })}
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[360px] p-0">
-                <ChangeList
-                  changes={changes}
-                  pageKeys={keys}
-                  readOf={blocksOfPage}
-                  onRemove={removeChanges}
-                />
-              </PopoverContent>
-            </Popover>
+                <span className="size-1.5 rounded-full bg-[var(--lr-accent)]" />
+                {lr.board.applying}
+              </span>
+            )
+          ) : (
+            <>
+              {totalChanges > 0 && (
+                <Popover open={listOpen} onOpenChange={setListOpen}>
+                  <PopoverTrigger
+                    type="button"
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'tabular-nums')}
+                  >
+                    {format(lr.board.changes, { n: totalChanges })}
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-[360px] p-0">
+                    <ChangeList
+                      changes={changes}
+                      restructures={restructures}
+                      pageKeys={keys}
+                      readOf={blocksOfPage}
+                      onRemove={removeChanges}
+                      onRemoveRestructure={(index) => removeRestructures([index])}
+                      readOnly={applying}
+                      apply={{
+                        onApply: () => {
+                          setListOpen(false);
+                          void boardApply.start();
+                        },
+                        disabled: applyHint !== null,
+                        hint: applyHint,
+                        starting: boardApply.starting,
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+              {boardApply.lastApply?.ok && (
+                <Button variant="ghost" size="sm" data-lr-undo-last onClick={askUndo}>
+                  {lr.board.applyUndoLast}
+                </Button>
+              )}
+            </>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -868,6 +1119,18 @@ export function Board() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  {selected.length === 2 && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={lr.board.mergePages}
+                      title={lr.board.mergePages}
+                      data-lr-merge-pages
+                      onClick={mergeSelected}
+                    >
+                      <Combine />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -930,6 +1193,7 @@ export function Board() {
                   onLink={(a, b) => setLink(a, b, true)}
                   onUnlink={(a, b) => setLink(a, b, false)}
                   onToggleLinks={toggleLinks}
+                  flashed={flashedPages}
                 />
               </Suspense>
             </>
@@ -945,6 +1209,8 @@ export function Board() {
             changes={changes}
             onChanges={applyChanges}
             cardTitle={(index) => cards[index]?.title ?? ''}
+            readOnly={applying}
+            onSplit={splitPage}
           />
         )}
       </div>
@@ -968,6 +1234,22 @@ export function Board() {
             </Button>
             <Button variant="destructive" size="sm" onClick={confirmDelete}>
               {t.common.delete}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={undoOpen} onOpenChange={setUndoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{lr.board.applyUndoConfirm.title}</DialogTitle>
+            <DialogDescription>{lr.board.applyUndoConfirm.body}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setUndoOpen(false)}>
+              {t.common.cancel}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => void undoLastApply()}>
+              {lr.board.applyUndoConfirm.confirm}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -52,6 +52,8 @@ export type PageNodeData = {
   dimmed: boolean;
   /** How many block moves this page is a source or a target of. */
   changeCount?: number;
+  /** The last apply touched this page: it lights up for a moment. */
+  flash?: boolean;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
   onMoveToEnd: (index: number) => void;
@@ -93,6 +95,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
     metrics,
     dimmed,
     changeCount = 0,
+    flash = false,
     ...actions
   } = data as unknown as PageNodeData;
   const t = useLocale();
@@ -166,6 +169,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
           'osd-board-card group/card flex items-center gap-2 rounded-[8px] bg-card px-2.5',
           'motion-safe:transition-[box-shadow,ring-color,scale,opacity]',
           ring,
+          flash && 'osd-board-applied',
           dragging ? 'cursor-grabbing' : 'cursor-grab',
         )}
         style={{ width: metrics.boxW, height: metrics.boxH, opacity: dimmed ? 0.35 : 1 }}
@@ -182,6 +186,7 @@ export function PageNode({ data, selected, dragging }: NodeProps) {
           'osd-board-card group/card flex flex-col gap-2 rounded-[8px] bg-card p-1.5',
           'motion-safe:transition-[box-shadow,ring-color,scale,opacity]',
           ring,
+          flash && 'osd-board-applied',
           dragging ? 'cursor-grabbing' : 'cursor-grab',
         )}
         style={{ width: metrics.boxW, opacity: dimmed ? 0.35 : 1 }}

@@ -2,8 +2,11 @@ import type { Block, BlockKind } from '../blocks/classify.ts';
 
 /** What the board remembers about a block it is about to move. */
 export type BlockInfo = { kind: BlockKind; text: string; loc: string | null };
-/** A place a block can sit: after `before`, or last when that is null. */
-export type Spot = { page: string; before: string | null };
+/**
+ * A place a block can sit: after `before`, or last when that is null.
+ * `beforeInfo` is the block at that place, so the prompt can name it.
+ */
+export type Spot = { page: string; before: string | null; beforeInfo?: BlockInfo };
 export type Placement = {
   origin: Spot & { block: string };
   block: BlockInfo;
@@ -191,12 +194,31 @@ const KIND_SET = new Set<BlockKind>([
   'number',
 ]);
 
+function cleanInfo(raw: unknown): BlockInfo | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const info = raw as Record<string, unknown>;
+  if (typeof info.kind !== 'string' || !KIND_SET.has(info.kind as BlockKind)) return null;
+  if (typeof info.text !== 'string') return null;
+  return {
+    kind: info.kind as BlockKind,
+    text: info.text.slice(0, TEXT_MAX),
+    loc: typeof info.loc === 'string' ? info.loc : null,
+  };
+}
+
 function cleanSpot(raw: unknown): Spot | null {
   if (!raw || typeof raw !== 'object') return null;
-  const { page, before } = raw as { page?: unknown; before?: unknown };
+  const { page, before, beforeInfo } = raw as {
+    page?: unknown;
+    before?: unknown;
+    beforeInfo?: unknown;
+  };
   if (typeof page !== 'string' || !page) return null;
   if (before !== null && typeof before !== 'string') return null;
-  return { page, before: before ?? null };
+  const spot: Spot = { page, before: before ?? null };
+  const info = cleanInfo(beforeInfo);
+  if (info) spot.beforeInfo = info;
+  return spot;
 }
 
 function cleanPlacement(raw: unknown): Placement | null {

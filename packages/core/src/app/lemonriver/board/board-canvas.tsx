@@ -77,6 +77,8 @@ type Props = {
   dimmed: boolean[];
   /** One count per page: block moves waiting to be applied. */
   changeCounts: number[];
+  /** Pages the last apply touched, lit for a moment. */
+  flashed: number[];
   /** Selected pages, by deck position. */
   selected: number[];
   onSelect: (indices: number[]) => void;
@@ -311,6 +313,7 @@ type BuildArgs = {
   design?: DesignSystem;
   dimmed: boolean[];
   changeCounts: number[];
+  flashed: number[];
   selected: Set<number>;
   size: CardSize;
   actions: Pick<PageNodeData, 'onDuplicate' | 'onDelete' | 'onMoveToEnd' | 'onPatchCard'>;
@@ -335,6 +338,7 @@ function buildNodes({
   design,
   dimmed,
   changeCounts,
+  flashed,
   selected,
   size,
   actions,
@@ -407,6 +411,7 @@ function buildNodes({
         metrics,
         dimmed: dimmed[pageIndex] === true,
         changeCount: changeCounts[pageIndex] ?? 0,
+        flash: flashed.includes(pageIndex),
         ...actions,
       } satisfies PageNodeData as unknown as Record<string, unknown>,
     };
@@ -434,6 +439,7 @@ function BoardFlow({
   collapsed,
   dimmed,
   changeCounts,
+  flashed,
   selected,
   onSelect,
   onOpenPage,
@@ -491,6 +497,7 @@ function BoardFlow({
       design,
       dimmed,
       changeCounts,
+      flashed,
       size,
       actions,
       columnActions,
@@ -504,6 +511,7 @@ function BoardFlow({
       design,
       dimmed,
       changeCounts,
+      flashed,
       size,
       actions,
       columnActions,
@@ -810,6 +818,8 @@ function BoardFlow({
       maxZoom={1.5}
       panOnScroll
       selectionOnDrag
+      // A page is removed only through the board's own confirmation dialog.
+      deleteKeyCode={null}
       multiSelectionKeyCode={['Meta', 'Control']}
       selectionKeyCode={null}
       className="osd-board"

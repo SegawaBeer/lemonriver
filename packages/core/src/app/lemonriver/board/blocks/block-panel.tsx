@@ -24,10 +24,12 @@ import {
   ListChecks,
   MoreHorizontal,
   Quote,
+  Scissors,
   Type,
 } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +53,7 @@ import {
   type Spot,
   unparkBlock,
 } from '../model/changes';
+import type { SplitBlock } from '../model/restructure';
 import { PagePreview } from '../page-node';
 import type { PageRead } from './cache';
 import type { BlockKind } from './classify';
@@ -100,6 +103,9 @@ export type BlockPanelProps = {
   changes: Placement[];
   onChanges: (next: Placement[]) => void;
   cardTitle: (index: number) => string;
+  /** The agent is applying the list: nothing here may be touched. */
+  readOnly?: boolean;
+  onSplit: (page: string, blocks: SplitBlock[]) => void;
 };
 
 /**
@@ -115,12 +121,15 @@ export function BlockPanel({
   changes,
   onChanges,
   cardTitle,
+  readOnly = false,
+  onSplit,
 }: BlockPanelProps) {
   const lr = useLrText();
   const page = selected !== null ? pages[selected] : undefined;
   const pageKey = selected !== null ? (pageKeys[selected] ?? null) : null;
   const [readFor, setReadFor] = useState<{ page: Page; read: PageRead } | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [checked, setChecked] = useState<ReadonlySet<string>>(() => new Set());
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -129,6 +138,10 @@ export function BlockPanel({
 
   useEffect(() => {
     if (page) setHovered(null);
+  }, [page]);
+
+  useEffect(() => {
+    if (page) setChecked(new Set());
   }, [page]);
 
   const onRead = useCallback(
@@ -209,6 +222,31 @@ export function BlockPanel({
     [changes, onChanges],
   );
 
+  const toggleChecked = useCallback((id: string) => {
+    setChecked((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Every block on the page is already a page of its own, and none of them is
+  // the page: the split is a part of it.
+  const canSplit =
+    !readOnly && pageKey !== null && !whole && checked.size > 0 && checked.size < effective.length;
+
+  const split = useCallback(() => {
+    if (!pageKey) return;
+    const picked = effective.filter((block) => checked.has(block.id));
+    if (picked.length === 0) return;
+    onSplit(
+      pageKey,
+      picked.map((block) => ({ id: block.id, kind: block.kind, text: block.text })),
+    );
+    setChecked(new Set());
+  }, [checked, effective, onSplit, pageKey]);
+
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       const activeId = String(event.active.id);
@@ -258,6 +296,32 @@ export function BlockPanel({
     const block = effective.find((candidate) => candidate.id === hovered);
     return block?.box ?? null;
   }, [effective, hovered]);
+
+  // A picture or a chart has no words, so its row is named by what it is and
+  // which one of them it is on this page.
+  const labels = useMemo(() => {
+    const counts = new Map<BlockKind, number>();
+    const named = new Map<string, string>();
+    for (const block of effective) {
+      if (block.text) {
+        named.set(block.id, block.text);
+        continue;
+      }
+      const n = (counts.get(block.kind) ?? 0) + 1;
+      counts.set(block.kind, n);
+      named.set(
+        block.id,
+        format(lr.board.blockKindN, { kind: lr.board.blockKinds[block.kind], n }),
+      );
+    }
+    return named;
+  }, [effective, lr.board]);
+
+  const labelOf = useCallback(
+    (block: EffectiveBlock) =>
+      labels.get(block.id) ?? block.text ?? lr.board.blockKinds[block.kind],
+    [labels, lr.board],
+  );
 
   const menuFor = (block: EffectiveBlock): ReactNode => (
     <>
@@ -349,6 +413,22 @@ export function BlockPanel({
         )}
       </div>
 
+      {canSplit && (
+        <div className="shrink-0 border-b border-hairline px-4 py-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            data-lr-split-page
+            onClick={split}
+          >
+            <Scissors />
+            {lr.board.splitPage}
+          </Button>
+        </div>
+      )}
+
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
           {!page ? null : whole ? (
@@ -370,7 +450,10 @@ export function BlockPanel({
                     key={listId(block.id)}
                     id={listId(block.id)}
                     kind={block.kind}
-                    text={block.text}
+                    label={labelOf(block)}
+                    readOnly={readOnly}
+                    checked={checked.has(block.id)}
+                    onToggle={() => toggleChecked(block.id)}
                     pending={block.pending === true && block.from !== pageKey}
                     from={
                       block.pending && block.from && block.from !== pageKey
@@ -412,7 +495,8 @@ export function BlockPanel({
                     key={parkedId(item)}
                     id={parkedId(item)}
                     kind={item.block.kind}
-                    text={item.block.text}
+                    label={item.block.text || lr.board.blockKinds[item.block.kind]}
+                    readOnly={readOnly}
                     onHover={() => {}}
                     onHoverEnd={() => {}}
                   >
@@ -431,7 +515,10 @@ export function BlockPanel({
 function BlockRow({
   id,
   kind,
-  text,
+  label,
+  readOnly,
+  checked,
+  onToggle,
   pending,
   from,
   onHover,
@@ -440,7 +527,11 @@ function BlockRow({
 }: {
   id: string;
   kind: BlockKind;
-  text: string;
+  label: string;
+  readOnly: boolean;
+  checked?: boolean;
+  /** Present on the blocks of a page: they can be picked to leave it. */
+  onToggle?: () => void;
   pending?: boolean;
   from?: string;
   onHover: () => void;
@@ -450,6 +541,7 @@ function BlockRow({
   const lr = useLrText();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
+    disabled: readOnly,
   });
   const Icon = KIND_ICON[kind];
   const style = { transform: CSS.Transform.toString(transform), transition };
@@ -468,17 +560,27 @@ function BlockRow({
         isDragging && 'bg-card opacity-80 shadow-edge',
       )}
     >
+      {onToggle && !readOnly && (
+        <input
+          type="checkbox"
+          checked={checked === true}
+          onChange={onToggle}
+          aria-label={label}
+          className="size-3.5 shrink-0 cursor-pointer accent-[var(--lr-accent)]"
+        />
+      )}
       <button
         type="button"
         aria-label={lr.board.blockDrag}
-        className="cursor-grab rounded p-1 text-muted-foreground/60 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+        disabled={readOnly}
+        className="cursor-grab rounded p-1 text-muted-foreground/60 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-40"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="size-3.5" />
       </button>
       <Icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.8} />
-      <span className="min-w-0 flex-1 truncate">{text}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       {pending && (
         <span
           title={from}
@@ -488,18 +590,20 @@ function BlockRow({
           {lr.board.blockPending}
         </span>
       )}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          type="button"
-          aria-label={lr.board.blockMenu}
-          className="rounded p-1 text-muted-foreground/60 opacity-0 outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/40 group-hover/row:opacity-100"
-        >
-          <MoreHorizontal className="size-3.5" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[190px]">
-          {children}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {!readOnly && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            type="button"
+            aria-label={lr.board.blockMenu}
+            className="rounded p-1 text-muted-foreground/60 opacity-0 outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/40 group-hover/row:opacity-100"
+          >
+            <MoreHorizontal className="size-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[190px]">
+            {children}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </li>
   );
 }

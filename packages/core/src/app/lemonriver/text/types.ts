@@ -90,6 +90,29 @@ export type LrText = {
     wholeBadge: string;
     whole: Record<WholeReason, string>;
     parkNeedsSource: string;
+    /** template: "{kind} {n}" — a block with no words of its own. */
+    blockKindN: string;
+    splitPage: string;
+    mergePages: string;
+    /** template: "Page {n}: {k} blocks go to a new page after it" */
+    changeSplit: Plural;
+    /** template: "Page {a} and page {b} become one page" */
+    changeMerge: string;
+    restructureReplaced: string;
+    apply: string;
+    applyNeedsAgent: string;
+    applyStale: string;
+    applyBuilding: string;
+    applying: string;
+    applyDone: string;
+    applyUndo: string;
+    applyUndoLast: string;
+    applyUndoConfirm: { title: string; body: string; confirm: string };
+    applyUndone: string;
+    /** template: "Not applied: {reason}" */
+    applyFailed: string;
+    applyStalled: string;
+    applyCancel: string;
   };
   theme: {
     lime: string;

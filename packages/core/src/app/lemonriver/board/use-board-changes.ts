@@ -59,6 +59,12 @@ export function useBoardChanges(slideId: string) {
     [save],
   );
 
+  /** Takes what the server already holds, without writing it back. */
+  const replace = useCallback((next: Placement[]) => {
+    changesRef.current = next;
+    setChanges(next);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     readyRef.current = false;
@@ -98,5 +104,5 @@ export function useBoardChanges(slideId: string) {
     };
   }, [flush]);
 
-  return { changes, ready, setChanges: commit };
+  return { changes, ready, setChanges: commit, replace };
 }
