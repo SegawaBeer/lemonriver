@@ -33,6 +33,31 @@ describe('blockSourceInSource', () => {
     expect(blockSourceInSource(SOURCE, '3:4', 'Alpha page one…')).toBe('<h1>Alpha page one</h1>');
   });
 
+  it('matches a paragraph whose words sit inside inline elements', () => {
+    const source = `export default [
+  <section>
+    <p>How we get from $28.6M to <strong>$40.0M ARR</strong>, and who does what.</p>
+  </section>,
+];
+`;
+    const text = 'How we get from $28.6M to $40.0M ARR, and who does what.';
+    expect(blockSourceInSource(source, '3:4', text)).toBe(
+      '<p>How we get from $28.6M to <strong>$40.0M ARR</strong>, and who does what.</p>',
+    );
+  });
+
+  it('reads a line break as a space between words', () => {
+    const source = `export default [
+  <section>
+    <h1>The FY27<br/>operating<br/>plan.</h1>
+  </section>,
+];
+`;
+    expect(blockSourceInSource(source, '3:4', 'The FY27 operating plan.')).toBe(
+      '<h1>The FY27<br/>operating<br/>plan.</h1>',
+    );
+  });
+
   it('matches on the first 40 characters only', () => {
     const source = `export default [
   <section>

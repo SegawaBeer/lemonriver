@@ -11,6 +11,29 @@ function directText(el: Element): string {
 }
 
 /**
+ * Every word the element shows, in document order, with a line break standing
+ * in for a space. Inline elements like `strong` or a highlight carry words of
+ * their own, and a block has to keep them.
+ */
+function allText(el: Element): string {
+  let text = '';
+  const walk = (parent: Node) => {
+    for (const child of parent.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        text += child.nodeValue ?? '';
+        continue;
+      }
+      if (child.nodeType !== Node.ELEMENT_NODE) continue;
+      const element = child as Element;
+      if (element.tagName === 'BR') text += ' ';
+      else walk(element);
+    }
+  };
+  walk(el);
+  return text;
+}
+
+/**
  * Copies the page's DOM into plain objects in canvas units. Runs in the browser
  * only: every figure comes from layout, so nothing here can be tested off-DOM.
  */
@@ -46,6 +69,7 @@ export function snapshotPage(canvas: HTMLElement, scale: number): SnapNode | nul
     return {
       tag: el.tagName.toLowerCase(),
       text: directText(el),
+      fullText: allText(el),
       fontSize: Number.parseFloat(style.fontSize) || 0,
       fontWeight: Number.parseInt(style.fontWeight, 10) || 400,
       box,

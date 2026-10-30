@@ -5,6 +5,7 @@ import { deleteSlide, duplicateSlide, slideSourcePath } from './helpers.ts';
 
 const SLIDE = 'lr-board-blocks';
 const STEPS = 'lr-board-blocks-steps';
+const INLINE = 'lr-board-blocks-inline';
 
 type Page = import('@playwright/test').Page;
 type Request = import('@playwright/test').APIRequestContext;
@@ -67,6 +68,44 @@ async function moveRowToPage(page: Page, rowIndex: number, pageNumber: number) {
   await page.getByRole('menuitem', { name: new RegExp(`^Page ${pageNumber}\\b`) }).click();
 }
 
+const INLINE_SOURCE = `import type { Page, SlideMeta } from '@lemonriver/core';
+
+export const meta: SlideMeta = { title: 'Inline Deck', theme: 'plain' };
+
+const fill = {
+  width: '100%',
+  height: '100%',
+  background: '#101014',
+  color: '#f2f2ef',
+  padding: 120,
+} as const;
+
+const One: Page = () => (
+  <div style={fill}>
+    <h1 style={{ fontSize: 96, margin: 0 }}>
+      The FY27
+      <br />
+      operating plan.
+    </h1>
+    <p style={{ fontSize: 40 }}>
+      How we get from $28.6M to <strong>$40.0M ARR</strong>, and who does what.
+    </p>
+    <p style={{ fontSize: 12, margin: 0 }}>01 / 03</p>
+  </div>
+);
+
+const Two: Page = () => (
+  <div style={fill}>
+    <h1 style={{ fontSize: 96, margin: 0 }}>marlow</h1>
+    <p style={{ fontSize: 12 }}>12.4%</p>
+    <p style={{ fontSize: 12 }}>Q3 FY27</p>
+    <p style={{ fontSize: 40 }}>Margins held</p>
+  </div>
+);
+
+export default [One, Two] satisfies Page[];
+`;
+
 let sourceBefore = '';
 let sourceMayChange = false;
 
@@ -94,6 +133,7 @@ test.describe('story board blocks', () => {
     }
     await deleteSlide(request, SLIDE);
     await deleteSlide(request, STEPS);
+    await deleteSlide(request, INLINE);
   });
 
   test('lists the blocks of the card last clicked', async ({ page }) => {
@@ -224,6 +264,37 @@ test.describe('story board blocks', () => {
     await page.getByRole('button', { name: 'Undo' }).click();
     await expect(cards(page)).toHaveCount(3);
     await expect(page.getByRole('button', { name: 'Changes (1)' })).toBeVisible();
+  });
+
+  test('keeps the words inside a highlight and leaves the page number out', async ({
+    page,
+    request,
+  }) => {
+    await duplicateSlide(request, 'alpha', INLINE);
+    await fs.writeFile(slideSourcePath(INLINE), INLINE_SOURCE);
+    await request.put('/__board', {
+      data: {
+        slideId: INLINE,
+        columns: [
+          { title: 'One', size: 1 },
+          { title: 'Two', size: 1 },
+        ],
+      },
+    });
+    await openBoard(page, INLINE, 2);
+
+    await selectCard(page, 0);
+    await expect(rows(page)).toHaveCount(2);
+    await expect(rows(page).nth(0)).toContainText('The FY27 operating plan.');
+    await expect(rows(page).nth(1)).toContainText(
+      'How we get from $28.6M to $40.0M ARR, and who does what.',
+    );
+
+    // Two labels at 12 px sit on that page; they are not blocks of their own.
+    await selectCard(page, 1);
+    await expect(rows(page)).toHaveCount(2);
+    await expect(rows(page).nth(0)).toContainText('marlow');
+    await expect(rows(page).nth(1)).toContainText('Margins held');
   });
 
   test('reads a page with stepped reveals as one whole page', async ({ page, request }) => {

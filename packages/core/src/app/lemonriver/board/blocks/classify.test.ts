@@ -8,7 +8,8 @@ function node(tag: string, extra: Partial<SnapNode> = {}, children: SnapNode[] =
   return {
     tag,
     text: '',
-    fontSize: 16,
+    fullText: extra.fullText ?? extra.text ?? '',
+    fontSize: 32,
     fontWeight: 400,
     box: { x: 0, y: counter * 10, w: 300, h: 40 },
     loc: null,
@@ -39,7 +40,7 @@ describe('readBlocks kinds', () => {
   it('reads a large text element as a title and a plain one as text', () => {
     const blocks = blocksOf(
       node('div', { text: 'Big', fontSize: 60 }),
-      node('div', { text: 'Small', fontSize: 18 }),
+      node('div', { text: 'Small', fontSize: 32 }),
     );
     expect(blocks.map((b) => b.kind)).toEqual(['title', 'text']);
   });
@@ -73,7 +74,7 @@ describe('readBlocks kinds', () => {
   it('reads a large figure as number and a small one as text', () => {
     const blocks = blocksOf(
       node('div', { text: '$40.0M', fontSize: 50 }),
-      node('div', { text: '$40.0M', fontSize: 20 }),
+      node('div', { text: '$40.0M', fontSize: 24 }),
     );
     expect(blocks.map((b) => b.kind)).toEqual(['number', 'text']);
   });
@@ -96,6 +97,51 @@ describe('readBlocks kinds', () => {
       node('div', {}, [node('span', { text: 'First' }), node('span', { text: 'second' })]),
     );
     expect(blocks.map((b) => b.text)).toEqual(['First', 'second']);
+  });
+
+  it('keeps the words an inline element carries', () => {
+    const [block] = blocksOf(
+      node(
+        'p',
+        {
+          text: 'How we get from $28.6M to ',
+          fullText: 'How we get from $28.6M to $40.0M ARR, and who does what.',
+        },
+        [node('span', { text: '$40.0M ARR' })],
+      ),
+    );
+    expect(block.kind).toBe('text');
+    expect(block.text).toBe('How we get from $28.6M to $40.0M ARR, and who does what.');
+  });
+
+  it('reads a heading split by line breaks as one run of words', () => {
+    const [block] = blocksOf(
+      node('h1', { text: 'The FY27', fullText: 'The FY27 operating plan.' }),
+    );
+    expect(block.kind).toBe('title');
+    expect(block.text).toBe('The FY27 operating plan.');
+  });
+
+  it('gives an image or a chart no words of its own', () => {
+    const blocks = blocksOf(node('img'), node('svg', { box: { x: 0, y: 100, w: 400, h: 300 } }));
+    expect(blocks.map((b) => b.text)).toEqual(['', '']);
+  });
+
+  it('leaves small type on the page', () => {
+    const blocks = blocksOf(
+      node('div', { text: 'Fieldwork', fontSize: 12 }),
+      node('div', { text: '01 / 13', fontSize: 12 }),
+      node('div', { text: 'Margins held', fontSize: 32 }),
+    );
+    expect(blocks.map((b) => b.text)).toEqual(['Margins held']);
+  });
+
+  it('does not count small type toward the forty', () => {
+    const small = Array.from({ length: 40 }, (_, i) =>
+      node('div', { text: `label ${i}`, fontSize: 11 }),
+    );
+    const big = Array.from({ length: 40 }, (_, i) => node('div', { text: `point ${i}` }));
+    expect(blocksOf(...small, ...big)).toHaveLength(40);
   });
 });
 

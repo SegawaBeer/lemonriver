@@ -2,7 +2,10 @@
 export type SnapBox = { x: number; y: number; w: number; h: number };
 export type SnapNode = {
   tag: string;
+  /** The element's own text, before its children. */
   text: string;
+  /** Everything it shows, in document order; a `<br>` becomes a space. */
+  fullText: string;
   fontSize: number;
   fontWeight: number;
   box: SnapBox;
@@ -25,6 +28,11 @@ export type WholeReason = 'steps' | 'empty' | 'tooMany' | 'tooLarge';
 const TEXT_MAX = 80;
 const MAX_BLOCKS = 40;
 const ROW_TOLERANCE = 24;
+/** Below this, a run of text is a caption, a page number or an axis label. */
+const SMALL_FONT = 22;
+
+/** Kinds whose text is what the page says in words. */
+const WORDY = new Set<BlockKind>(['title', 'point', 'text', 'quote']);
 
 function squash(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
@@ -42,10 +50,11 @@ function ownKind(node: SnapNode): BlockKind | null {
   if ((tag === 'svg' || tag === 'canvas') && node.box.w >= 200 && node.box.h >= 120) return 'chart';
   if (tag === 'blockquote' || tag === 'q') return 'quote';
   if (tag === 'li') return 'point';
-  if (!node.text) return null;
+  const words = squash(node.fullText);
+  if (!words) return null;
   if (tag === 'h1' || tag === 'h2' || tag === 'h3') return 'title';
   // A big figure is a number even when it is as large as a heading.
-  if (node.fontSize >= 48 && NUMBER_RE.test(squash(node.text))) return 'number';
+  if (node.fontSize >= 48 && NUMBER_RE.test(words)) return 'number';
   if (node.fontSize >= 56) return 'title';
   return null;
 }
@@ -59,13 +68,22 @@ type Collected = { kind: BlockKind; text: string; loc: string | null; box: SnapB
 function collect(node: SnapNode, out: Collected[]): void {
   const kind = ownKind(node);
   if (kind) {
-    out.push({ kind, text: clip(node.text || node.tag), loc: node.loc, box: node.box });
+    // Small type travels with its page: nobody moves a page number or an axis
+    // label on its own, and a dense page would otherwise read as forty blocks.
+    if (WORDY.has(kind) && node.fontSize < SMALL_FONT) return;
+    out.push({
+      kind,
+      text: WORDY.has(kind) ? clip(node.fullText) : '',
+      loc: node.loc,
+      box: node.box,
+    });
     return;
   }
-  // An element that is only its own text is a paragraph of its own; the text
-  // nodes inside it were already joined when the tree was copied.
-  if (node.text) {
-    out.push({ kind: 'text', text: clip(node.text), loc: node.loc, box: node.box });
+  // An element with text of its own is a paragraph of its own, and that text is
+  // all of it, inline emphasis included.
+  if (squash(node.text)) {
+    if (node.fontSize < SMALL_FONT) return;
+    out.push({ kind: 'text', text: clip(node.fullText), loc: node.loc, box: node.box });
     return;
   }
   for (const child of node.children) collect(child, out);
