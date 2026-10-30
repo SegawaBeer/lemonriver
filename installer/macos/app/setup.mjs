@@ -219,9 +219,18 @@ async function main(argv) {
       return;
     }
     case 'state-get': {
+      // A key that is not there has to read as an empty line: the shell treats
+      // the output as "nothing installed yet" with `[ -z ... ]`, and `""` is
+      // not empty.
       const state = readState(flags.file);
       const value = flags.key ? state[flags.key] : state;
-      process.stdout.write(`${typeof value === 'string' ? value : JSON.stringify(value ?? '')}\n`);
+      const text =
+        value === undefined || value === null
+          ? ''
+          : typeof value === 'string'
+            ? value
+            : JSON.stringify(value);
+      process.stdout.write(`${text}\n`);
       return;
     }
     default: {
