@@ -353,6 +353,43 @@ describe('start.sh on a machine with nothing installed', () => {
     expect(existsSync(stateFile(home))).toBe(false);
   });
 
+  it('refuses the disk image without running the bundled node at all', () => {
+    const app = path.join(tempDir(), 'LemonRiver.app');
+    const res = path.join(app, 'Contents/Resources');
+    mkdirSync(path.join(res, 'node/bin'), { recursive: true });
+    copyFileSync(path.join(HERE, 'start.sh'), path.join(res, 'start.sh'));
+    chmodSync(path.join(res, 'start.sh'), 0o755);
+
+    // A node that hangs and leaves a trace: the guard has to come before it.
+    const ran = path.join(tempDir(), 'node-ran');
+    writeFileSync(path.join(res, 'node/bin/node'), `#!/bin/sh\necho "$@" > '${ran}'\nsleep 30\n`);
+    chmodSync(path.join(res, 'node/bin/node'), 0o755);
+
+    const home = installHome();
+    const env = startEnv(home, '/Volumes/LemonRiver/LemonRiver.app');
+    const start = path.join(res, 'start.sh');
+
+    let code = 0;
+    let stderr = '';
+    const started = Date.now();
+    try {
+      execFileSync('/bin/bash', [start, 'ensure'], { env, stdio: 'pipe', timeout: 5000 });
+    } catch (err) {
+      code = err.status;
+      stderr = String(err.stderr ?? '');
+    }
+
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(code).toBe(78);
+    expect(stderr).toContain('应用程序');
+    expect(existsSync(ran)).toBe(false);
+    expect(existsSync(path.join(home, 'LemonRiver'))).toBe(false);
+    expect(existsSync(stateFile(home))).toBe(false);
+    expect(execFileSync('/bin/bash', [start, 'status'], { env, encoding: 'utf8' }).trim()).toBe(
+      'stopped',
+    );
+  });
+
   it.skipIf(!built)(
     'starts an app that still carries the download flags, and clears them',
     async () => {

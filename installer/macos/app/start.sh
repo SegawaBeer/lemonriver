@@ -22,6 +22,33 @@ if [ -n "$(/usr/bin/xattr -p com.apple.quarantine "$NODE" 2>/dev/null || true)" 
   /usr/bin/xattr -dr com.apple.quarantine "$APP_BUNDLE" 2>/dev/null || true
 fi
 
+# Decided in shell, before anything runs node: on a mounted disk image the
+# marks above cannot be cleared and the system then blocks the bundled node
+# outright, so a check that needs node would never get to report anything.
+APP_PATH="${LEMONRIVER_APP_PATH:-$APP_BUNDLE}"
+case "$APP_PATH" in
+  /Volumes/* | */AppTranslocation/*) LOCATION_PROBLEM=1 ;;
+  *) LOCATION_PROBLEM= ;;
+esac
+
+if [ -n "$LOCATION_PROBLEM" ]; then
+  case "${1:-ensure}" in
+    status)
+      echo stopped
+      exit 0
+      ;;
+    ensure)
+      if [ "${LEMONRIVER_DRY_DIALOG:-0}" = "1" ]; then
+        printf '%s\n' "请先把 LemonRiver 拖到「应用程序」文件夹，再从那里打开。" >&2
+      else
+        /usr/bin/osascript -e 'display dialog "请先把 LemonRiver 拖到「应用程序」文件夹，再从那里打开。" buttons {"好"} default button "好" with title "LemonRiver"' \
+          >/dev/null 2>&1 || true
+      fi
+      ;;
+  esac
+  exit 78
+fi
+
 state_value() {
   "$NODE" "$RES/setup.mjs" state-get --file "$STATE" --key "$1"
 }
