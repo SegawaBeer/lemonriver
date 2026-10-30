@@ -8,6 +8,7 @@ import {
   DEFAULT_PORT_RANGE,
   dockEntry,
   dockHasApp,
+  installLocationProblem,
   pickPort,
   readDockApps,
   readState,
@@ -30,6 +31,31 @@ function seedDock(dir) {
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+describe('installLocationProblem', () => {
+  it('flags a copy still on the mounted disk image', () => {
+    expect(installLocationProblem('/Volumes/LemonRiver/LemonRiver.app')).toBe('volume');
+  });
+
+  it('flags the temporary directory Gatekeeper runs it from', () => {
+    expect(
+      installLocationProblem(
+        '/private/var/folders/ab/xyz/T/AppTranslocation/ABC-123/d/LemonRiver.app',
+      ),
+    ).toBe('translocated');
+  });
+
+  it('accepts an app that lives in Applications', () => {
+    expect(installLocationProblem('/Applications/LemonRiver.app')).toBeNull();
+    expect(installLocationProblem('/Users/me/Applications/LemonRiver.app')).toBeNull();
+  });
+
+  it('handles paths with spaces and trailing slashes', () => {
+    expect(installLocationProblem('/Volumes/My Disk/LemonRiver.app')).toBe('volume');
+    expect(installLocationProblem('/Applications/LemonRiver.app/')).toBeNull();
+    expect(installLocationProblem('/Users/me/My Apps/LemonRiver.app')).toBeNull();
+  });
 });
 
 describe('pickPort', () => {

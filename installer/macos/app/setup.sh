@@ -14,14 +14,34 @@ PLIST="$AGENTS/com.lemonriver.app.plist"
 DESKTOP="$LR_HOME/Desktop"
 ALIAS="$DESKTOP/LemonRiver.app"
 LABEL="com.lemonriver.app"
-CORE_VERSION="$("$NODE" -p "require('$RES/workspace-template/node_modules/@lemonriver/core/package.json').version" 2>/dev/null || echo unknown)"
-
-mkdir -p "$SUPPORT" "$LOGS" "$AGENTS"
 
 show_error() {
+  if [ "${LEMONRIVER_DRY_DIALOG:-0}" = "1" ]; then
+    printf '%s\n' "$1" >&2
+    return
+  fi
   /usr/bin/osascript -e "display dialog \"$1\" buttons {\"好\"} default button \"好\" with title \"LemonRiver\"" \
     >/dev/null 2>&1 || true
 }
+
+LOCATION_PROBLEM="$("$NODE" "$RES/setup.mjs" location-check --app "$APP_PATH" 2>/dev/null || true)"
+# A freshly mounted, quarantined dmg can refuse to run the bundled node at
+# all, which is exactly the case this guard exists for, so repeat the check in
+# shell when the node run produced nothing.
+if [ -z "$LOCATION_PROBLEM" ]; then
+  case "$APP_PATH" in
+    /Volumes/*) LOCATION_PROBLEM="volume" ;;
+    */AppTranslocation/*) LOCATION_PROBLEM="translocated" ;;
+  esac
+fi
+if [ -n "$LOCATION_PROBLEM" ]; then
+  show_error "请先把 LemonRiver 拖到「应用程序」文件夹，再从那里打开。"
+  exit 78
+fi
+
+CORE_VERSION="$("$NODE" -p "require('$RES/workspace-template/node_modules/@lemonriver/core/package.json').version" 2>/dev/null || echo unknown)"
+
+mkdir -p "$SUPPORT" "$LOGS" "$AGENTS"
 
 if [ -f "$STATE" ] && [ "$("$NODE" "$RES/setup.mjs" state-get --file "$STATE" --key setup)" = "true" ]; then
   exit 0
@@ -29,6 +49,9 @@ fi
 
 if [ ! -e "$WORKSPACE" ]; then
   /usr/bin/ditto "$RES/workspace-template" "$WORKSPACE"
+  # A quarantined dmg carries the flag onto every copied file, which can get
+  # the workspace's native toolchain blocked on first run.
+  /usr/bin/xattr -dr com.apple.quarantine "$WORKSPACE" 2>/dev/null || true
 fi
 
 if [ -d "$DESKTOP" ] && [ ! -e "$ALIAS" ]; then

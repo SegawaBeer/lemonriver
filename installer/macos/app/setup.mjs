@@ -19,6 +19,19 @@ const execFileAsync = promisify(execFile);
 export const DOCK_DOMAIN = 'com.apple.dock';
 export const SERVICE_LABEL = 'com.lemonriver.app';
 export const DEFAULT_PORT_RANGE = { start: 5273, end: 5279 };
+export const EXIT_WRONG_LOCATION = 78;
+
+// Running straight from the dmg or from a quarantined download puts the app
+// somewhere that disappears: /Volumes/ unmounts, and Gatekeeper runs an
+// un-moved app from a random read-only AppTranslocation directory. Anything
+// setup.sh points at from there (desktop alias, Dock tile, launchd job) would
+// dangle, so the location is checked before anything is created.
+export function installLocationProblem(appPath) {
+  const target = String(appPath).replace(/\/+$/, '');
+  if (target.startsWith('/Volumes/')) return 'volume';
+  if (target.includes('/AppTranslocation/')) return 'translocated';
+  return null;
+}
 
 export function readState(file) {
   try {
@@ -176,6 +189,13 @@ async function main(argv) {
       process.stdout.write(`${port}\n`);
       return;
     }
+    case 'location-check': {
+      const problem = installLocationProblem(flags.app);
+      if (!problem) return;
+      process.stdout.write(`${problem}\n`);
+      process.exitCode = EXIT_WRONG_LOCATION;
+      return;
+    }
     case 'dock-add': {
       const result = await addAppToDock({
         domain: flags.domain || DOCK_DOMAIN,
@@ -206,7 +226,7 @@ async function main(argv) {
     }
     default: {
       process.stderr.write(
-        'usage: setup.mjs <pick-port|dock-add|setup-done|state-get> [--flag value]\n',
+        'usage: setup.mjs <location-check|pick-port|dock-add|setup-done|state-get> [--flag value]\n',
       );
       process.exitCode = 1;
     }

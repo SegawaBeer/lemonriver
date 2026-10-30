@@ -24,8 +24,10 @@ on run
 
 	try
 		do shell script shellScript & " ensure"
-	on error errText
-		display dialog "LemonRiver 启动失败：" & errText buttons {"好"} default button "好" with title "LemonRiver"
+	on error errText number errNum
+		if errNum is not 78 then
+			display dialog "LemonRiver 启动失败：" & errText buttons {"好"} default button "好" with title "LemonRiver"
+		end if
 		return
 	end try
 
