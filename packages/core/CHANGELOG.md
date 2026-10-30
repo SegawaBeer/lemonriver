@@ -1,5 +1,22 @@
 # @lemonriver/core
 
+## 0.5.0
+
+### Minor Changes
+
+- 14c3acc: The agent panel now uses the model and effort set in Claude Code or Codex by default, and lists the models your client can actually use.
+- 8b3b6a6: Story board: ask your agent to rewrite a page, chart it, follow its note or expand it, and to fill a chapter from one sentence.
+- 25f9960: Story board: split and merge pages, then have your agent apply every change in one go and undo it in one step.
+- 0d46c98: Story board: open a page to see its blocks and move them to another page or a holding area.
+- 62d6648: Story board: undo and redo, add, delete, move and fold chapters, select several cards at once, three card sizes, and filters.
+- ebd0188: Story board: switch between cards, a list and a timeline with time per page against your target, see each chapter's progress, and say how two linked pages relate.
+- 964c3c1: Use WorkBuddy from the agent panel alongside Claude Code and Codex; turn it on in Settings.
+
+### Patch Changes
+
+- cf6a9e0: Show WorkBuddy with its own app icon in the agent panel and settings.
+- c507b19: An outline that could not be drafted now says why.
+
 ## 0.4.0
 
 ### Minor Changes

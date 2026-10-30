@@ -1,5 +1,11 @@
 # @lemonriver/cli
 
+## 0.1.2
+
+### Patch Changes
+
+- New workspaces start on the latest LemonRiver release.
+
 ## 0.1.1
 
 ### Patch Changes

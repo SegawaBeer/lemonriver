@@ -1,6 +1,6 @@
 {
   "name": "@lemonriver/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Create a LemonRiver workspace in one command, with the skills your agent reads already in place.",
   "type": "module",
   "bin": {
