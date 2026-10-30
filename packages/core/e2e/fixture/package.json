@@ -5,11 +5,11 @@
   "type": "module",
   "dependencies": {
     "@lemonriver/core": "workspace:*",
-    "react": "^19.2.8",
+    "react": "^19.3.1",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@types/react": "^19.2.18",
+    "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.5"
   }
 }
