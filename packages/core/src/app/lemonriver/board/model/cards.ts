@@ -4,8 +4,10 @@ export type CardStatus = (typeof CARD_STATUSES)[number];
 /** What the board knows about a page that the deck never sees. */
 export type BoardCard = { title?: string; status?: CardStatus; memo?: string };
 export type BoardCards = Record<string, BoardCard>;
-/** No direction, and no say in the deck's order. */
-export type BoardLink = { a: string; b: string };
+/** What links two pages, when the board knows; a plain link is just an association. */
+export const LINK_KINDS = ['cause', 'contrast', 'echo'] as const;
+export type LinkKind = (typeof LINK_KINDS)[number];
+export type BoardLink = { a: string; b: string; kind?: LinkKind };
 export type CardState = { cards: BoardCards; links: BoardLink[] };
 /** `null` or an empty string clears a field. */
 export type CardPatch = { title?: string | null; status?: CardStatus | null; memo?: string | null };
@@ -21,6 +23,10 @@ export const isSettledKey = (key: string) => !key.startsWith(PENDING);
 
 export function isCardStatus(value: unknown): value is CardStatus {
   return typeof value === 'string' && (CARD_STATUSES as readonly string[]).includes(value);
+}
+
+export function isLinkKind(value: unknown): value is LinkKind {
+  return typeof value === 'string' && (LINK_KINDS as readonly string[]).includes(value);
 }
 
 function cleanCard(raw: unknown): BoardCard | null {
@@ -46,8 +52,12 @@ export function sanitizeCards(raw: unknown): BoardCards {
 const sameLink = (link: BoardLink, a: string, b: string) =>
   (link.a === a && link.b === b) || (link.a === b && link.b === a);
 
+export function hasLink(links: BoardLink[], a: string, b: string): boolean {
+  return links.some((link) => sameLink(link, a, b));
+}
+
 export function linkCards(links: BoardLink[], a: string, b: string): BoardLink[] {
-  if (!a || !b || a === b || links.some((link) => sameLink(link, a, b))) return links;
+  if (!a || !b || a === b || hasLink(links, a, b)) return links;
   return [...links, { a, b }];
 }
 
@@ -56,12 +66,38 @@ export function unlinkCards(links: BoardLink[], a: string, b: string): BoardLink
   return kept.length === links.length ? links : kept;
 }
 
+/** The same link under another name, keeping what the board said about it. */
+const relink = (link: BoardLink, a: string, b: string): BoardLink =>
+  link.kind ? { a, b, kind: link.kind } : { a, b };
+
+/** Names what links two pages, or clears it back to a plain association. */
+export function setLinkKind(
+  links: BoardLink[],
+  a: string,
+  b: string,
+  kind: LinkKind | null,
+): BoardLink[] {
+  let changed = false;
+  const next = links.map((link) => {
+    if (!sameLink(link, a, b) || (link.kind ?? null) === kind) return link;
+    changed = true;
+    return kind ? { a: link.a, b: link.b, kind } : { a: link.a, b: link.b };
+  });
+  return changed ? next : links;
+}
+
 export function sanitizeLinks(raw: unknown): BoardLink[] {
   if (!Array.isArray(raw)) return [];
-  return raw.reduce<BoardLink[]>((links, item) => {
-    const { a, b } = (item ?? {}) as { a?: unknown; b?: unknown };
-    return typeof a === 'string' && typeof b === 'string' ? linkCards(links, a, b) : links;
-  }, []);
+  const links: BoardLink[] = [];
+  for (const item of raw) {
+    const { a, b, kind } = (item ?? {}) as { a?: unknown; b?: unknown; kind?: unknown };
+    if (typeof a !== 'string' || typeof b !== 'string') continue;
+    if (!a || !b || a === b || hasLink(links, a, b)) continue;
+    // An unknown kind loses the label, not the link: the two pages are still
+    // linked, which is what the board said for certain.
+    links.push(isLinkKind(kind) ? { a, b, kind } : { a, b });
+  }
+  return links;
 }
 
 export function patchCard(cards: BoardCards, key: string, patch: CardPatch): BoardCards {
@@ -111,12 +147,15 @@ export function pageKeys(entries: string[] | null | undefined, count: number): s
 }
 
 /** Position pairs for the links whose pages are both in the deck. */
-export function linkedPairs(keys: string[], links: BoardLink[]): [number, number][] {
+export type LinkedPair = { a: number; b: number; kind?: LinkKind };
+
+export function linkedPairs(keys: string[], links: BoardLink[]): LinkedPair[] {
   const at = new Map(keys.map((key, i) => [key, i]));
   return links.flatMap((link) => {
     const a = at.get(link.a);
     const b = at.get(link.b);
-    return a === undefined || b === undefined ? [] : [[a, b] as [number, number]];
+    if (a === undefined || b === undefined) return [];
+    return [link.kind ? { a, b, kind: link.kind } : { a, b }];
   });
 }
 
@@ -215,11 +254,13 @@ export function carryCards(
       if (next !== null) cards[next] = card;
     }
   }
-  const links = state.links.reduce<BoardLink[]>((kept, link) => {
+  const links: BoardLink[] = [];
+  for (const link of state.links) {
     const a = resolve(link.a);
     const b = resolve(link.b);
-    return a !== null && b !== null ? linkCards(kept, a, b) : kept;
-  }, []);
+    if (a === null || b === null || a === b || hasLink(links, a, b)) continue;
+    links.push(relink(link, a, b));
+  }
   return { cards, links };
 }
 
@@ -249,11 +290,13 @@ export function adoptEntries(
     else delete cards[named];
     delete cards[blank];
   }
-  const links = state.links
-    .filter((link) => !targets.has(link.a) && !targets.has(link.b))
-    .reduce<BoardLink[]>(
-      (kept, link) => linkCards(kept, rename.get(link.a) ?? link.a, rename.get(link.b) ?? link.b),
-      [],
-    );
+  const links: BoardLink[] = [];
+  for (const link of state.links) {
+    if (targets.has(link.a) || targets.has(link.b)) continue;
+    const a = rename.get(link.a) ?? link.a;
+    const b = rename.get(link.b) ?? link.b;
+    if (hasLink(links, a, b)) continue;
+    links.push(relink(link, a, b));
+  }
   return { cards, links };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addColumnAfter,
   type BoardColumn,
+  chapterProgress,
   columnOfPosition,
   columnsAfterApply,
   columnsAfterInsert,
@@ -320,5 +321,30 @@ describe('columnsAfterApply', () => {
 
   it('falls back to the deck’s new length when no page can be matched', () => {
     expect(columnsAfterApply(before, ['x', 'y'])).toEqual([{ title: 'Opening', size: 2 }]);
+  });
+});
+
+describe('chapterProgress', () => {
+  it('counts an empty chapter as nothing at all', () => {
+    expect(chapterProgress({}, [])).toEqual({ done: 0, review: 0, total: 0 });
+  });
+
+  it('counts every page when the chapter is finished', () => {
+    const cards = { A: { status: 'done' }, B: { status: 'done' } } as const;
+    expect(chapterProgress(cards, ['A', 'B'])).toEqual({ done: 2, review: 0, total: 2 });
+  });
+
+  it('separates what is done from what is waiting to be looked over', () => {
+    const cards = {
+      A: { status: 'done' },
+      B: { status: 'review' },
+      C: { status: 'doing' },
+    } as const;
+    expect(chapterProgress(cards, ['A', 'B', 'C'])).toEqual({ done: 1, review: 1, total: 3 });
+  });
+
+  it('does not count a page with no status as done', () => {
+    const cards = { A: { status: 'done' }, B: { memo: 'still open' } } as const;
+    expect(chapterProgress(cards, ['A', 'B', 'C'])).toEqual({ done: 1, review: 0, total: 3 });
   });
 });

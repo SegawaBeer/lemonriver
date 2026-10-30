@@ -6,9 +6,12 @@ import {
   Combine,
   Copy,
   Filter,
+  GanttChart,
   Grid2X2,
   Image as ImageIcon,
+  LayoutGrid,
   List,
+  ListOrdered,
   Plus,
   Redo2,
   Rows3,
@@ -66,6 +69,7 @@ import {
   type CardStatus,
   entriesAfter,
   isSettledKey,
+  type LinkKind,
   originAfter,
   type PageOp,
   pageKeys,
@@ -91,6 +95,7 @@ import {
 import {
   addColumnAfter,
   type BoardColumn,
+  chapterProgress,
   columnStarts,
   columnsAfterInsert,
   columnsAfterMoveMany,
@@ -110,6 +115,10 @@ import { useBoardComments } from './use-board-comments';
 import { useBoardRestructures } from './use-board-restructures';
 import { useHistory } from './use-history';
 import { usePageOrder } from './use-page-order';
+import { useTargetMinutes } from './use-target-minutes';
+import { BlockReadings } from './views/block-readings';
+import { ListView } from './views/list-view';
+import { TimelineView } from './views/timeline-view';
 
 const BoardCanvas = lazy(() => import('./board-canvas'));
 
@@ -119,8 +128,26 @@ const NO_PAGES: Page[] = [];
 
 const LINKS_KEY = 'open-slide:board-links-visible';
 const SIZE_KEY = 'open-slide:board-card-size';
+const VIEW_KEY = 'open-slide:board-view';
 const BLOCKS_KEY = 'open-slide:board-blocks-visible';
 const collapsedKey = (slideId: string) => `open-slide:board-collapsed:${slideId}`;
+
+const BOARD_VIEWS = ['cards', 'list', 'timeline'] as const;
+export type BoardViewKind = (typeof BOARD_VIEWS)[number];
+
+/** Which of the three ways the deck is being read. A preference, so it outlives the visit. */
+function useBoardView(): [BoardViewKind, (view: BoardViewKind) => void] {
+  const [view, setView] = useState<BoardViewKind>(() => {
+    if (typeof window === 'undefined') return 'cards';
+    const stored = window.localStorage.getItem(VIEW_KEY);
+    return stored === 'list' || stored === 'timeline' ? stored : 'cards';
+  });
+  const choose = useCallback((next: BoardViewKind) => {
+    setView(next);
+    window.localStorage.setItem(VIEW_KEY, next);
+  }, []);
+  return [view, choose];
+}
 
 function useBlocksVisible() {
   const [visible, setVisible] = useState(() => {
@@ -248,11 +275,13 @@ export function Board() {
     keys,
     entries,
     cards,
+    byKey,
     pairs,
     links,
     patch,
     link,
     unlink,
+    kindLink,
     beginOp,
     entryAt,
     addLinks,
@@ -269,10 +298,14 @@ export function Board() {
   const [showLinks, toggleLinks] = useLinksVisible();
   const [showBlocks, toggleBlocks] = useBlocksVisible();
   const [size, chooseSize] = useCardSize();
+  const [view, chooseView] = useBoardView();
+  const [target, chooseTarget] = useTargetMinutes(slideId);
   const [collapsed, toggleCollapse, trimFolded] = useFolded(slideId);
   const [filter, setFilter] = useState<BoardFilter>(EMPTY_FILTER);
   const [selected, setSelected] = useState<number[]>([]);
   const [pendingDelete, setPendingDelete] = useState<number[] | null>(null);
+  const [jumpTo, setJumpTo] = useState<{ index: number; seq: number } | null>(null);
+  const jumpSeq = useRef(0);
 
   const pageCount = useRef(pages.length);
   pageCount.current = pages.length;
@@ -411,6 +444,15 @@ export function Board() {
     },
     [keys, pages],
   );
+
+  /** How far along each chapter is, for the chapter's own header. */
+  const columnProgress = useMemo(() => {
+    if (!columns) return [];
+    const starts = columnStarts(columns);
+    return columns.map((column, index) =>
+      chapterProgress(byKey, keys.slice(starts[index] ?? 0, (starts[index] ?? 0) + column.size)),
+    );
+  }, [columns, byKey, keys]);
 
   // ----- handing the list to the agent -----
 
@@ -1020,6 +1062,30 @@ export function Board() {
     [link, unlink, history],
   );
 
+  const setLinkKindAt = useCallback(
+    (a: number, b: number, kind: LinkKind | null) => {
+      const before = pairs.find((pair) => pair.a === a && pair.b === b)?.kind ?? null;
+      kindLink(a, b, kind);
+      history.record({
+        undo: () => kindLink(a, b, before),
+        redo: () => kindLink(a, b, kind),
+      });
+    },
+    [pairs, kindLink, history],
+  );
+
+  /** Brings a page into view and lights it up, wherever it is being read. */
+  const jumpToPage = useCallback(
+    (index: number) => {
+      jumpSeq.current += 1;
+      setJumpTo({ index, seq: jumpSeq.current });
+      setSelected([index]);
+      const key = keys[index];
+      if (key) setFlashed([key]);
+    },
+    [keys],
+  );
+
   const openPage = useCallback(
     (index: number) => {
       navigate(`/s/${encodeURIComponent(slideId)}?p=${index + 1}`);
@@ -1067,7 +1133,7 @@ export function Board() {
   }, [pendingDelete, deletePages]);
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
+    <div className="flex h-screen flex-col bg-background text-foreground" data-lr-board-view={view}>
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-3">
         <Button
           variant="ghost"
@@ -1117,12 +1183,15 @@ export function Board() {
           >
             <Columns3 />
           </Button>
-          <div className="flex items-center rounded-[6px] border border-hairline p-0.5">
+          <div
+            className="flex items-center rounded-[6px] border border-hairline p-0.5"
+            data-lr-view-switch
+          >
             {(
               [
-                ['large', ImageIcon, lr.board.sizeLarge],
-                ['small', Grid2X2, lr.board.sizeSmall],
-                ['title', List, lr.board.sizeTitle],
+                ['cards', LayoutGrid, lr.board.viewCards],
+                ['list', ListOrdered, lr.board.viewList],
+                ['timeline', GanttChart, lr.board.viewTimeline],
               ] as const
             ).map(([value, Icon, label]) => (
               <button
@@ -1130,11 +1199,12 @@ export function Board() {
                 type="button"
                 aria-label={label}
                 title={label}
-                aria-pressed={size === value}
-                onClick={() => chooseSize(value)}
+                aria-pressed={view === value}
+                data-lr-view={value}
+                onClick={() => chooseView(value)}
                 className={cn(
                   'flex size-6 items-center justify-center rounded-[4px] motion-safe:transition-colors',
-                  size === value
+                  view === value
                     ? 'bg-muted text-foreground'
                     : 'text-muted-foreground/60 hover:text-foreground',
                 )}
@@ -1143,6 +1213,34 @@ export function Board() {
               </button>
             ))}
           </div>
+          {view === 'cards' && (
+            <div className="flex items-center rounded-[6px] border border-hairline p-0.5">
+              {(
+                [
+                  ['large', ImageIcon, lr.board.sizeLarge],
+                  ['small', Grid2X2, lr.board.sizeSmall],
+                  ['title', List, lr.board.sizeTitle],
+                ] as const
+              ).map(([value, Icon, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={label}
+                  title={label}
+                  aria-pressed={size === value}
+                  onClick={() => chooseSize(value)}
+                  className={cn(
+                    'flex size-6 items-center justify-center rounded-[4px] motion-safe:transition-colors',
+                    size === value
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground/60 hover:text-foreground',
+                  )}
+                >
+                  <Icon className="size-3.5" strokeWidth={1.8} />
+                </button>
+              ))}
+            </div>
+          )}
           <Button
             variant="ghost"
             size="icon-sm"
@@ -1272,7 +1370,7 @@ export function Board() {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <div className="relative min-h-0 flex-1">
+        <div className="relative min-h-0 min-w-0 flex-1">
           {error ? (
             <p className="grid h-full place-items-center px-6 text-center text-[13px] text-destructive">
               {error}
@@ -1348,47 +1446,88 @@ export function Board() {
                   </Button>
                 </div>
               )}
-              <Suspense fallback={null}>
-                <BoardCanvas
-                  slideId={slideId}
+              {view !== 'cards' && <BlockReadings pages={pages} design={slide?.design} />}
+              {view === 'cards' ? (
+                <Suspense fallback={null}>
+                  <BoardCanvas
+                    slideId={slideId}
+                    pages={pages}
+                    notes={slide?.notes}
+                    cards={cards}
+                    cardsReady={ready}
+                    links={pairs}
+                    showLinks={showLinks}
+                    columns={columns}
+                    progress={columnProgress}
+                    design={slide?.design}
+                    size={size}
+                    collapsed={collapsed}
+                    dimmed={dimmed}
+                    changeCounts={changeCounts}
+                    selected={selected}
+                    onSelect={setSelected}
+                    onOpenPage={openPage}
+                    onMovePages={movePages}
+                    onMoveToNewChapter={moveToNewChapter}
+                    onRenameColumn={renameChapter}
+                    onAddPage={addPageToColumn}
+                    onAddChapter={addChapter}
+                    onDeleteChapter={deleteChapter}
+                    onToggleCollapse={toggleCollapse}
+                    onMoveChapter={moveChapter}
+                    onDuplicate={(index) => duplicatePages([index])}
+                    onDelete={(index) => deletePages([index])}
+                    onMoveToEnd={moveToEnd}
+                    onPatchCard={patchCard}
+                    onLink={(a, b) => setLink(a, b, true)}
+                    onUnlink={(a, b) => setLink(a, b, false)}
+                    onSetLinkKind={setLinkKindAt}
+                    onJump={jumpToPage}
+                    onToggleLinks={toggleLinks}
+                    flashed={flashedPages}
+                    agentHint={agentHint}
+                    onPageTask={startPageTask}
+                    planFor={planFor}
+                    onFillChapter={openChapter}
+                    onViewPlan={openChapter}
+                  />
+                </Suspense>
+              ) : view === 'list' ? (
+                <ListView
                   pages={pages}
-                  notes={slide?.notes}
+                  keys={keys}
                   cards={cards}
-                  cardsReady={ready}
-                  links={pairs}
-                  showLinks={showLinks}
+                  byKey={byKey}
                   columns={columns}
-                  design={slide?.design}
-                  size={size}
-                  collapsed={collapsed}
+                  notes={slide?.notes}
+                  comments={comments}
                   dimmed={dimmed}
                   changeCounts={changeCounts}
                   selected={selected}
+                  jumpTo={jumpTo}
+                  onSelect={setSelected}
+                  onOpenPage={openPage}
+                  onPatchCard={patchCard}
+                  onMovePages={movePages}
+                  blocksOfPage={blocksOfPage}
+                />
+              ) : (
+                <TimelineView
+                  pages={pages}
+                  keys={keys}
+                  cards={cards}
+                  columns={columns}
+                  notes={slide?.notes}
+                  dimmed={dimmed}
+                  selected={selected}
+                  target={target}
+                  targetFor={chooseTarget}
                   onSelect={setSelected}
                   onOpenPage={openPage}
                   onMovePages={movePages}
-                  onMoveToNewChapter={moveToNewChapter}
-                  onRenameColumn={renameChapter}
-                  onAddPage={addPageToColumn}
-                  onAddChapter={addChapter}
-                  onDeleteChapter={deleteChapter}
-                  onToggleCollapse={toggleCollapse}
-                  onMoveChapter={moveChapter}
-                  onDuplicate={(index) => duplicatePages([index])}
-                  onDelete={(index) => deletePages([index])}
-                  onMoveToEnd={moveToEnd}
-                  onPatchCard={patchCard}
-                  onLink={(a, b) => setLink(a, b, true)}
-                  onUnlink={(a, b) => setLink(a, b, false)}
-                  onToggleLinks={toggleLinks}
-                  flashed={flashedPages}
-                  agentHint={agentHint}
-                  onPageTask={startPageTask}
-                  planFor={planFor}
-                  onFillChapter={openChapter}
-                  onViewPlan={openChapter}
+                  blocksOfPage={blocksOfPage}
                 />
-              </Suspense>
+              )}
             </>
           )}
         </div>

@@ -84,7 +84,8 @@ export type BoardView = { size?: CardSize; collapsed?: boolean[] };
 
 const CHAPTER_NAME = /chapter|section|章/i;
 
-function pageName(page: Page): string {
+/** The name a page was written as, for anywhere the board shows a page by name. */
+export function pageName(page: Page): string {
   const fn = page as unknown as { displayName?: string; name?: string };
   return fn.displayName ?? fn.name ?? '';
 }

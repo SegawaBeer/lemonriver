@@ -1,3 +1,5 @@
+import type { BoardCards } from './cards';
+
 /**
  * The board's own structure, stored outside the deck: a deck file never learns
  * that a board exists. Columns hold a count rather than page ids, so reordering
@@ -113,6 +115,25 @@ export function columnOfPosition(columns: BoardColumn[], position: number): numb
     if (position >= starts[i]) return i;
   }
   return 0;
+}
+
+export type ChapterProgress = {
+  done: number;
+  /** Pages waiting to be looked over: they are not finished either. */
+  review: number;
+  total: number;
+};
+
+/** How far along a chapter is; a page with no status counts as unfinished. */
+export function chapterProgress(cards: BoardCards, keys: string[]): ChapterProgress {
+  let done = 0;
+  let review = 0;
+  for (const key of keys) {
+    const status = cards[key]?.status;
+    if (status === 'done') done += 1;
+    else if (status === 'review') review += 1;
+  }
+  return { done, review, total: keys.length };
 }
 
 /**

@@ -155,6 +155,36 @@ export type LrText = {
     planRemove: string;
     planMoveUp: string;
     planMoveDown: string;
+    dragPage: string;
+    viewCards: string;
+    viewList: string;
+    viewTimeline: string;
+    /** template: "About {d}" */
+    totalDuration: string;
+    target: string;
+    /** template: "Over by {d}" */
+    overTarget: string;
+    /** template: "{d} to spare" */
+    underTarget: string;
+    basisNotes: string;
+    basisPage: string;
+    basisNone: string;
+    /** template: "{done}/{total} done" */
+    progress: string;
+    /** template: "{n} to review" */
+    progressReview: string;
+    linkCause: string;
+    linkContrast: string;
+    linkEcho: string;
+    linkEchoShort: string;
+    linkRelation: string;
+    linkPlain: string;
+    /** template: "Jump to page {n}" */
+    jumpToPage: string;
+    /** Duration shapes: "45s", "1m 20s", "12 min". */
+    durationSeconds: string;
+    durationMinSec: string;
+    durationMinutes: string;
   };
   theme: {
     lime: string;

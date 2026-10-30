@@ -33,6 +33,7 @@ import {
   type CardStatus,
   isCardStatus,
 } from './model/cards';
+import { STATUS_STYLE } from './status-style';
 
 export type PageNodeData = {
   slideId: string;
@@ -71,13 +72,6 @@ const ASK_ICON: Record<PageAction, typeof PenLine> = {
   chart: BarChart3,
   memo: StickyNote,
   expand: Maximize2,
-};
-
-const STATUS_STYLE: Record<CardStatus, { dot: string; ring: string }> = {
-  todo: { dot: 'bg-muted-foreground/50', ring: 'ring-muted-foreground/35' },
-  doing: { dot: 'bg-[var(--lr-accent)]', ring: 'ring-[var(--lr-accent)]' },
-  review: { dot: 'bg-[var(--lr-warning)]', ring: 'ring-[var(--lr-warning)]/75' },
-  done: { dot: 'bg-[var(--lr-success)]', ring: 'ring-[var(--lr-success)]/70' },
 };
 
 export function useStatusLabels(): Record<CardStatus, string> {

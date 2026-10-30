@@ -23,6 +23,7 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   Columns3,
@@ -37,6 +38,13 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format } from '@/lib/use-locale';
 import { cn, pad2 } from '@/lib/utils';
 import type { DesignSystem } from '../../lib/design';
@@ -56,9 +64,10 @@ import {
   slotAtPoint,
 } from './layout';
 import type { PageAction } from './model/agent-tasks';
-import type { BoardCard, CardPatch } from './model/cards';
-import { type BoardColumn, columnsAfterMoveMany } from './model/structure';
+import type { BoardCard, CardPatch, LinkedPair, LinkKind } from './model/cards';
+import { type BoardColumn, type ChapterProgress, columnsAfterMoveMany } from './model/structure';
 import { PageNode, type PageNodeData } from './page-node';
+import { Progress } from './views/progress';
 import '@xyflow/react/dist/base.css';
 import './board.css';
 
@@ -70,8 +79,10 @@ type Props = {
   cards: (BoardCard | undefined)[];
   cardsReady: boolean;
   /** Linked pages, as deck positions. */
-  links: [number, number][];
+  links: LinkedPair[];
   showLinks: boolean;
+  /** How far along each chapter is, one per chapter. */
+  progress: ChapterProgress[];
   design?: DesignSystem;
   size: CardSize;
   /** One flag per chapter: folded chapters draw no cards. */
@@ -100,6 +111,9 @@ type Props = {
   onPatchCard: (index: number, patch: CardPatch) => void;
   onLink: (a: number, b: number) => void;
   onUnlink: (a: number, b: number) => void;
+  onSetLinkKind: (a: number, b: number, kind: LinkKind | null) => void;
+  /** Bring a page into view and select it. */
+  onJump: (index: number) => void;
   onToggleLinks: () => void;
   /** Why the one-page agent actions are off, or null when they can run. */
   agentHint: string | null;
@@ -117,6 +131,8 @@ type ColumnLabelData = {
   width: number;
   collapsed: boolean;
   canDelete: boolean;
+  /** How much of this chapter is finished. */
+  progress: ChapterProgress;
   /** 'planning' while the agent is out, the number of titles when ready, else null. */
   plan: 'planning' | number | null;
   onRename: (index: number, title: string) => void;
@@ -136,6 +152,7 @@ function ColumnLabel({ data }: NodeProps) {
     width,
     collapsed,
     canDelete,
+    progress,
     plan,
     onRename,
     onAddPage,
@@ -200,7 +217,8 @@ function ColumnLabel({ data }: NodeProps) {
         </button>
       )}
       <span className="folio">{pad2(count)}</span>
-      <div className="ml-auto flex items-center">
+      {progress.total > 0 && <Progress progress={progress} />}
+      <div className={cn('flex items-center', progress.total === 0 && 'ml-auto')}>
         {plan === 'planning' ? (
           <span className="mr-1 text-[11px] text-muted-foreground" data-lr-planning>
             {lr.board.planning}
@@ -280,7 +298,14 @@ function DropSlot({ data }: NodeProps) {
 
 const nodeTypes: NodeTypes = { page: PageNode, columnLabel: ColumnLabel, dropSlot: DropSlot };
 
-type LinkEdgeData = { a: number; b: number; onUnlink: (a: number, b: number) => void };
+type LinkEdgeData = {
+  a: number;
+  b: number;
+  kind?: LinkKind;
+  onUnlink: (a: number, b: number) => void;
+  onSetKind: (a: number, b: number, kind: LinkKind | null) => void;
+  onJump: (index: number) => void;
+};
 
 function boxOf(node: InternalNode | undefined): Box | null {
   if (!node) return null;
@@ -293,32 +318,111 @@ function boxOf(node: InternalNode | undefined): Box | null {
   };
 }
 
+const LINK_EDGE_CLASS: Record<LinkKind | 'plain', string> = {
+  plain: 'osd-board-link osd-board-link--plain',
+  cause: 'osd-board-link osd-board-link--cause',
+  contrast: 'osd-board-link osd-board-link--contrast',
+  echo: 'osd-board-link osd-board-link--echo',
+};
+
 /**
- * A loose association between two pages. It is drawn thin and dashed so it can
- * never be read as the deck's order, and it follows the cards as they move.
+ * A loose association between two pages. It is drawn thin so it can never be
+ * read as the deck's order, and it follows the cards as they move. Its midpoint
+ * names what the two pages have to do with each other, and offers to jump
+ * between them.
  */
 function LinkEdge({ id, source, target, data }: EdgeProps) {
   const lr = useLrText();
-  const { a, b, onUnlink } = data as unknown as LinkEdgeData;
+  const { a, b, kind, onUnlink, onSetKind, onJump } = data as unknown as LinkEdgeData;
   const from = boxOf(useInternalNode(source));
   const to = boxOf(useInternalNode(target));
   if (!from || !to) return null;
   const curve = linkCurve(from, to);
+  const className = LINK_EDGE_CLASS[kind ?? 'plain'];
+  const tag =
+    kind === 'cause'
+      ? lr.board.linkCause
+      : kind === 'contrast'
+        ? lr.board.linkContrast
+        : kind === 'echo'
+          ? lr.board.linkEchoShort
+          : '';
 
   return (
     <>
-      <BaseEdge id={id} path={curve.path} className="osd-board-link" interactionWidth={14} />
+      {kind === 'contrast' ? (
+        // Two lines side by side: a comparison is two things held up together.
+        <>
+          <BaseEdge
+            id={id}
+            path={linkCurve({ ...from, y: from.y - 2.5 }, { ...to, y: to.y - 2.5 }).path}
+            className={className}
+            interactionWidth={14}
+          />
+          <BaseEdge
+            id={`${id}-pair`}
+            path={linkCurve({ ...from, y: from.y + 2.5 }, { ...to, y: to.y + 2.5 }).path}
+            className={className}
+            interactionWidth={14}
+          />
+        </>
+      ) : (
+        <BaseEdge id={id} path={curve.path} className={className} interactionWidth={14} />
+      )}
       <EdgeLabelRenderer>
-        <button
-          type="button"
-          aria-label={lr.board.removeLink}
-          title={lr.board.removeLink}
-          onClick={() => onUnlink(a, b)}
-          className="osd-board-link-remove nodrag nopan"
-          style={{ transform: `translate(-50%, -50%) translate(${curve.x}px, ${curve.y}px)` }}
+        <div
+          className="nodrag nopan flex items-center gap-1"
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${curve.x}px, ${curve.y}px)`,
+          }}
         >
-          <X className="size-3" strokeWidth={2.2} />
-        </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              type="button"
+              aria-label={lr.board.linkRelation}
+              title={lr.board.linkRelation}
+              data-lr-link-menu
+              className="osd-board-link-menu nodrag nopan"
+            >
+              <Link2 className="size-3" strokeWidth={2.2} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="min-w-[176px]">
+              {(
+                [
+                  ['cause', lr.board.linkCause],
+                  ['contrast', lr.board.linkContrast],
+                  ['echo', lr.board.linkEcho],
+                ] as const
+              ).map(([value, label]) => (
+                <DropdownMenuItem key={value} onClick={() => onSetKind(a, b, value)}>
+                  <Check className={cn('size-3.5', kind === value ? 'opacity-100' : 'opacity-0')} />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem onClick={() => onSetKind(a, b, null)}>
+                <Check className={cn('size-3.5', kind ? 'opacity-0' : 'opacity-100')} />
+                {lr.board.linkPlain}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onJump(a)}>
+                {format(lr.board.jumpToPage, { n: a + 1 })}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onJump(b)}>
+                {format(lr.board.jumpToPage, { n: b + 1 })}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onUnlink(a, b)}>
+                {lr.board.removeLink}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {tag && (
+            <span className="osd-board-link-tag" data-lr-link-kind={kind}>
+              {tag}
+            </span>
+          )}
+        </div>
       </EdgeLabelRenderer>
     </>
   );
@@ -371,6 +475,7 @@ type BuildArgs = {
     | 'onFillChapter'
     | 'onViewPlan'
   > & { columns: number; planFor: (column: number) => 'planning' | number | null };
+  progress: ChapterProgress[];
 };
 
 /**
@@ -393,6 +498,7 @@ function buildNodes({
   size,
   actions,
   columnActions,
+  progress,
 }: BuildArgs): Node[] {
   const { metrics } = layout;
   const labels: Node[] = layout.columns.map((column, i) => ({
@@ -408,6 +514,7 @@ function buildNodes({
       width: column.boxW,
       collapsed: column.collapsed,
       canDelete: columnActions.columns > 1,
+      progress: progress[i] ?? { done: 0, review: 0, total: 0 },
       plan: columnActions.planFor(i),
       onRename: columnActions.onRename,
       onAddPage: columnActions.onAddPage,
@@ -510,15 +617,19 @@ function BoardFlow({
   onPatchCard,
   onLink,
   onUnlink,
+  onSetLinkKind,
+  onJump,
   onToggleLinks,
   agentHint,
   onPageTask,
   planFor,
   onFillChapter,
   onViewPlan,
+  progress: columnProgress,
 }: Props) {
   const lr = useLrText();
-  const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, screenToFlowPosition, setCenter, getNode, getZoom } =
+    useReactFlow();
   const metrics = cardMetrics(size);
 
   const layout = useMemo(
@@ -572,6 +683,7 @@ function BoardFlow({
       size,
       actions,
       columnActions,
+      progress: columnProgress,
     }),
     [
       slideId,
@@ -586,6 +698,7 @@ function BoardFlow({
       size,
       actions,
       columnActions,
+      columnProgress,
     ],
   );
 
@@ -808,6 +921,29 @@ function BoardFlow({
 
   const fitAll = useCallback(() => fitView({ padding: 0.12, maxZoom: 0.9 }), [fitView]);
 
+  /** Puts a page in the middle of the canvas, at a size its text can be read at. */
+  const centerOn = useCallback(
+    (index: number) => {
+      const node = getNode(`page-${index}`);
+      if (!node) return;
+      const width = node.measured?.width ?? metrics.boxW;
+      const height = node.measured?.height ?? metrics.boxH;
+      void setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+        zoom: Math.max(getZoom(), 0.6),
+        duration: 400,
+      });
+    },
+    [getNode, getZoom, metrics, setCenter],
+  );
+
+  const jump = useCallback(
+    (index: number) => {
+      onJump(index);
+      centerOn(index);
+    },
+    [centerOn, onJump],
+  );
+
   const edges = useMemo<Edge[]>(() => {
     const byIndex = new Map(layout.slots.map((slot) => [slot.index, slot]));
     const mainLine: Edge[] = pages.slice(0, -1).map((_, i) => {
@@ -826,17 +962,26 @@ function BoardFlow({
       };
     });
     if (!showLinks) return mainLine;
-    const linkLines: Edge[] = links.map(([a, b]) => ({
+    const linkLines: Edge[] = links.map(({ a, b, kind }) => ({
       id: `link-${Math.min(a, b)}-${Math.max(a, b)}`,
       source: `page-${a}`,
       target: `page-${b}`,
       type: 'link',
-      data: { a, b, onUnlink } satisfies LinkEdgeData,
+      data: {
+        a,
+        b,
+        kind,
+        onUnlink,
+        onSetKind: onSetLinkKind,
+        onJump: jump,
+      } satisfies LinkEdgeData,
+      // A cause points the way it was drawn; the other relations have no direction.
+      markerEnd: kind === 'cause' ? marker : undefined,
       selectable: false,
       focusable: false,
     }));
     return [...mainLine, ...linkLines];
-  }, [layout, pages, links, showLinks, onUnlink]);
+  }, [layout, pages, links, showLinks, onUnlink, onSetLinkKind, jump]);
 
   // A link is drawn by dragging a card's dot onto another card. The whole card is
   // the target rather than a handle on it, because a handle is too small to hit

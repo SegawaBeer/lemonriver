@@ -10,7 +10,9 @@ import {
   type CardPatch,
   carryCards,
   entriesAfter,
+  hasLink,
   isSettledKey,
+  type LinkKind,
   linkCards,
   linkedPairs,
   originAfter,
@@ -20,6 +22,7 @@ import {
   patchCards,
   sanitizeCards,
   sanitizeLinks,
+  setLinkKind,
   unlinkCards,
 } from './model/cards';
 
@@ -236,8 +239,9 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
       if (pairs.length === 0) return;
       const current = boardRef.current;
       if (!current.loaded) return;
-      const links = pairs.reduce((kept, { a, b }) => linkCards(kept, a, b), current.links);
-      if (links !== current.links) commit({ ...current, links }, true);
+      const links = [...current.links];
+      for (const pair of pairs) if (!hasLink(links, pair.a, pair.b)) links.push(pair);
+      if (links.length !== current.links.length) commit({ ...current, links }, true);
     },
     [commit],
   );
@@ -266,6 +270,19 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
   const link = useCallback((a: number, b: number) => setLink(a, b, true), [setLink]);
   const unlink = useCallback((a: number, b: number) => setLink(a, b, false), [setLink]);
 
+  /** Names what links two pages, or clears it back to a plain association. */
+  const kindLink = useCallback(
+    (a: number, b: number, kind: LinkKind | null) => {
+      const from = keyAt(a);
+      const to = keyAt(b);
+      if (!from || !to) return;
+      const current = boardRef.current;
+      const links = setLinkKind(current.links, from, to, kind);
+      if (links !== current.links) commit({ ...current, links }, true);
+    },
+    [keyAt, commit],
+  );
+
   const keys = useMemo(() => pageKeys(board.entries, count), [board.entries, count]);
   const ready = board.loaded && keys.every(isSettledKey);
   const cards = useMemo<(BoardCard | undefined)[]>(
@@ -279,12 +296,15 @@ export function useBoardCards(slideId: string, modulePages: Page[], count: numbe
     keys,
     entries: board.entries,
     cards,
+    /** The same cards as a record, for code that looks a page up by its key. */
+    byKey: board.cards,
     pairs,
     links: board.links,
     patch,
     patchMany,
     link,
     unlink,
+    kindLink,
     beginOp,
     entryAt,
     addLinks,

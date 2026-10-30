@@ -9,6 +9,7 @@ import {
   reconcileColumns,
   sanitizeStructure,
 } from '../../app/lemonriver/board/model/structure.ts';
+import { sanitizeTargetMinutes } from '../../app/lemonriver/board/model/timing.ts';
 import { resolveSlideEntry } from '../../editing/slide-ops.ts';
 import { validateMutationRequest } from '../../http/request-guard.ts';
 import {
@@ -42,8 +43,9 @@ import {
   writeBoardStructure,
 } from './store.ts';
 
-// GET /__board?slideId=…&pages=n   → { columns, applying, lastApply, chapterPlan }
+// GET /__board?slideId=…&pages=n   → { columns, applying, lastApply, chapterPlan, targetMinutes }
 // PUT /__board                     { slideId, columns: [{ title, size }] }
+// PUT /__board/target              { slideId, targetMinutes } → the length the deck aims for
 // GET /__board/cards?slideId=…     → { cards, links }
 // PUT /__board/cards               { slideId, cards, links }
 // GET /__board/changes?slideId=…   → { changes }
@@ -88,6 +90,7 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
           applying: sanitizeApplying(raw.applying),
           lastApply: sanitizeLastApply(raw.lastApply),
           chapterPlan: sanitizeChapterPlan(raw.chapterPlan),
+          targetMinutes: sanitizeTargetMinutes(raw.targetMinutes),
         });
       }
 
@@ -111,6 +114,25 @@ export function registerBoardRoutes(server: ViteDevServer, ctx: ApiContext): voi
         };
         if (structure.columns.length === 0) return json(res, 400, { error: 'no usable columns' });
         await writeBoardStructure(boardStructurePath(ctx.userCwd, slideId), structure);
+        return json(res, 200, { ok: true });
+      }
+
+      if (method === 'PUT' && url.pathname === '/target') {
+        const requestCheck = validateMutationRequest(req, { requireJsonBody: true });
+        if (!requestCheck.ok) {
+          return json(res, requestCheck.status, { error: requestCheck.error });
+        }
+        const body = (await readBody(req)) as { slideId?: unknown; targetMinutes?: unknown };
+        const slideId = typeof body?.slideId === 'string' ? body.slideId : '';
+        if (!resolveSlideEntryPath(ctx, slideId)) {
+          return json(res, 400, { error: 'invalid slideId' });
+        }
+        if (body?.targetMinutes != null && sanitizeTargetMinutes(body.targetMinutes) === null) {
+          return json(res, 400, { error: 'invalid targetMinutes' });
+        }
+        await updateBoardFile(boardStructurePath(ctx.userCwd, slideId), {
+          targetMinutes: sanitizeTargetMinutes(body?.targetMinutes),
+        });
         return json(res, 200, { ok: true });
       }
 

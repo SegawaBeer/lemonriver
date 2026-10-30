@@ -13,6 +13,7 @@ import {
   patchCard,
   sanitizeCards,
   sanitizeLinks,
+  setLinkKind,
   unlinkCards,
 } from './cards.ts';
 
@@ -206,11 +207,33 @@ describe('links', () => {
 
   it('follows both pages when the deck is reordered', () => {
     const keys = ['Close', 'Cover', 'Q3', 'Agenda'];
-    expect(linkedPairs(keys, [{ a: 'Cover', b: 'Close' }])).toEqual([[1, 0]]);
+    expect(linkedPairs(keys, [{ a: 'Cover', b: 'Close' }])).toEqual([{ a: 1, b: 0 }]);
   });
 
   it('hides a link whose page is not in the deck', () => {
     expect(linkedPairs(deck, [{ a: 'Cover', b: 'Gone' }])).toEqual([]);
+  });
+
+  it('carries what two pages have to do with each other', () => {
+    const keys = ['Close', 'Cover'];
+    expect(linkedPairs(keys, [{ a: 'Cover', b: 'Close', kind: 'cause' }])).toEqual([
+      { a: 1, b: 0, kind: 'cause' },
+    ]);
+  });
+
+  it('names a link without making a second one', () => {
+    const links = setLinkKind([{ a: 'A', b: 'B' }], 'B', 'A', 'cause');
+    expect(links).toEqual([{ a: 'A', b: 'B', kind: 'cause' }]);
+    expect(setLinkKind(links, 'A', 'B', null)).toEqual([{ a: 'A', b: 'B' }]);
+  });
+
+  it('keeps the kind when a page it points at moves', () => {
+    const after = run(
+      { cards: {}, links: [{ a: 'Cover', b: 'Q3', kind: 'contrast' }] },
+      ['Cover', 'Q3', 'Close'],
+      { kind: 'move', from: 1, to: 0 },
+    );
+    expect(after.state.links).toEqual([{ a: 'Cover', b: 'Q3', kind: 'contrast' }]);
   });
 });
 
@@ -241,6 +264,20 @@ describe('sanitize', () => {
   it('drops malformed and duplicate links', () => {
     expect(sanitizeLinks([{ a: 'A', b: 'B' }, { a: 'B', b: 'A' }, { a: 'A' }, null])).toEqual([
       { a: 'A', b: 'B' },
+    ]);
+  });
+
+  it('keeps a kind it knows and drops one it does not', () => {
+    expect(
+      sanitizeLinks([
+        { a: 'A', b: 'B', kind: 'echo' },
+        { a: 'B', b: 'C', kind: 'because' },
+        { a: 'C', b: 'D' },
+      ]),
+    ).toEqual([
+      { a: 'A', b: 'B', kind: 'echo' },
+      { a: 'B', b: 'C' },
+      { a: 'C', b: 'D' },
     ]);
   });
 });

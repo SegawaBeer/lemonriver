@@ -158,6 +158,35 @@ export const en: LrText = {
     planRemove: 'Remove',
     planMoveUp: 'Move up',
     planMoveDown: 'Move down',
+    dragPage: 'Drag this page',
+    viewCards: 'Cards',
+    viewList: 'List',
+    viewTimeline: 'Timeline',
+    /** template: "About {d}" */
+    totalDuration: 'About {d}',
+    target: 'Target (minutes)',
+    /** template: "Over by {d}" */
+    overTarget: 'Over by {d}',
+    /** template: "{d} to spare" */
+    underTarget: '{d} to spare',
+    basisNotes: 'From the speaker notes',
+    basisPage: 'From the words on the page',
+    basisNone: 'Cannot tell, so the minimum',
+    /** template: "{done}/{total} done" */
+    progress: '{done}/{total} done',
+    /** template: "{n} to review" */
+    progressReview: '{n} to review',
+    linkCause: 'Cause',
+    linkContrast: 'Contrast',
+    linkEcho: 'Echoes',
+    linkEchoShort: 'Echo',
+    linkRelation: 'This link',
+    linkPlain: 'Plain link',
+    /** template: "Jump to page {n}" */
+    jumpToPage: 'Jump to page {n}',
+    durationSeconds: '{s}s',
+    durationMinSec: '{m}m {s}s',
+    durationMinutes: '{m} min',
   },
   theme: {
     lime: 'Lime',
