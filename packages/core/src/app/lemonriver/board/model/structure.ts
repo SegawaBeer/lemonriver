@@ -47,6 +47,55 @@ export function reconcileColumns(columns: BoardColumn[], pageCount: number): Boa
   return kept;
 }
 
+/**
+ * The structure after an apply that added or removed pages. A page still in the
+ * deck keeps its chapter; a page the apply created joins the chapter of the page
+ * in front of it, or of the page behind it when nothing in front survives. A
+ * chapter left without pages keeps its title, and when no page can be matched
+ * at all the deck's new length is shared out the way a re-read of the deck does.
+ */
+export function columnsAfterApply(
+  before: { title: string; keys: string[] }[],
+  afterKeys: string[],
+  newPagesTo?: number,
+): BoardColumn[] {
+  const at = new Map(afterKeys.map((key, index) => [key, index]));
+  const owner = new Array<number>(afterKeys.length).fill(-1);
+  const sizes = before.map(() => 0);
+  before.forEach((column, c) => {
+    for (const key of column.keys) {
+      const index = at.get(key);
+      if (index === undefined || owner[index] !== -1) continue;
+      owner[index] = c;
+      sizes[c] += 1;
+    }
+  });
+
+  if (!owner.some((value) => value !== -1)) {
+    return reconcileColumns(
+      before.map((column) => ({ title: column.title, size: column.keys.length })),
+      afterKeys.length,
+    );
+  }
+
+  const into = (index: number): number => {
+    for (let i = index - 1; i >= 0; i--) if (owner[i] !== -1) return owner[i];
+    for (let i = index + 1; i < owner.length; i++) if (owner[i] !== -1) return owner[i];
+    return 0;
+  };
+
+  owner.forEach((value, index) => {
+    if (value !== -1) return;
+    const column =
+      newPagesTo !== undefined && newPagesTo >= 0 && newPagesTo < before.length
+        ? newPagesTo
+        : into(index);
+    sizes[column] += 1;
+  });
+
+  return before.map((column, i) => ({ title: column.title, size: sizes[i] }));
+}
+
 /** Column index that owns a position, and where each column starts. */
 export function columnStarts(columns: BoardColumn[]): number[] {
   const starts: number[] = [];

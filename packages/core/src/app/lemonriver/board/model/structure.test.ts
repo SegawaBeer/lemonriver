@@ -3,6 +3,7 @@ import {
   addColumnAfter,
   type BoardColumn,
   columnOfPosition,
+  columnsAfterApply,
   columnsAfterInsert,
   columnsAfterMove,
   columnsAfterMoveMany,
@@ -268,5 +269,56 @@ describe('column bookkeeping for batch edits', () => {
   it('cannot put an emptied chapter back from positions alone, which is why undo replays the saved list', () => {
     const removed = columnsAfterRemove(columns, [0, 1]);
     expect(columnsAfterInsert(removed, [0, 1])).not.toEqual(columns);
+  });
+});
+
+describe('columnsAfterApply', () => {
+  const before = [
+    { title: 'Opening', keys: ['a', 'b'] },
+    { title: 'Middle', keys: ['c'] },
+    { title: 'End', keys: ['d'] },
+  ];
+
+  it('keeps a page the apply created right after another page in that page’s chapter', () => {
+    expect(columnsAfterApply(before, ['a', 'a2', 'b', 'c', 'd'])).toEqual([
+      { title: 'Opening', size: 3 },
+      { title: 'Middle', size: 1 },
+      { title: 'End', size: 1 },
+    ]);
+  });
+
+  it('takes a merged page out of the chapter that held it', () => {
+    expect(columnsAfterApply(before, ['a', 'c', 'd'])).toEqual([
+      { title: 'Opening', size: 1 },
+      { title: 'Middle', size: 1 },
+      { title: 'End', size: 1 },
+    ]);
+  });
+
+  it('gives a page added at the very front the chapter of the page behind it', () => {
+    expect(columnsAfterApply(before, ['new', 'a', 'b', 'c', 'd']).map((c) => c.size)).toEqual([
+      3, 1, 1,
+    ]);
+  });
+
+  it('keeps a chapter that lost every page, with its title', () => {
+    expect(columnsAfterApply(before, ['a', 'b', 'd'])).toEqual([
+      { title: 'Opening', size: 2 },
+      { title: 'Middle', size: 0 },
+      { title: 'End', size: 1 },
+    ]);
+  });
+
+  it('sends every new page to the chapter named, even one that is still empty', () => {
+    const columns = [...before.slice(0, 2), { title: 'End', keys: [] }];
+    expect(columnsAfterApply(columns, ['a', 'b', 'c', 'n1', 'n2'], 2)).toEqual([
+      { title: 'Opening', size: 2 },
+      { title: 'Middle', size: 1 },
+      { title: 'End', size: 2 },
+    ]);
+  });
+
+  it('falls back to the deck’s new length when no page can be matched', () => {
+    expect(columnsAfterApply(before, ['x', 'y'])).toEqual([{ title: 'Opening', size: 2 }]);
   });
 });

@@ -27,6 +27,9 @@ export function useBoardColumns(
   });
   seedRef.current = { pages, title: columnTitle };
 
+  /** Chapters a task just wrote, waiting for the deck to reload with them. */
+  const waiting = useRef<{ columns: BoardColumn[]; count: number } | null>(null);
+
   const save = useCallback(
     async (next: BoardColumn[]) => {
       try {
@@ -78,6 +81,15 @@ export function useBoardColumns(
   // A deck edited outside the board (or by the agent) changes the page count;
   // the structure follows so the board never renders half a deck.
   useEffect(() => {
+    const pending = waiting.current;
+    if (pending) {
+      // The chapters belong to a deck that has not reloaded yet; reconciling
+      // now would spread the new pages into the wrong chapter.
+      if (pages.length !== pending.count) return;
+      waiting.current = null;
+      setColumns(pending.columns);
+      return;
+    }
     setColumns((current) => {
       if (!current) return current;
       const total = current.reduce((sum, column) => sum + column.size, 0);
@@ -90,11 +102,29 @@ export function useBoardColumns(
 
   const applyColumns = useCallback(
     (next: BoardColumn[]) => {
+      waiting.current = null;
       setColumns(next);
       void save(next);
     },
     [save],
   );
 
-  return { columns, applyColumns };
+  /** Chapters the server just wrote; held until the deck has that many pages. */
+  const adoptColumns = useCallback(
+    (next: BoardColumn[]) => {
+      const count = next.reduce((sum, column) => sum + column.size, 0);
+      // Fewer pages than the deck has: this is the record from before the task,
+      // and the deck's own reconcile already knows better.
+      if (count === 0 || count < pages.length) return;
+      if (pages.length === count) {
+        waiting.current = null;
+        setColumns(next);
+        return;
+      }
+      waiting.current = { columns: next, count };
+    },
+    [pages.length],
+  );
+
+  return { columns, applyColumns, adoptColumns };
 }
