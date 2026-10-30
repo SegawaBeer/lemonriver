@@ -25,6 +25,18 @@ async function readColumns(request: Request, pages = 3) {
   return body.columns ?? [];
 }
 
+/**
+ * Chapters are saved by their own request, which the board does not wait on, so
+ * a read right after a page write can still see the previous ones.
+ */
+async function expectColumns(
+  request: Request,
+  expected: (column: { title: string; size: number }) => unknown,
+  value: unknown,
+) {
+  await expect.poll(async () => (await readColumns(request)).map(expected)).toEqual(value);
+}
+
 async function readEntries(request: Request) {
   const res = await request.get(`/__board/entries?slideId=${SLIDE}`);
   const body = (await res.json()) as { entries?: string[] | null };
@@ -111,7 +123,7 @@ test.describe('story board structure', () => {
     await dragBy(page, labels(page).nth(1), -(box.width + 88), 8);
 
     await expect.poll(async () => (await readEntries(request))?.join(',')).toBe('Three,One,Two');
-    expect((await readColumns(request)).map((c) => c.title)).toEqual(['Closing', 'Opening']);
+    await expectColumns(request, (column) => column.title, ['Closing', 'Opening']);
   });
 
   test('folds a chapter away and back without touching the deck', async ({ page, request }) => {
@@ -144,7 +156,7 @@ test.describe('story board structure', () => {
     await dragBy(page, cards(page).nth(0), gapCentre - (card.x + card.width / 2));
 
     await expect.poll(async () => (await readEntries(request))?.join(',')).toBe('Two,One,Three');
-    expect((await readColumns(request)).map((c) => [c.title, c.size])).toEqual([
+    await expectColumns(request, (column) => [column.title, column.size], [
       ['Opening', 1],
       ['New chapter', 1],
       ['Closing', 1],
@@ -206,7 +218,7 @@ test.describe('story board structure', () => {
     await page.getByRole('button', { name: 'Undo' }).click();
     await expect(page.locator('header .folio')).toHaveText('03');
     await expect.poll(async () => (await readEntries(request))?.join(',')).toBe('One,Two,Three');
-    expect((await readColumns(request)).map((c) => c.size)).toEqual([2, 1]);
+    await expectColumns(request, (column) => column.size, [2, 1]);
   });
 
   test('switches between the three card sizes', async ({ page }) => {

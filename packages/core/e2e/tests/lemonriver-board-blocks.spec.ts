@@ -62,6 +62,21 @@ async function liftOneRow(page: Page, rowIndex: number) {
   await page.waitForTimeout(300);
 }
 
+/**
+ * Opens the change list and reads the line it holds. A line is numbered from
+ * the page keys, and those go blank for a moment while the deck reloads after a
+ * page move, so the line can be missing on the first look.
+ */
+async function expectChangeLine(page: Page, text: string) {
+  await expect(async () => {
+    if (!(await page.getByText(text).isVisible())) {
+      const toggle = page.getByRole('button', { name: 'Changes (1)' });
+      if ((await toggle.count()) > 0) await toggle.click();
+    }
+    await expect(page.getByText(text)).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
 async function moveRowToPage(page: Page, rowIndex: number, pageNumber: number) {
   await rows(page).nth(rowIndex).getByRole('button', { name: 'More for this block' }).click();
   await page.getByRole('menuitem', { name: 'Move to page' }).hover();
@@ -237,8 +252,7 @@ test.describe('story board blocks', () => {
     await selectCard(page, 1);
     await expect(rows(page)).toHaveCount(2);
     await moveRowToPage(page, 1, 3);
-    await page.getByRole('button', { name: 'Changes (1)' }).click();
-    await expect(page.getByText('Page 2 “Middle content” → page 3')).toBeVisible();
+    await expectChangeLine(page, 'Page 2 “Middle content” → page 3');
     await page.keyboard.press('Escape');
 
     // Whole-page reorder: page 1 goes to the end, so page 2 becomes page 1.
@@ -246,8 +260,7 @@ test.describe('story board blocks', () => {
       .first()
       .click({ button: 'right', position: { x: 12, y: 12 } });
     await page.getByRole('menuitem', { name: 'Move to end' }).click();
-    await page.getByRole('button', { name: 'Changes (1)' }).click();
-    await expect(page.getByText('Page 1 “Middle content” → page 2')).toBeVisible();
+    await expectChangeLine(page, 'Page 1 “Middle content” → page 2');
     await page.keyboard.press('Escape');
 
     // Deleting a page is the one thing here that writes the deck itself.
