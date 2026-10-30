@@ -2,6 +2,7 @@
 set -euo pipefail
 
 RES="$(cd "$(dirname "$0")" && pwd)"
+APP_BUNDLE="$(cd "$RES/../.." && pwd)"
 LR_HOME="${LEMONRIVER_HOME:-$HOME}"
 NODE="$RES/node/bin/node"
 NODE_BIN="$RES/node/bin"
@@ -12,6 +13,14 @@ PLIST="$LR_HOME/Library/LaunchAgents/com.lemonriver.app.plist"
 PIDFILE="$SUPPORT/service.pid"
 LABEL="com.lemonriver.app"
 DRY="${LEMONRIVER_DRY_LAUNCHD:-0}"
+
+# Downloading the dmg marks every file inside the app, and with that mark still
+# on it the system refuses to start the bundled node at all. The user has
+# already let this app through in Privacy & Security, so clear the app's own
+# marks before running anything; on a read-only volume this fails harmlessly.
+if [ -n "$(/usr/bin/xattr -p com.apple.quarantine "$NODE" 2>/dev/null || true)" ]; then
+  /usr/bin/xattr -dr com.apple.quarantine "$APP_BUNDLE" 2>/dev/null || true
+fi
 
 state_value() {
   "$NODE" "$RES/setup.mjs" state-get --file "$STATE" --key "$1"

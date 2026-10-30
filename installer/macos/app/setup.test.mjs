@@ -1,5 +1,15 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -181,9 +191,31 @@ describe('state file', () => {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CLI = path.join(HERE, 'setup.mjs');
 const REPO = path.resolve(HERE, '../../..');
-const APP = path.join(REPO, 'installer/macos/out/LemonRiver.app');
-const START = path.join(APP, 'Contents/Resources/start.sh');
-const built = existsSync(START);
+const OUT = path.join(REPO, 'installer/macos/out');
+const built =
+  existsSync(path.join(OUT, 'node/bin/node')) &&
+  existsSync(path.join(OUT, 'workspace-template/package.json'));
+
+// The scripts under test are the ones in this directory, not whatever a
+// previous build copied into out/; only the parts a build produces are reused.
+function sourceApp({ copyNode = false } = {}) {
+  const app = path.join(tempDir(), 'LemonRiver.app');
+  const res = path.join(app, 'Contents/Resources');
+  mkdirSync(res, { recursive: true });
+  for (const file of ['start.sh', 'setup.sh', 'setup.mjs']) {
+    copyFileSync(path.join(HERE, file), path.join(res, file));
+    chmodSync(path.join(res, file), 0o755);
+  }
+  if (copyNode) {
+    execFileSync('/usr/bin/ditto', [path.join(OUT, 'node'), path.join(res, 'node')]);
+  } else {
+    symlinkSync(path.join(OUT, 'node'), path.join(res, 'node'));
+  }
+  symlinkSync(path.join(OUT, 'workspace-template'), path.join(res, 'workspace-template'));
+  return app;
+}
+
+const startScript = (app) => path.join(app, 'Contents/Resources/start.sh');
 
 function runCli(args) {
   return execFileSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
@@ -201,7 +233,7 @@ function installHome() {
   return home;
 }
 
-function startEnv(home, appPath = APP) {
+function startEnv(home, appPath) {
   return {
     ...process.env,
     HOME: home,
@@ -218,6 +250,48 @@ function startEnv(home, appPath = APP) {
 
 const stateFile = (home) =>
   path.join(home, 'Library', 'Application Support', 'LemonRiver', 'state.json');
+
+function quarantineApp(dir) {
+  const value = `0083;${Math.floor(Date.now() / 1000).toString(16)};Safari;`;
+  const files = execFileSync('/usr/bin/find', [dir], { encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean);
+  for (let i = 0; i < files.length; i += 200) {
+    execFileSync('/usr/bin/xattr', [
+      '-w',
+      'com.apple.quarantine',
+      value,
+      ...files.slice(i, i + 200),
+    ]);
+  }
+}
+
+function quarantineCount(dir) {
+  let listing = '';
+  try {
+    listing = execFileSync('/usr/bin/xattr', ['-lr', dir], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch (err) {
+    listing = String(err.stdout ?? '');
+  }
+  return listing.split('\n').filter((line) => line.includes('com.apple.quarantine')).length;
+}
+
+async function waitForPage(start, env) {
+  const url = execFileSync('/bin/bash', [start, 'url'], { env, encoding: 'utf8' }).trim();
+  expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+  let status = 0;
+  for (let i = 0; i < 120; i += 1) {
+    try {
+      status = (await fetch(url)).status;
+      if (status === 200) break;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return status;
+}
 
 describe('state-get output', () => {
   it('prints an empty line for a file that does not exist', () => {
@@ -237,43 +311,39 @@ describe('start.sh on a machine with nothing installed', () => {
   it.skipIf(!built)(
     'runs first-time setup, serves the page, and stops',
     async () => {
+      const app = sourceApp();
+      const start = startScript(app);
       const home = installHome();
-      const env = startEnv(home);
+      const env = startEnv(home, app);
 
-      execFileSync('/bin/bash', [START, 'ensure'], { env, stdio: 'pipe', timeout: 240000 });
+      execFileSync('/bin/bash', [start, 'ensure'], { env, stdio: 'pipe', timeout: 240000 });
 
       const state = JSON.parse(readFileSync(stateFile(home), 'utf8'));
       expect(state.setup).toBe(true);
       expect(existsSync(path.join(home, 'LemonRiver', 'package.json'))).toBe(true);
 
-      const url = execFileSync('/bin/bash', [START, 'url'], { env, encoding: 'utf8' }).trim();
-      expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+      expect(await waitForPage(start, env)).toBe(200);
 
-      let status = 0;
-      for (let i = 0; i < 120; i += 1) {
-        try {
-          status = (await fetch(url)).status;
-          if (status === 200) break;
-        } catch {}
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-      expect(status).toBe(200);
-
-      execFileSync('/bin/bash', [START, 'stop'], { env, stdio: 'pipe' });
+      execFileSync('/bin/bash', [start, 'stop'], { env, stdio: 'pipe' });
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      const after = execFileSync('/bin/bash', [START, 'status'], { env, encoding: 'utf8' });
+      const after = execFileSync('/bin/bash', [start, 'status'], { env, encoding: 'utf8' });
       expect(after.trim()).toBe('stopped');
     },
     300000,
   );
 
   it.skipIf(!built)('refuses when the app is still on the disk image', () => {
+    const app = sourceApp();
     const home = installHome();
     const env = startEnv(home, '/Volumes/LemonRiver/LemonRiver.app');
 
     let code = 0;
     try {
-      execFileSync('/bin/bash', [START, 'ensure'], { env, stdio: 'pipe', timeout: 60000 });
+      execFileSync('/bin/bash', [startScript(app), 'ensure'], {
+        env,
+        stdio: 'pipe',
+        timeout: 60000,
+      });
     } catch (err) {
       code = err.status;
     }
@@ -282,4 +352,25 @@ describe('start.sh on a machine with nothing installed', () => {
     expect(existsSync(path.join(home, 'LemonRiver'))).toBe(false);
     expect(existsSync(stateFile(home))).toBe(false);
   });
+
+  it.skipIf(!built)(
+    'starts an app that still carries the download flags, and clears them',
+    async () => {
+      const app = sourceApp({ copyNode: true });
+      const start = startScript(app);
+      quarantineApp(app);
+      expect(quarantineCount(app)).toBeGreaterThan(0);
+
+      const home = installHome();
+      const env = startEnv(home, app);
+
+      execFileSync('/bin/bash', [start, 'ensure'], { env, stdio: 'pipe', timeout: 240000 });
+
+      expect(await waitForPage(start, env)).toBe(200);
+      expect(quarantineCount(app)).toBe(0);
+
+      execFileSync('/bin/bash', [start, 'stop'], { env, stdio: 'pipe' });
+    },
+    300000,
+  );
 });
