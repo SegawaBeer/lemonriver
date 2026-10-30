@@ -7,6 +7,7 @@ import {
   Image as ImageIcon,
   List,
   Redo2,
+  Rows3,
   Trash2,
   Undo2,
   X,
@@ -32,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { isTypingTarget } from '@/lib/keys';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { format, useLocale } from '@/lib/use-locale';
@@ -39,8 +41,23 @@ import { cn, pad2 } from '@/lib/utils';
 import type { Page } from '../../lib/sdk';
 import { useSlideModule } from '../../lib/use-slide-module';
 import { useLrText } from '../text';
+import { BlockPanel } from './blocks/block-panel';
+import { pageReadOf } from './blocks/cache';
+import { ChangeList } from './blocks/change-list';
+import type { Block } from './blocks/classify';
 import { type CardSize, orderAfterMoveMany } from './layout';
-import { type BoardCard, CARD_STATUSES, type CardPatch, type CardStatus } from './model/cards';
+import {
+  type BoardCard,
+  CARD_STATUSES,
+  type CardPatch,
+  type CardStatus,
+  entriesAfter,
+  isSettledKey,
+  originAfter,
+  type PageOp,
+  pageKeys,
+} from './model/cards';
+import { carryChanges, type Placement } from './model/changes';
 import {
   type BoardFilter,
   EMPTY_FILTER,
@@ -63,7 +80,8 @@ import {
   renameColumnAt,
 } from './model/structure';
 import { useStatusLabels } from './page-node';
-import { useBoardCards } from './use-board-cards';
+import { countAfter, useBoardCards } from './use-board-cards';
+import { useBoardChanges } from './use-board-changes';
 import { useBoardColumns } from './use-board-columns';
 import { useBoardComments } from './use-board-comments';
 import { useHistory } from './use-history';
@@ -77,7 +95,20 @@ const NO_PAGES: Page[] = [];
 
 const LINKS_KEY = 'open-slide:board-links-visible';
 const SIZE_KEY = 'open-slide:board-card-size';
+const BLOCKS_KEY = 'open-slide:board-blocks-visible';
 const collapsedKey = (slideId: string) => `open-slide:board-collapsed:${slideId}`;
+
+function useBlocksVisible() {
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(BLOCKS_KEY) === '1';
+  });
+  useEffect(() => {
+    window.localStorage.setItem(BLOCKS_KEY, visible ? '1' : '0');
+  }, [visible]);
+  const toggle = useCallback(() => setVisible((v) => !v), []);
+  return [visible, toggle] as const;
+}
 
 function useLinksVisible() {
   const [visible, setVisible] = useState(() => {
@@ -188,11 +219,25 @@ export function Board() {
     [lr.board.columnFallback],
   );
   const { columns, applyColumns } = useBoardColumns(slideId, pages, columnTitle);
-  const { ready, cards, pairs, links, patch, link, unlink, beginOp, entryAt, addLinks } =
-    useBoardCards(slideId, modulePages, pages.length);
+  const {
+    ready,
+    keys,
+    entries,
+    cards,
+    pairs,
+    links,
+    patch,
+    link,
+    unlink,
+    beginOp,
+    entryAt,
+    addLinks,
+  } = useBoardCards(slideId, modulePages, pages.length);
   const comments = useBoardComments(slideId, pages.length);
   const history = useHistory(slideId);
+  const { changes, setChanges } = useBoardChanges(slideId);
   const [showLinks, toggleLinks] = useLinksVisible();
+  const [showBlocks, toggleBlocks] = useBlocksVisible();
   const [size, chooseSize] = useCardSize();
   const [collapsed, toggleCollapse, trimFolded] = useFolded(slideId);
   const [filter, setFilter] = useState<BoardFilter>(EMPTY_FILTER);
@@ -201,6 +246,44 @@ export function Board() {
 
   const pageCount = useRef(pages.length);
   pageCount.current = pages.length;
+
+  const changesRef = useRef(changes);
+  changesRef.current = changes;
+
+  /** A page operation carries the block moves along with it, in the same step. */
+  const beginPageOp = useCallback(
+    (op: PageOp, count: number) => {
+      const snapshot = changesRef.current;
+      const before = pageKeys(entries, count);
+      if (before.every(isSettledKey)) {
+        const after = pageKeys(entriesAfter(op, entries, count), countAfter(op, count));
+        setChanges(carryChanges(snapshot, before, after, originAfter(op, count)));
+      }
+      const settle = beginOp(op, count);
+      return (ok: boolean) => {
+        if (!ok) setChanges(snapshot);
+        settle(ok);
+      };
+    },
+    [entries, setChanges, beginOp],
+  );
+
+  const applyChanges = useCallback(
+    (next: Placement[]) => {
+      const previous = changesRef.current;
+      setChanges(next);
+      history.record({ undo: () => setChanges(previous), redo: () => setChanges(next) });
+    },
+    [setChanges, history],
+  );
+
+  const removeChanges = useCallback(
+    (indices: number[]) => {
+      const drop = new Set(indices);
+      applyChanges(changesRef.current.filter((_, index) => !drop.has(index)));
+    },
+    [applyChanges],
+  );
 
   useEffect(() => {
     setSelected((current) => current.filter((index) => index < pages.length));
@@ -217,16 +300,40 @@ export function Board() {
     [cards, comments, filter],
   );
 
+  const changeCounts = useMemo(() => {
+    const counts = new Array<number>(pages.length).fill(0);
+    const at = new Map(keys.map((key, index) => [key, index]));
+    for (const item of changes) {
+      const from = at.get(item.origin.page);
+      if (from !== undefined) counts[from] += 1;
+      if (item.to === 'parked') continue;
+      const to = at.get(item.to.page);
+      if (to !== undefined && to !== from) counts[to] += 1;
+    }
+    return counts;
+  }, [changes, keys, pages.length]);
+
+  const blocksOfPage = useCallback(
+    (key: string): Block[] | null => {
+      const index = keys.indexOf(key);
+      const page = index >= 0 ? pages[index] : undefined;
+      if (!page) return null;
+      const read = pageReadOf(page);
+      return read && 'blocks' in read ? read.blocks : null;
+    },
+    [keys, pages],
+  );
+
   // ----- deck operations, each with the step that takes it back -----
 
   /** Applies a whole new page order together with the chapters it implies. */
   const performOrder = useCallback(
     async (order: number[], nextColumns: BoardColumn[], count: number) => {
-      const settle = beginOp({ kind: 'reorder', order }, count);
+      const settle = beginPageOp({ kind: 'reorder', order }, count);
       applyColumns(nextColumns);
       await reorderAll(order).then(settle);
     },
-    [beginOp, applyColumns, reorderAll],
+    [beginPageOp, applyColumns, reorderAll],
   );
 
   const performDuplicate = useCallback(
@@ -235,7 +342,7 @@ export function Board() {
       applyColumns(nextColumns);
       let total = startCount;
       for (const index of sorted) {
-        const settle = beginOp({ kind: 'duplicate', index }, total);
+        const settle = beginPageOp({ kind: 'duplicate', index }, total);
         const ok = await duplicate(index);
         settle(ok);
         if (!ok) return false;
@@ -243,7 +350,7 @@ export function Board() {
       }
       return true;
     },
-    [applyColumns, beginOp, duplicate],
+    [applyColumns, beginPageOp, duplicate],
   );
 
   /** Removes pages from the highest index down. */
@@ -253,7 +360,7 @@ export function Board() {
       applyColumns(nextColumns);
       let total = startCount;
       for (const index of sorted) {
-        const settle = beginOp({ kind: 'delete', index }, total);
+        const settle = beginPageOp({ kind: 'delete', index }, total);
         const ok = await remove(index);
         settle(ok);
         if (!ok) return false;
@@ -261,7 +368,7 @@ export function Board() {
       }
       return true;
     },
-    [applyColumns, beginOp, remove],
+    [applyColumns, beginPageOp, remove],
   );
 
   const performRestore = useCallback(
@@ -274,7 +381,7 @@ export function Board() {
       applyColumns(nextColumns);
       let total = startCount;
       for (const { index, entry, card } of sorted) {
-        const settle = beginOp({ kind: 'restore', index, entry, card }, total);
+        const settle = beginPageOp({ kind: 'restore', index, entry, card }, total);
         const ok = await restore(index, entry);
         settle(ok);
         if (!ok) return false;
@@ -282,7 +389,7 @@ export function Board() {
       }
       return true;
     },
-    [applyColumns, beginOp, restore],
+    [applyColumns, beginPageOp, restore],
   );
 
   const movePages = useCallback(
@@ -339,12 +446,16 @@ export function Board() {
           linked: entry ? links.filter((link) => link.a === entry || link.b === entry) : [],
         };
       });
+      // Block moves that involve a removed page go with it, and come back with
+      // it: the page lands on the same entry, so the whole list is restored.
+      const changesBefore = changesRef.current;
       const before = (done: number) => columnsAfterRemove(columns, sorted.slice(0, done));
       const steps: HistoryStep[] = saved.map(({ index, entry, card, linked }, at) => ({
         undo: entry
           ? async () => {
               await performRestore([{ index, entry, card }], count - 1 - at, before(at));
               addLinks(linked);
+              setChanges(changesBefore);
             }
           : null,
         redo: async () => {
@@ -355,7 +466,7 @@ export function Board() {
       history.record(groupSteps(steps));
       setSelected([]);
     },
-    [columns, performDelete, performRestore, entryAt, cards, links, addLinks, history],
+    [columns, performDelete, performRestore, entryAt, cards, links, addLinks, history, setChanges],
   );
 
   const insertPage = useCallback(
@@ -368,7 +479,7 @@ export function Board() {
       );
       const run = async () => {
         applyColumns(nextColumns);
-        const settle = beginOp({ kind: 'insert', index: at }, count);
+        const settle = beginPageOp({ kind: 'insert', index: at }, count);
         const ok = await insert(at);
         settle(ok);
       };
@@ -380,7 +491,7 @@ export function Board() {
         redo: run,
       });
     },
-    [columns, applyColumns, beginOp, insert, performDelete, history],
+    [columns, applyColumns, beginPageOp, insert, performDelete, history],
   );
 
   const addPageToColumn = useCallback(
@@ -531,7 +642,13 @@ export function Board() {
     const onKey = (event: KeyboardEvent) => {
       if (isTypingTarget(event.target)) return;
       const mod = event.metaKey || event.ctrlKey;
-      if (mod && (event.key === 'z' || event.key === 'Z')) {
+      const undoKey = mod && (event.key === 'z' || event.key === 'Z');
+      // Keys pressed inside the block panel are the panel's, not the board's;
+      // undo is the one shortcut that still carries across.
+      if (!undoKey && (event.target as Element | null)?.closest?.('[data-lr-block-panel]')) {
+        return;
+      }
+      if (undoKey) {
         event.preventDefault();
         void (event.shiftKey ? history.redo() : history.undo());
         return;
@@ -632,6 +749,35 @@ export function Board() {
               </button>
             ))}
           </div>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={lr.board.blockPanel}
+            title={lr.board.blockPanel}
+            aria-pressed={showBlocks}
+            onClick={toggleBlocks}
+            className={cn(showBlocks && 'text-foreground')}
+          >
+            <Rows3 />
+          </Button>
+          {changes.length > 0 && (
+            <Popover>
+              <PopoverTrigger
+                type="button"
+                className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'tabular-nums')}
+              >
+                {format(lr.board.changes, { n: changes.length })}
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[360px] p-0">
+                <ChangeList
+                  changes={changes}
+                  pageKeys={keys}
+                  readOf={blocksOfPage}
+                  onRemove={removeChanges}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger
               type="button"
@@ -686,105 +832,120 @@ export function Board() {
         <span className="folio">{pad2(pages.length)}</span>
       </header>
 
-      <div className="relative min-h-0 flex-1">
-        {error ? (
-          <p className="grid h-full place-items-center px-6 text-center text-[13px] text-destructive">
-            {error}
-          </p>
-        ) : pages.length === 0 || !columns ? (
-          <p className="grid h-full place-items-center text-[13px] text-muted-foreground">
-            {lr.board.loading}
-          </p>
-        ) : (
-          <>
-            {selected.length > 0 && (
-              <div className="pointer-events-auto absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1 rounded-[8px] border border-hairline bg-card px-2 py-1 shadow-edge">
-                <span className="px-1 text-[12px] text-muted-foreground">
-                  {format(lr.board.selected, { n: selected.length })}
-                </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    type="button"
-                    className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                  >
-                    {lr.board.status}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="center" className="min-w-[150px]">
-                    {CARD_STATUSES.map((value) => (
-                      <DropdownMenuItem key={value} onClick={() => setStatusFor(selected, value)}>
-                        {labels[value]}
+      <div className="flex min-h-0 flex-1">
+        <div className="relative min-h-0 flex-1">
+          {error ? (
+            <p className="grid h-full place-items-center px-6 text-center text-[13px] text-destructive">
+              {error}
+            </p>
+          ) : pages.length === 0 || !columns ? (
+            <p className="grid h-full place-items-center text-[13px] text-muted-foreground">
+              {lr.board.loading}
+            </p>
+          ) : (
+            <>
+              {selected.length > 0 && (
+                <div className="pointer-events-auto absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1 rounded-[8px] border border-hairline bg-card px-2 py-1 shadow-edge">
+                  <span className="px-1 text-[12px] text-muted-foreground">
+                    {format(lr.board.selected, { n: selected.length })}
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      type="button"
+                      className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                    >
+                      {lr.board.status}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="min-w-[150px]">
+                      {CARD_STATUSES.map((value) => (
+                        <DropdownMenuItem key={value} onClick={() => setStatusFor(selected, value)}>
+                          {labels[value]}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setStatusFor(selected, null)}>
+                        {lr.board.statusNone}
                       </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setStatusFor(selected, null)}>
-                      {lr.board.statusNone}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t.thumbnailRail.duplicatePage}
-                  title={t.thumbnailRail.duplicatePage}
-                  onClick={() => duplicatePages(selected)}
-                >
-                  <Copy />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t.thumbnailRail.deletePage}
-                  title={t.thumbnailRail.deletePage}
-                  onClick={() => setPendingDelete([...selected])}
-                >
-                  <Trash2 />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={lr.board.clearSelection}
-                  title={lr.board.clearSelection}
-                  onClick={() => setSelected([])}
-                >
-                  <X />
-                </Button>
-              </div>
-            )}
-            <Suspense fallback={null}>
-              <BoardCanvas
-                slideId={slideId}
-                pages={pages}
-                notes={slide?.notes}
-                cards={cards}
-                cardsReady={ready}
-                links={pairs}
-                showLinks={showLinks}
-                columns={columns}
-                design={slide?.design}
-                size={size}
-                collapsed={collapsed}
-                dimmed={dimmed}
-                selected={selected}
-                onSelect={setSelected}
-                onOpenPage={openPage}
-                onMovePages={movePages}
-                onMoveToNewChapter={moveToNewChapter}
-                onRenameColumn={renameChapter}
-                onAddPage={addPageToColumn}
-                onAddChapter={addChapter}
-                onDeleteChapter={deleteChapter}
-                onToggleCollapse={toggleCollapse}
-                onMoveChapter={moveChapter}
-                onDuplicate={(index) => duplicatePages([index])}
-                onDelete={(index) => deletePages([index])}
-                onMoveToEnd={moveToEnd}
-                onPatchCard={patchCard}
-                onLink={(a, b) => setLink(a, b, true)}
-                onUnlink={(a, b) => setLink(a, b, false)}
-                onToggleLinks={toggleLinks}
-              />
-            </Suspense>
-          </>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t.thumbnailRail.duplicatePage}
+                    title={t.thumbnailRail.duplicatePage}
+                    onClick={() => duplicatePages(selected)}
+                  >
+                    <Copy />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t.thumbnailRail.deletePage}
+                    title={t.thumbnailRail.deletePage}
+                    onClick={() => setPendingDelete([...selected])}
+                  >
+                    <Trash2 />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={lr.board.clearSelection}
+                    title={lr.board.clearSelection}
+                    onClick={() => setSelected([])}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              )}
+              <Suspense fallback={null}>
+                <BoardCanvas
+                  slideId={slideId}
+                  pages={pages}
+                  notes={slide?.notes}
+                  cards={cards}
+                  cardsReady={ready}
+                  links={pairs}
+                  showLinks={showLinks}
+                  columns={columns}
+                  design={slide?.design}
+                  size={size}
+                  collapsed={collapsed}
+                  dimmed={dimmed}
+                  changeCounts={changeCounts}
+                  selected={selected}
+                  onSelect={setSelected}
+                  onOpenPage={openPage}
+                  onMovePages={movePages}
+                  onMoveToNewChapter={moveToNewChapter}
+                  onRenameColumn={renameChapter}
+                  onAddPage={addPageToColumn}
+                  onAddChapter={addChapter}
+                  onDeleteChapter={deleteChapter}
+                  onToggleCollapse={toggleCollapse}
+                  onMoveChapter={moveChapter}
+                  onDuplicate={(index) => duplicatePages([index])}
+                  onDelete={(index) => deletePages([index])}
+                  onMoveToEnd={moveToEnd}
+                  onPatchCard={patchCard}
+                  onLink={(a, b) => setLink(a, b, true)}
+                  onUnlink={(a, b) => setLink(a, b, false)}
+                  onToggleLinks={toggleLinks}
+                />
+              </Suspense>
+            </>
+          )}
+        </div>
+        {showBlocks && (
+          <BlockPanel
+            slideId={slideId}
+            pages={pages}
+            pageKeys={keys}
+            design={slide?.design}
+            selected={selected.length > 0 ? selected[selected.length - 1] : null}
+            changes={changes}
+            onChanges={applyChanges}
+            cardTitle={(index) => cards[index]?.title ?? ''}
+          />
         )}
       </div>
 
